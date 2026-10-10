@@ -25,6 +25,14 @@ from .common import (
     plane_frame,
     reframe,
 )
+from .refine import (
+    MAX_LOG_FOCAL_STEP,
+    MAX_ROTATION_STEP,
+    focal_prior_residual,
+    focal_prior_weight,
+    least_squares,
+    small_rotation,
+)
 
 # Below this angle between the plane normal and the view axis the focal length
 # cannot be estimated reliably from a rectangle.
@@ -103,6 +111,36 @@ def _pose(hmat: np.ndarray, f: float) -> tuple[np.ndarray, np.ndarray]:
     return world_to_cam, t
 
 
+def refine_with_known_focal(plane_pts, image_pts, f, world_to_cam, origin_cam, known, weight):
+    """Least squares on the corner reprojection plus ``focal_prior_residual``, over
+    focal length, rotation and translation. Returns the refined focal length,
+    world -> camera rotation, origin in camera space and the final cost."""
+    x_world = np.column_stack([plane_pts, np.zeros(len(plane_pts))])
+    reach = float(np.linalg.norm(origin_cam))
+
+    def unpack(x):
+        return f * math.exp(x[3]), small_rotation(x[:3]) @ world_to_cam, origin_cam + reach * x[4:]
+
+    def fun(x):
+        focal, rot, t = unpack(x)
+        cam = x_world @ rot.T + t
+        if np.any(cam[:, 2] > -1e-9 * reach):
+            return np.full(2 * len(cam) + 1, np.inf)  # a corner behind the camera
+        r = (focal * cam[:, :2] / -cam[:, 2:3] - image_pts).ravel()
+        return np.append(r, focal_prior_residual(focal, known, weight))
+
+    def bounded(step):
+        for part, limit in ((slice(0, 3), MAX_ROTATION_STEP), (slice(3, 4), MAX_LOG_FOCAL_STEP), (slice(4, 7), 0.5)):
+            n = float(np.linalg.norm(step[part]))
+            if n > limit:
+                step = step * (limit / n)
+        return step
+
+    x, cost = least_squares(fun, 7, bounded)
+    focal, rot, t = unpack(x)
+    return focal, orthonormalize(rot), t, cost
+
+
 def solve_rectangle(
     corners,
     width: float,
@@ -111,11 +149,16 @@ def solve_rectangle(
     *,
     principal_point=None,
     focal_px: float | None = None,
+    known_focal_px: float | None = None,
     plane: str = "XY",
     straighten_horizon: bool = False,
     pitch_offset: float = 0.0,
 ) -> CameraSolution:
-    """Solve a camera from the four image corners of a known rectangle on ``plane``."""
+    """Solve a camera from the four image corners of a known rectangle on ``plane``.
+
+    The focal length is ``focal_px`` if given, otherwise solved; ``known_focal_px``
+    (e.g. from EXIF) is then refined by the corners as far as they measure it.
+    """
     if width <= 0.0 or height <= 0.0:
         raise SolverError("the rectangle size must be positive")
     img = as_points(corners)
@@ -135,10 +178,18 @@ def solve_rectangle(
         hmat = homography(plane, centred)
         f = focal_px
         if not f:
-            f = focal_from_homography(hmat)
+            f = focal_from_homography(hmat) or known_focal_px
             if f is None:
                 raise SolverError("the focal length cannot be estimated from this rectangle")
         world_to_cam, origin_cam = _pose(hmat, f)
+        if known_focal_px and not focal_px:
+            # Start from the corners' own focal length and from the known one: keep the better fit.
+            weight = focal_prior_weight(image_size)
+            fits = [
+                refine_with_known_focal(plane, centred, start, *_pose(hmat, start), known_focal_px, weight)
+                for start in {f, known_focal_px}
+            ]
+            f, world_to_cam, origin_cam, _ = min(fits, key=lambda fit: fit[3])
         position = -world_to_cam.T @ origin_cam
         return f, world_to_cam, origin_cam, position
 
@@ -146,7 +197,7 @@ def solve_rectangle(
     if position[2] < 0.0:
         f, world_to_cam, origin_cam, position = solve_for(-1.0)
 
-    if not focal_px:
+    if not (focal_px or known_focal_px):
         # Angle between the plane normal and the optical axis.
         tilt = math.degrees(math.acos(min(1.0, abs(world_to_cam[2, 2]))))
         if tilt < FRONTAL_LIMIT_DEG:

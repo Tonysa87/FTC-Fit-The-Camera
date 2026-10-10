@@ -14,6 +14,7 @@ from .exif import native_frame
 from .solver import (
     CameraSolution,
     ReferenceDistance,
+    ScaleCube,
     SolverError,
     focal_px_from_35mm,
     focal_px_from_mm,
@@ -43,6 +44,8 @@ HANDLE_DEFAULTS = {
     "origin": (0.50, 0.30),
     "ref_a": (0.50, 0.30),
     "ref_b": (0.62, 0.34),
+    "cube_base": (0.62, 0.22),
+    "cube_top": (0.62, 0.40),
     "pp": (0.50, 0.50),
     "rect_0": (0.20, 0.12),
     "rect_1": (0.80, 0.12),
@@ -74,9 +77,49 @@ def view_camera(context):
     return cam if cam is not None and cam.type == "CAMERA" else None
 
 
+def default_handles(settings) -> dict:
+    """Default guide layout. With a known focal length the first two vanishing
+    points sit on the centre line at +-focal from the centre, so the untouched
+    guides already agree with the camera."""
+    layout = dict(HANDLE_DEFAULTS)
+    w, h = image_size(settings)
+    focal = known_focal_px(settings) if w and h else None
+    if not focal:
+        return layout
+    for index, side in ((1, 1.0), (2, -1.0)):
+        vp = (0.5 + side * focal / w, 0.5)
+        for line in "12":
+            a = HANDLE_DEFAULTS[f"vp{index}_{line}a"]
+            t = min(0.6, 0.3 / abs(vp[0] - a[0]))
+            layout[f"vp{index}_{line}b"] = (a[0] + t * (vp[0] - a[0]), a[1] + t * (vp[1] - a[1]))
+    layout.update(_default_rectangle(settings, focal, w, h))
+    return layout
+
+
+def _default_rectangle(settings, focal, w, h) -> dict:
+    """Corners of the known rectangle lying on the floor in the lower part of the
+    image, seen 20 degrees from grazing by a camera with ``focal``."""
+    below = math.atan(0.22 * h / focal)  # centre of the rectangle under the image centre
+    tilt = math.radians(20.0) - below  # camera pitch down (negative: up)
+    aspect = settings.rect_height / settings.rect_width if settings.rect_width > 0.0 else 1.0
+    side = 0.5 * w / focal
+    centre = np.array([0.0, -0.22 * h, -focal])
+    centre /= np.linalg.norm(centre)
+    away = np.array([0.0, math.sin(tilt), -math.cos(tilt)]) * min(aspect, 2.0)
+    corners = {}
+    for _ in range(12):  # a wide lens shows the near side large: shrink to fit
+        for i, (a, b) in enumerate(((-1, -1), (1, -1), (1, 1), (-1, 1))):
+            x, y, z = centre + side / 2.0 * (a * np.array([1.0, 0.0, 0.0]) + b * away)
+            corners[f"rect_{i}"] = (0.5 + focal * x / -z / w, 0.5 + focal * y / -z / h)
+        if all(0.03 <= c <= 0.97 for co in corners.values() for c in co):
+            break
+        side *= 0.8
+    return corners
+
+
 def ensure_handles(settings) -> None:
     present = {h.name for h in settings.handles}
-    for key, co in HANDLE_DEFAULTS.items():
+    for key, co in default_handles(settings).items():
         if key not in present:
             item = settings.handles.add()
             item.name = key
@@ -97,7 +140,7 @@ def set_handle(settings, key, co) -> None:
 
 
 def reset_handles(settings) -> None:
-    for key, co in HANDLE_DEFAULTS.items():
+    for key, co in default_handles(settings).items():
         set_handle(settings, key, co)
 
 
@@ -135,17 +178,30 @@ def active_handle_keys(settings) -> list[str]:
         keys.append("origin")
         if settings.scale_mode == "REFERENCE":
             keys += ["ref_a", "ref_b"]
-        if settings.pp_mode == "MANUAL":
-            keys.append("pp")
     elif settings.mode == "RECT":
         keys += [f"rect_{i}" for i in range(4)]
-        if settings.pp_mode == "MANUAL":
-            keys.append("pp")
     else:
         keys += ["hz_a", "hz_b"]
-        if settings.pp_mode == "MANUAL":
-            keys.append("pp")
+    if cube_visible(settings):
+        keys.append("cube_base")
+    if cube_scales(settings):
+        keys.append("cube_top")
+    if settings.pp_mode == "MANUAL":
+        keys.append("pp")
     return keys
+
+
+def cube_scales(settings) -> bool:
+    """The scale cube sets the scene scale (otherwise it is only a visual check)."""
+    return settings.mode == "VP" and settings.scale_mode == "CUBE"
+
+
+def cube_visible(settings) -> bool:
+    return settings.show_cube or cube_scales(settings)
+
+
+def cube_size(settings) -> float:
+    return settings.cube_custom if settings.cube_size == "CUSTOM" else float(settings.cube_size)
 
 
 # ----------------------------------------------------------------------------
@@ -185,6 +241,32 @@ def mode_needs_focal(settings) -> bool:
     return settings.mode == "HORIZON" or (settings.mode == "VP" and settings.vp_count == "1")
 
 
+def focal_source(settings) -> str:
+    """How the focal length is used: "KNOWN" (fixed), "AUTO" (known, refined by
+    the guides) or "SOLVE" (from the guides only)."""
+    if mode_needs_focal(settings):
+        return "KNOWN"
+    if settings.focal_mode == "AUTO":
+        pp_solved = settings.mode == "VP" and settings.vp_count == "3" and settings.pp_mode == "SOLVE"
+        if pp_solved or known_focal_px(settings) is None:
+            return "SOLVE"
+    return settings.focal_mode
+
+
+def _focal_inputs(settings) -> dict:
+    """``focal_px`` / ``known_focal_px`` solver arguments for 2-3 vanishing points
+    and the rectangle."""
+    source = focal_source(settings)
+    if source == "KNOWN":
+        focal = known_focal_px(settings)
+        if focal is None:
+            raise SolverError("the focal length is unknown: enter it in Camera Data")
+        return {"focal_px": focal}
+    if source == "AUTO":
+        return {"known_focal_px": known_focal_px(settings)}
+    return {}
+
+
 # ----------------------------------------------------------------------------
 # Solving
 
@@ -217,50 +299,46 @@ def solve(settings, overrides: dict | None = None) -> CameraSolution:
             lines.append([(a1, b1), (a2, b2)])
         axes = [settings.vp1_axis, settings.vp2_axis, settings.vp3_axis][: max(count, 2)]
         axis2_line = third_line = None
-        focal = None
-        if count >= 2 and settings.use_known_focal:
-            focal = known_focal_px(settings)
-            if focal is None:
-                raise SolverError("the focal length is unknown: enter it in Camera Data")
+        focal = _focal_inputs(settings) if count >= 2 else {}
         if count == 2 and settings.use_third_line:
             third_line = tuple(_points(settings, ["vp3_1a", "vp3_1b"]))
         if count == 1:
-            focal = known_focal_px(settings)
-            if focal is None:
+            focal = {"focal_px": known_focal_px(settings)}
+            if focal["focal_px"] is None:
                 raise SolverError("one vanishing point needs the focal length: enter it in Camera Data")
             a, b = _points(settings, ["hz_a", "hz_b"])
             axis2_line = (a, b)
-        reference = None
+        reference = cube = None
         if settings.scale_mode == "REFERENCE":
             ra, rb = _points(settings, ["ref_a", "ref_b"])
             reference = ReferenceDistance(settings.ref_axis, ra, rb, settings.ref_length)
+        else:
+            base, top = _points(settings, ["cube_base", "cube_top"])
+            cube = ScaleCube(base, top, cube_size(settings), reference_plane(settings))
         return solve_vanishing_points(
             lines,
             axes,
             size,
             principal_point=pp,
             solve_principal_point=count == 3 and settings.pp_mode == "SOLVE",
-            focal_px=focal,
+            **focal,
             axis2_line=axis2_line,
             third_axis_line=third_line,
             origin=at("origin"),
-            camera_distance=settings.camera_distance,
             reference=reference,
+            cube=cube,
             **common,
         )
 
     if settings.mode == "RECT":
-        focal = known_focal_px(settings) if settings.use_known_focal else None
-        if settings.use_known_focal and focal is None:
-            raise SolverError("the focal length is unknown: enter it in Camera Data")
         return solve_rectangle(
             _points(settings, [f"rect_{i}" for i in range(4)]),
             settings.rect_width,
             settings.rect_height,
             size,
             principal_point=pp,
-            focal_px=focal,
             plane=reference_plane(settings),
+            **_focal_inputs(settings),
             **common,
         )
 
@@ -284,13 +362,15 @@ def solve(settings, overrides: dict | None = None) -> CameraSolution:
 
 
 # Handles that only place or scale the result, not its orientation or focal length.
-_POSE_ONLY_KEYS = {"origin", "ref_a", "ref_b", "pp"}
+_POSE_ONLY_KEYS = {"origin", "ref_a", "ref_b", "cube_base", "cube_top", "pp"}
 # Assumed placement error of a handle, as a fraction of the long image side.
 PLACEMENT_ERROR = 1e-3
 UNSTABLE_FOCAL = 0.05
 # Guide misfit (degrees) above which the guides and the camera disagree.
 MISFIT_KNOWN_FOCAL_DEG = 1.0
 MISFIT_DEG = 2.0
+# Change of a known focal length by the guides worth pointing out.
+FOCAL_SHIFT = 0.15
 UNSTABLE_ANGLE_DEG = 1.0
 
 
@@ -377,8 +457,10 @@ def _store_results(settings, solution: CameraSolution | None, error: str) -> Non
     res.focal_error = min(focal_err, 10.0)
     res.angle_error = min(angle_err, 180.0)
     # A known focal length is an input, not something the guides can destabilise.
-    focal_solved = not (mode_needs_focal(settings) or settings.use_known_focal)
+    source = focal_source(settings)
+    focal_solved = source != "KNOWN"
     res.focal_solved = focal_solved
+    res.focal_shift = solution.focal_px / known_focal_px(settings) - 1.0 if source == "AUTO" else 0.0
     if (focal_solved and focal_err > UNSTABLE_FOCAL) or angle_err > UNSTABLE_ANGLE_DEG:
         warnings.insert(
             0,
@@ -386,13 +468,18 @@ def _store_results(settings, solution: CameraSolution | None, error: str) -> Non
             "use longer guides further apart, add a third axis line or a third vanishing point, "
             "or use the known focal length",
         )
-    focal_fixed = mode_needs_focal(settings) or settings.use_known_focal
     res.guide_misfit = math.radians(solution.guide_misfit)
-    if focal_fixed and solution.guide_misfit > MISFIT_KNOWN_FOCAL_DEG:
+    if source == "KNOWN" and solution.guide_misfit > MISFIT_KNOWN_FOCAL_DEG:
         warnings.insert(
             0,
             f"the guides disagree with the known focal length by up to {solution.guide_misfit:.1f}°: "
             "the photo may be cropped or zoomed, try solving the focal length",
+        )
+    elif abs(res.focal_shift) > FOCAL_SHIFT:
+        warnings.insert(
+            0,
+            f"the guides overrule the known focal length ({100 * res.focal_shift:+.0f}%): "
+            "the photo is probably cropped or zoomed",
         )
     elif solution.guide_misfit > MISFIT_DEG:
         warnings.insert(

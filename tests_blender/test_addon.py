@@ -217,7 +217,7 @@ def rectangle_and_horizon_modes_solve():
     s = cam.data.ftc
     s.mode = "RECT"
     assert s.results.valid, s.results.error
-    s.use_known_focal = True
+    s.focal_mode = "KNOWN"
     assert s.results.valid, s.results.error
     s.mode = "HORIZON"
     s.camera_height = 1.7
@@ -262,13 +262,20 @@ def uncertainty_flags_far_vanishing_points():
             calibrate.set_handle(s, key, norm(p))
 
     with calibrate.suspended():
-        s.mode, s.vp_count, s.vp1_axis, s.vp2_axis = "VP", "2", "+X", "-Z"
+        s.mode, s.vp_count, s.vp1_axis, s.vp2_axis, s.focal_mode = "VP", "2", "+X", "-Z", "SOLVE"
         place(1, "wall_door_bottom", "wall_threshold")
         place(2, "vertical_left_jamb", "vertical_right_jamb")
     calibrate.refresh(cam.data)
     assert s.results.valid, s.results.error
     assert s.results.focal_error > 0.05, s.results.focal_error
     assert "unstable" in s.results.warnings
+    # The default, EXIF focal refined by the guides: the far wall can no longer move it.
+    unstable = s.results.angle_error
+    s.focal_mode = "AUTO"
+    assert s.results.valid, s.results.error
+    assert s.results.angle_error < unstable / 3, (s.results.angle_error, unstable)
+    assert abs(s.results.focal_shift) < 0.05, s.results.focal_shift
+    s.focal_mode = "SOLVE"
 
     # EXIF 5.9 mm / 25 mm-eq on a square crop of a 4:3 sensor: ~2960 px.
     assert abs(calibrate.known_focal_px(s) - 2964) < 15, calibrate.known_focal_px(s)
@@ -287,7 +294,7 @@ def uncertainty_flags_far_vanishing_points():
     # Two floor directions + one vertical line + the EXIF focal: stable too.
     with calibrate.suspended():
         s.vp_count, s.vp1_axis, s.vp2_axis = "2", "+X", "-Y"
-        s.use_third_line, s.use_known_focal = True, True
+        s.use_third_line, s.focal_mode = True, "KNOWN"
         place(1, "tile_across_c", "tile_across_d")
         place(2, "tile_depth_a", "tile_depth_b")
         calibrate.set_handle(s, "vp3_1a", norm(lines["vertical_right_jamb"][0]))
@@ -306,12 +313,74 @@ def uncertainty_flags_far_vanishing_points():
 def live_writes_only_in_session_or_apply():
     fresh_scene()
     cam = load(write_photo("live.jpg", (1200, 800)))
+    s = cam.data.ftc
+    assert s.scale_mode == "CUBE" and s.cube_size == "1"
+    distance = s.results.distance
     before = cam.matrix_world.copy()
-    cam.data.ftc.camera_distance = 25.0  # no session: results only
+    s.cube_size = "2"  # no session: results only
     assert cam.matrix_world == before
+    assert abs(s.results.distance - 2.0 * distance) < 1e-6 * distance
     assert bpy.ops.ftc.apply() == {"FINISHED"}
     assert cam.matrix_world != before
-    assert abs(cam.matrix_world.translation.length - 25.0) < 1e-3
+    assert abs(cam.matrix_world.translation.length - 2.0 * distance) < 1e-6 * distance
+
+
+@test
+def scale_cube_sets_the_scale():
+    """A 1.5 m cube on the floor of the synthetic scene gives Blender's projection
+    back; its top handle is shown on the top of the vertical edge."""
+    draw = importlib.import_module(PKG + ".draw")
+    scene, cam, syn = _calibrated_camera((1920, 1080))
+    s = cam.data.ftc
+    w, h = syn.image_size
+
+    def norm(p):
+        return (float(p[0] / w), float(p[1] / h))
+
+    calibrate.set_handle(s, "cube_base", norm(syn.project([1.0, 0.5, 0.0])[0]))
+    top = norm(syn.project([1.0, 0.5, 1.5])[0])
+    calibrate.set_handle(s, "cube_top", top)
+    with calibrate.suspended():
+        s.scale_mode, s.cube_size, s.cube_custom = "CUBE", "CUSTOM", 1.5
+    solution = calibrate.update(bpy.context, cam, apply=True)
+    assert solution is not None, s.results.error
+    assert {"cube_base", "cube_top"} <= set(calibrate.active_handle_keys(s))
+    shown = draw.handle_co(s, solution, "cube_top")
+    assert math.dist(shown, top) < 1e-3, (shown, top)
+    check_projection(scene, cam, syn)
+
+    # Elsewhere the cube is only a visual check: its base moves, nothing scales.
+    s.mode = "RECT"
+    keys = calibrate.active_handle_keys(s)
+    assert "cube_base" in keys and "cube_top" not in keys
+    s.show_cube = False
+    assert "cube_base" not in calibrate.active_handle_keys(s)
+
+
+@test
+def flip_axis_buttons_keep_a_right_handed_world():
+    draw = importlib.import_module(PKG + ".draw")
+    scene, cam, syn = _calibrated_camera((1920, 1080))
+    s = cam.data.ftc
+    assert draw.third_axis("+X", "+Y") == "+Z" and draw.third_axis("+Y", "+X") == "-Z"
+    assert draw.third_axis("-X", "+Z") == "+Y"
+    assert bpy.ops.ftc.flip_axis(index=1) == {"FINISHED"}
+    assert (s.vp1_axis, s.vp2_axis) == ("-X", "+Y")
+    assert bpy.ops.ftc.flip_axis(index=3) == {"FINISHED"}  # Z flips with axis 2
+    assert (s.vp1_axis, s.vp2_axis) == ("-X", "-Y")
+    s.vp2_axis = "+Z"
+    assert bpy.ops.ftc.flip_axis(index=3) == {"FINISHED"}  # axis 2 is Z: axis 1 flips
+    assert (s.vp1_axis, s.vp2_axis) == ("+X", "+Z")
+
+    # The third axis arrow follows the solved camera, not the handle order.
+    s.vp1_axis, s.vp2_axis, s.use_third_line = "+X", "+Y", True
+    w, h = syn.image_size
+    bottom, top = (tuple(syn.project(p)[0] / (w, h)) for p in ([0, 0, 0], [0, 0, 1]))
+    calibrate.set_handle(s, "vp3_1a", bottom)
+    calibrate.set_handle(s, "vp3_1b", top)
+    solution = calibrate.refresh(cam.data)
+    assert not draw.runs_backwards(s, solution, "+Z", "vp3_1a", "vp3_1b")
+    assert draw.runs_backwards(s, solution, "+Z", "vp3_1b", "vp3_1a")
 
 
 @test
@@ -403,7 +472,7 @@ def overlay_draws_in_every_mode():
     view = draw.View(20.0, 20.0, 380.0, 222.5, (1920, 1080))
     configs = [
         {"mode": "VP", "vp_count": "2", "scale_mode": "REFERENCE"},
-        {"mode": "VP", "vp_count": "3", "scale_mode": "DISTANCE", "freeze": True},
+        {"mode": "VP", "vp_count": "3", "scale_mode": "CUBE", "freeze": True},
         {"mode": "VP", "vp_count": "1", "pp_mode": "MANUAL"},
         {"mode": "RECT", "freeze": False},
         {"mode": "HORIZON"},
@@ -503,6 +572,7 @@ def every_button_has_a_tooltip():
         "align_clear",
         "align_rotate",
         "align_flip",
+        "flip_axis",
         "move_along_view",
     ):
         if not getattr(bpy.ops.ftc, op).get_rna_type().description.strip():

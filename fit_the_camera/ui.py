@@ -9,7 +9,7 @@ from bpy.app.translations import pgettext_iface as iface_
 from bpy.types import Panel
 
 from . import calibrate
-from .draw import remaining_axis
+from .draw import remaining_axis, third_axis
 from .exif import is_native_aspect
 from .ops_load import background_for
 from .ops_modal import FTC_OT_calibrate
@@ -41,6 +41,34 @@ def info_row(layout, label, value, alert=False):
     split.alert = alert
     split.label(text=label)
     split.label(text=value)
+
+
+def draw_cube_size(layout, settings):
+    layout.prop(settings, "cube_size")
+    if settings.cube_size == "CUSTOM":
+        layout.prop(settings, "cube_custom")
+
+
+def axis_row(layout, settings, index, label):
+    """Axis of a guide group with its flip button; the third axis is derived."""
+    row = layout.row(align=True)
+    if index == 3:
+        split = row.split(factor=0.4)
+        sub = split.row()
+        sub.alignment = "RIGHT"
+        sub.label(text=label)
+        split.label(text=third_axis(settings.vp1_axis, settings.vp2_axis))
+    else:
+        row.prop(settings, f"vp{index}_axis", text=label)
+    row.operator("ftc.flip_axis", text="", icon="ARROW_LEFTRIGHT").index = index
+
+
+def draw_focal_mode(layout, settings, has_focal):
+    layout.prop(settings, "focal_mode")
+    if not has_focal and settings.focal_mode == "AUTO":
+        layout.label(text="Focal length unknown: solved from the guides", icon="INFO")
+    elif not has_focal and settings.focal_mode == "KNOWN":
+        layout.label(text="Needs the focal length (Camera Data)", icon="ERROR")
 
 
 class FTC_PT_main(Panel):
@@ -146,21 +174,19 @@ class FTC_PT_main(Panel):
             row.prop_enum(settings, "vp_count", "2")
             row.prop_enum(settings, "vp_count", "3")
             count = int(settings.vp_count)
-            col.prop(settings, "vp1_axis", text=iface_("Axis 1"))
-            col.prop(settings, "vp2_axis", text=iface_("Axis 2 Line") if count == 1 else iface_("Axis 2"))
-            if count == 3:
-                info_row(col, iface_("Axis 3"), remaining_axis(settings.vp1_axis, settings.vp2_axis))
+            axis_row(col, settings, 1, iface_("Axis 1"))
+            axis_row(col, settings, 2, iface_("Axis 2 Line") if count == 1 else iface_("Axis 2"))
+            if count >= 2:
+                axis_row(col, settings, 3, iface_("Axis 3"))
             if count == 2:
                 third = remaining_axis(settings.vp1_axis, settings.vp2_axis)
                 col.prop(settings, "use_third_line", text=iface_("Third Axis Line") + f" ({third})")
             if count >= 2:
-                sub = col.row()
-                sub.enabled = has_focal
-                sub.prop(settings, "use_known_focal")
+                draw_focal_mode(col, settings, has_focal)
             col.separator()
             col.prop(settings, "scale_mode")
-            if settings.scale_mode == "DISTANCE":
-                col.prop(settings, "camera_distance")
+            if settings.scale_mode == "CUBE":
+                draw_cube_size(col, settings)
             else:
                 col.prop(settings, "ref_axis")
                 col.prop(settings, "ref_length")
@@ -172,9 +198,7 @@ class FTC_PT_main(Panel):
         elif settings.mode == "RECT":
             col.prop(settings, "rect_width")
             col.prop(settings, "rect_height")
-            sub = col.row()
-            sub.enabled = has_focal
-            sub.prop(settings, "use_known_focal")
+            draw_focal_mode(col, settings, has_focal)
             col.prop(settings, "pp_mode")
         else:
             col.prop(settings, "camera_height")
@@ -245,6 +269,15 @@ class FTC_PT_main(Panel):
         sub = row.row()
         sub.active = settings.show_grid
         sub.prop(settings, "grid_opacity", text="", slider=True)
+        if not calibrate.cube_scales(settings):
+            # When the cube sets the scale it is always shown, with its size above.
+            row = body.row(heading="Scale Cube")
+            row.prop(settings, "show_cube", text="")
+            sub = row.row(align=True)
+            sub.active = settings.show_cube
+            sub.prop(settings, "cube_size", text="")
+            if settings.cube_size == "CUSTOM":
+                sub.prop(settings, "cube_custom", text="")
 
     def draw_results(self, context, layout, settings):
         header, body = layout.panel("ftc_results", default_closed=False)
@@ -264,6 +297,8 @@ class FTC_PT_main(Panel):
         if res.focal_solved:
             focal += f"  ±{100 * res.focal_error:.1f}%"
         info_row(col, iface_("Focal Length"), focal, alert=res.focal_solved and res.focal_error > 0.05)
+        if calibrate.focal_source(settings) == "AUTO":
+            info_row(col, iface_("vs Known"), f"{100 * res.focal_shift:+.1f}%", alert=abs(res.focal_shift) > 0.15)
         info_row(col, iface_("Orientation"), f"±{res.angle_error:.2f}°", alert=res.angle_error > 1.0)
         if settings.mode == "VP":
             misfit = math.degrees(res.guide_misfit)

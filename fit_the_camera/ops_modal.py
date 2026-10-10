@@ -8,6 +8,7 @@ import math
 import bpy
 from bpy.app.handlers import persistent
 from bpy.app.translations import pgettext_iface as iface_
+from bpy.props import IntProperty
 from bpy.types import Operator
 
 from . import calibrate, draw
@@ -118,6 +119,19 @@ def flip(axis: str) -> str:
     return ("-" if axis.startswith("+") else "+") + axis[1:]
 
 
+def flip_axis(settings, index: int) -> None:
+    """Flip axis ``index`` (1-3) of the vanishing point guides.
+
+    The world is right-handed, so the third axis follows from the first two:
+    flipping it flips axis 2, or axis 1 when axis 2 is Z, keeping Z where it is.
+    """
+    if index == 3:
+        index = 1 if settings.vp2_axis[1] == "Z" else 2
+    attr = f"vp{index}_axis"
+    with calibrate.suspended():
+        setattr(settings, attr, flip(getattr(settings, attr)))
+
+
 class FTC_OT_calibrate(Operator):
     """Edit the calibration guides in the camera view"""
 
@@ -207,12 +221,12 @@ class FTC_OT_calibrate(Operator):
     def pick(self, settings, view, mouse) -> str | None:
         radius = draw.PICK_RADIUS * draw.ui_scale()
         best, best_d = None, radius
+        solution = calibrate.cached_solution(settings.id_data)
         if not settings.freeze:
             for key in calibrate.active_handle_keys(settings):
-                d = math.dist(view.to_region(calibrate.handle(settings, key)), mouse)
+                d = math.dist(view.to_region(draw.handle_co(settings, solution, key)), mouse)
                 if d < best_d:
                     best, best_d = key, d
-        solution = calibrate.cached_solution(bpy.data.objects[FTC_OT_calibrate._session.camera_name].data)
         if solution is not None and best is None and not settings.freeze:
             ph = draw.pitch_handle_px(solution)
             if ph is not None and math.dist(view.px_to_region(ph), mouse) < radius * 1.2:
@@ -225,7 +239,7 @@ class FTC_OT_calibrate(Operator):
         for other in calibrate.active_handle_keys(settings):
             if other == key:
                 continue
-            p = view.to_region(calibrate.handle(settings, other))
+            p = view.to_region(draw.handle_co(settings, calibrate.cached_solution(settings.id_data), other))
             d = math.dist(p, pos)
             if d < best_d:
                 best, best_d = p, d
@@ -345,10 +359,7 @@ class FTC_OT_calibrate(Operator):
         if event.type == "F" and not event.ctrl:
             self.push_undo(session, snapshot(settings))
             if settings.mode == "VP":
-                # The third axis is derived: flipping applies to the first two only.
-                attr = f"vp{min(session.active_vp, 1) + 1}_axis"
-                with calibrate.suspended():
-                    setattr(settings, attr, flip(getattr(settings, attr)))
+                flip_axis(settings, session.active_vp + 1)
             elif settings.mode == "RECT":
                 # Move the first corner to the next vertex.
                 cos = [calibrate.handle(settings, f"rect_{i}") for i in range(4)]
@@ -405,7 +416,9 @@ class FTC_OT_calibrate(Operator):
         session.last_mouse = mouse
         if event.shift:
             dx, dy = dx * FINE_FACTOR, dy * FINE_FACTOR
-        pos = view.to_region(calibrate.handle(settings, session.drag_key))
+        # Shown position: the cube's top handle stays on the cube's vertical edge.
+        solution = calibrate.cached_solution(cam_obj.data)
+        pos = view.to_region(draw.handle_co(settings, solution, session.drag_key))
         pos = (pos[0] + dx, pos[1] + dy)
         if event.ctrl:
             target = self.snap_target(settings, view, session.drag_key, mouse)
@@ -468,7 +481,41 @@ class FTC_OT_reset(Operator):
         return {"FINISHED"}
 
 
-classes = (FTC_OT_calibrate, FTC_OT_apply, FTC_OT_reset)
+class FTC_OT_flip_axis(Operator):
+    """Flip the direction of this axis"""
+
+    bl_idname = "ftc.flip_axis"
+    bl_label = "Flip Axis"
+    bl_options = {"REGISTER", "UNDO"}
+
+    index: IntProperty(name="Axis", min=1, max=3, default=1, options={"SKIP_SAVE"})
+
+    @classmethod
+    def poll(cls, context):
+        return _panel_camera(context) is not None
+
+    @classmethod
+    def description(cls, context, properties):
+        if properties.index == 3:
+            return (
+                "Flip the third axis. It follows from the first two (the world is right-handed): "
+                "axis 2 flips with it, or axis 1 when axis 2 is Z"
+            )
+        return "Flip the direction of this axis (the arrow on its first guide)"
+
+    def execute(self, context):
+        cam_obj = _panel_camera(context)
+        settings = cam_obj.data.ftc
+        session = FTC_OT_calibrate._session
+        if session is not None and session.camera_name == cam_obj.name:
+            session.undo.append(snapshot(settings))
+            session.redo.clear()
+        flip_axis(settings, self.index)
+        calibrate.settings_changed(cam_obj.data, context, reset_pitch=True)
+        return {"FINISHED"}
+
+
+classes = (FTC_OT_calibrate, FTC_OT_apply, FTC_OT_reset, FTC_OT_flip_axis)
 
 
 def end_session() -> None:

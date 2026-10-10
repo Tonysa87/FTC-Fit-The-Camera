@@ -22,6 +22,11 @@ Sidebar del viewport (N) › tab **FTC**.
    viewport camera). Scorciatoie nell'header: trascina = sposta maniglia,
    Shift = fine, Ctrl = snap, 1/2/3 = asse, F = inverti verso, H = raddrizza,
    Ctrl+Z / Ctrl+Shift+Z = undo/redo interni, Invio = applica, Esc/RMB = esci.
+   Accanto a ogni asse un pulsante ne inverte il verso.
+   **Focale**: *Nota + guide* (default: parte dalla focale di Camera Data e le guide
+   la correggono per quanto la misurano; se è sconosciuta la risolvono), *Solo
+   guide*, *Solo nota*. **Scala**: *Cubo di scala* (default) o *Misura di
+   riferimento*.
 4. **Align to Scene** – porta il piano calibrato (XY, XZ, YZ) sul 3D cursor, sulla
    faccia attiva (Edit Mode) o sull'oggetto attivo; Ruota 90° / Inverti.
 5. **Results** – focale, FOV, altezza, angoli, **incertezza** (focale ± %,
@@ -34,25 +39,40 @@ Sidebar del viewport (N) › tab **FTC**.
 | Modalità | Input | Note |
 | --- | --- | --- |
 | Punti di fuga 1 | 2 guide per l'asse 1 + una linea lungo l'asse 2 | richiede la focale |
-| Punti di fuga 2 | 2 guide per asse | opzioni: *Usa focale nota*, *Linea terzo asse* |
+| Punti di fuga 2 | 2 guide per asse | opzioni: focale, *Linea terzo asse* |
 | Punti di fuga 3 | 2 guide per asse | punto principale al centro (default), manuale o *Risolvi* (ortocentro, instabile) |
-| Rettangolo noto | 4 angoli, larghezza/altezza reali | su XY, XZ o YZ; focale nota opzionale |
+| Rettangolo noto | 4 angoli, larghezza/altezza reali | su XY, XZ o YZ; focale come sopra |
 | Orizzonte | linea d'orizzonte, altezza camera, yaw | richiede la focale |
+
+### Cubo di scala
+
+Un cubo wireframe di lato noto (10 cm … 10 m o misura personalizzata) appoggiato sul
+piano di riferimento, con gli spigoli nei colori degli assi. La maniglia alla base
+scorre sul piano (mettila ai piedi di un oggetto di altezza nota); quella in cima
+scorre lungo lo spigolo verticale: portala all'altezza dell'oggetto e la scala
+della scena si adegua. Con la *Misura di riferimento*, nel rettangolo noto e
+nell'orizzonte la scala è già nota e il cubo è solo un controllo visivo (si può
+nascondere in *Opacity*).
 
 ### Consigli (verificati su foto reali, vedi `tests/data`)
 
 - Il verso **+** di un asse va lungo la **prima** guida del gruppo, dalla prima alla
-  seconda maniglia (freccia sulla guida). F lo inverte.
+  seconda maniglia (freccia sulla guida). F o il pulsante accanto all'asse lo
+  invertono. Il terzo asse segue dai primi due (riferimento destrorso): invertirlo
+  inverte anche l'asse 2 (o l'1 se il 2 è Z); la sua freccia indica il verso reale.
 - Due punti di fuga **solo sul pavimento** non misurano la verticale: le estrusioni
   in Z possono deviare di gradi. Aggiungi la **Linea terzo asse** (uno stipite) o
-  usa 3 punti di fuga; con la focale nota l'incertezza scende sotto 1°.
+  usa 3 punti di fuga; con la focale nota (*Nota + guide*) l'incertezza scende
+  sotto 1°.
 - Un punto di fuga lontanissimo (parete quasi frontale) rende la focale
   indeterminabile: usa la focale nota o linee in un'altra direzione.
 - Le linee "che sembrano parallele" non sempre lo sono (binari luci, facciate di
   edifici diversi, fughe di piastrelle). Con 3 gruppi o la focale nota l'**aderenza
   guide** lo rivela.
-- La focale EXIF può essere sbagliata (foto zoomate o ritagliate): se le guide la
-  contraddicono compare un avviso; prova a far calcolare la focale.
+- La focale EXIF può essere sbagliata (foto zoomate o ritagliate). Con *Nota +
+  guide*, se le guide la contraddicono nettamente prevalgono loro e un avviso
+  riporta di quanto l'hanno cambiata (riga *Rispetto alla nota* nei risultati).
+  Due punti di fuga di cui uno lontano non bastano a scoprirlo: servono 3 gruppi.
 - **Raddrizza orizzonte** forza il rollio a 0: se la foto è inclinata la camera
   non segue più le guide (l'avviso indica quanti gradi ha tolto).
 

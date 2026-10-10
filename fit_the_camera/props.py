@@ -135,6 +135,8 @@ class FTC_Results(PropertyGroup):
     focal_error: FloatProperty(name="Focal Uncertainty", subtype="FACTOR")
     angle_error: FloatProperty(name="Angle Uncertainty")
     focal_solved: BoolProperty()
+    # Solved focal length / known one - 1, with "Known + Guides"; 0 otherwise.
+    focal_shift: FloatProperty()
     removed_roll: FloatProperty(name="Removed Roll", subtype="ANGLE")
     guide_misfit: FloatProperty(name="Guide Fit", subtype="ANGLE")
 
@@ -193,19 +195,46 @@ class FTC_Settings(PropertyGroup):
         name="Scale",
         description="How the real-world size of the scene is set",
         items=[
-            ("DISTANCE", "Camera Distance", "Distance from the camera to the origin"),
+            (
+                "CUBE",
+                "Scale Cube",
+                "A cube of known size standing on the reference plane: drag its top handle until it matches "
+                "something of that height in the photo",
+            ),
             ("REFERENCE", "Reference Distance", "A known length along an axis, starting from the origin line"),
         ],
-        default="DISTANCE",
+        default="CUBE",
         update=_changed,
     )
-    camera_distance: FloatProperty(
-        name="Camera Distance",
-        description="Distance from the camera to the origin handle",
-        default=10.0,
+    cube_size: EnumProperty(
+        name="Cube Size",
+        description="Edge length of the scale cube",
+        items=[
+            ("0.1", "10 cm", ""),
+            ("0.2", "20 cm", ""),
+            ("0.5", "50 cm", ""),
+            ("1", "1 m", ""),
+            ("2", "2 m", ""),
+            ("5", "5 m", ""),
+            ("10", "10 m", ""),
+            ("CUSTOM", "Custom Size", "Enter the edge length"),
+        ],
+        default="1",
+        update=_changed,
+    )
+    cube_custom: FloatProperty(
+        name="Custom Size",
+        description="Edge length of the scale cube",
+        default=1.0,
         min=1e-4,
         subtype="DISTANCE",
         unit="LENGTH",
+        update=_changed,
+    )
+    show_cube: BoolProperty(
+        name="Scale Cube",
+        description="Show the cube of known size on the reference plane, to check the scale by eye",
+        default=True,
         update=_changed,
     )
     ref_axis: EnumProperty(
@@ -243,13 +272,24 @@ class FTC_Settings(PropertyGroup):
         unit="LENGTH",
         update=_changed,
     )
-    use_known_focal: BoolProperty(
-        name="Use Known Focal Length",
-        description=(
-            "Use the focal length from the camera data instead of solving it: the guides then only set the "
-            "orientation, which is much more stable when a vanishing point is far away"
-        ),
-        default=False,
+    focal_mode: EnumProperty(
+        name="Focal Length",
+        description="Where the focal length comes from (vanishing points and rectangle)",
+        items=[
+            (
+                "AUTO",
+                "Known + Guides",
+                "Start from the focal length in Camera Data and let the guides correct it as far as they "
+                "measure it; when it is unknown, solve it from the guides",
+            ),
+            ("SOLVE", "Guides Only", "Solve the focal length from the guides, ignoring Camera Data"),
+            (
+                "KNOWN",
+                "Known Only",
+                "Use the focal length in Camera Data as it is: the guides only set the orientation",
+            ),
+        ],
+        default="AUTO",
         update=_changed,
     )
     use_third_line: BoolProperty(
@@ -327,7 +367,7 @@ class FTC_Settings(PropertyGroup):
 
     ref_plane: EnumProperty(
         name="Reference Plane",
-        description="Calibrated plane used for the rectangle, the grid and the scene alignment",
+        description="Calibrated plane used for the rectangle, the grid, the scale cube and the scene alignment",
         items=[
             ("XY", "XY", "Floor or any horizontal plane"),
             ("XZ", "XZ", "Wall facing -Y, with Z up"),
