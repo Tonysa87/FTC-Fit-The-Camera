@@ -1,0 +1,69 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+"""Italian translation of the interface (Preferences > Interface > Translation).
+
+Only add-on specific phrases are listed: registered translations apply to the
+whole interface, and generic words are already translated by Blender itself.
+"""
+
+import bpy
+
+_IT = {
+    # Operators
+    "Load Image": "Carica immagine",
+    "Make Upright Copy": "Crea copia raddrizzata",
+    "Calibrate": "Calibra",
+    "Stop Calibrating": "Termina calibrazione",
+    "Reset Guides": "Reset guide",
+    "Anchor to 3D Cursor": "Aggancia al 3D cursor",
+    # Camera data
+    "35 mm Equivalent": "Equivalente 35 mm",
+    "Sensor Width": "Larghezza sensore",
+    "From EXIF": "Da EXIF",
+    "Focal length": "Focale",
+    "Sensor size": "Dimensione sensore",
+    "{} not in the image metadata": "{} assente nei metadati dell'immagine",
+    "Look up the specifications of: {}": "Cerca le specifiche di: {}",
+    "Enter focal length + sensor width, or the 35 mm equivalent": (
+        "Inserisci focale + larghezza sensore, oppure l'equivalente 35 mm"
+    ),
+    "Image stored rotated (EXIF orientation {})": "Immagine salvata ruotata (orientamento EXIF {})",
+    "Active camera '{}' is not the view camera": "La camera attiva '{}' non è la camera di vista",
+    "No scene camera: load an image to create one": "Nessuna camera di scena: carica un'immagine per crearne una",
+    # Calibration
+    "Vanishing Points": "Punti di fuga",
+    "Known Rectangle": "Rettangolo noto",
+    "Axis 1": "Asse 1",
+    "Axis 2": "Asse 2",
+    "Axis 3": "Asse 3",
+    "Horizon Axis": "Asse orizzonte",
+    "Camera Distance": "Distanza camera",
+    "Reference Distance": "Misura di riferimento",
+    "Reference Axis": "Asse di riferimento",
+    "Reference Length": "Lunghezza di riferimento",
+    "Use Known Focal Length": "Usa focale nota",
+    "Camera Height": "Altezza camera",
+    "Principal Point": "Punto principale",
+    "Live Update": "Aggiornamento live",
+    "Freeze Guides": "Congela guide",
+    "Straighten Horizon": "Raddrizza orizzonte",
+    "Pitch Correction": "Correzione beccheggio",
+    "Grid Opacity": "Opacità griglia",
+    "Needs the focal length (Camera Data)": "Serve la focale (Dati camera)",
+    # Results
+    "Not solved": "Non risolto",
+    "Field of View": "Campo visivo",
+    # Move Along View
+    "Distance Factor": "Fattore distanza",
+    "Scale with Distance": "Scala con la distanza",
+}
+
+translations_dict = {"it_IT": {("*", en): it for en, it in _IT.items()}}
+translations_dict["it_IT"].update({("Operator", en): it for en, it in _IT.items()})
+
+
+def register():
+    bpy.app.translations.register(__package__, translations_dict)
+
+
+def unregister():
+    bpy.app.translations.unregister(__package__)
