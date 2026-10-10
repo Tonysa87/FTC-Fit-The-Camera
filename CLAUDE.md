@@ -6,7 +6,7 @@ Extensions audience) and `README.it.md` (Italian); developer docs
 `docs/PUBLISHING.md`. History: `docs/CHANGELOG.md`. Original spec: `FTC – Specifica addon Blender 5.2+.md` (says
 "Camera Match": the final name is **FTC**, package `fit_the_camera`, tab "FTC").
 
-## Status / next session (bookmark 2026-10-10, resume 2026-10-11)
+## Status / next session (bookmark 2026-10-10)
 - **v1.0.0** = 0.6.1 + Render section (Prepare Render, Object Roles with only
   Shadow Catcher / Holdout) + two audit rounds of fixes; Apply ends a session.
   The user is testing it on Windows (`docs/TEST_GUI.md`); fix what he reports.
