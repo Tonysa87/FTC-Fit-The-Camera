@@ -1,0 +1,131 @@
+{
+ "description": "Edges measured (sub-pixel) on a 3072x3072 phone photo of a lift door, upright, pixels with origin bottom-left. Camera has ~4-5 deg of real roll; tile joints are ~6 deg off the wall direction; the wall direction vanishes ~22000 px away.",
+ "image_size": [
+  3072,
+  3072
+ ],
+ "exif_focal_mm": 5.895,
+ "exif_focal_35mm": 25,
+ "lines": {
+  "vertical_left_jamb": [
+   [
+    386.1,
+    3011.5
+   ],
+   [
+    741.6,
+    372.9
+   ]
+  ],
+  "vertical_door_split": [
+   [
+    1654.9,
+    3012.3
+   ],
+   [
+    1492.0,
+    741.9
+   ]
+  ],
+  "vertical_right_door": [
+   [
+    2554.5,
+    3014.3
+   ],
+   [
+    2090.6,
+    874.0
+   ]
+  ],
+  "vertical_right_jamb": [
+   [
+    2965.7,
+    3008.9
+   ],
+   [
+    2281.2,
+    676.0
+   ]
+  ],
+  "wall_door_bottom": [
+   [
+    820.0,
+    561.9
+   ],
+   [
+    1472.9,
+    674.8
+   ]
+  ],
+  "wall_threshold": [
+   [
+    1511.0,
+    694.3
+   ],
+   [
+    2077.9,
+    792.3
+   ]
+  ],
+  "wall_right_skirting": [
+   [
+    2318.9,
+    728.1
+   ],
+   [
+    3047.2,
+    862.2
+   ]
+  ],
+  "wall_left_skirting": [
+   [
+    19.3,
+    306.0
+   ],
+   [
+    728.9,
+    428.3
+   ]
+  ],
+  "tile_depth_a": [
+   [
+    1497.4,
+    464.5
+   ],
+   [
+    1617.2,
+    107.7
+   ]
+  ],
+  "tile_depth_b": [
+   [
+    2082.9,
+    197.5
+   ],
+   [
+    2172.9,
+    9.3
+   ]
+  ],
+  "tile_across_c": [
+   [
+    1310.2,
+    438.2
+   ],
+   [
+    2121.8,
+    596.0
+   ]
+  ],
+  "tile_across_d": [
+   [
+    1312.2,
+    29.2
+   ],
+   [
+    2480.1,
+    296.7
+   ]
+  ]
+ }
+}

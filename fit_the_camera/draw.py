@@ -501,7 +501,8 @@ def draw_guides(view, settings, solution, session, unit_system):
         if not res.valid and res.error:
             text((view.x0 + 10 * s, view.y1 - 22 * s), res.error, ERROR_COLOR, 13.0)
         elif res.warnings:
-            text((view.x0 + 10 * s, view.y1 - 22 * s), res.warnings.splitlines()[0], HORIZON_COLOR, 12.0)
+            for i, line in enumerate(res.warnings.splitlines()):
+                text((view.x0 + 10 * s, view.y1 - (22 + 18 * i) * s), line, HORIZON_COLOR, 12.0)
     finally:
         gpu.state.blend_set("NONE")
 

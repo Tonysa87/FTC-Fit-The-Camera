@@ -241,6 +241,55 @@ def default_guides_give_camera_above_ground():
 
 
 @test
+def uncertainty_flags_far_vanishing_points():
+    """Real-photo edges: the wall direction vanishes ~22000 px away, so wall +
+    verticals is unstable; verticals + one wall line + the EXIF focal is stable."""
+    import json
+
+    with open(os.path.join(ROOT, "tests", "data", "elevator_lines.json")) as f:
+        data = json.load(f)
+    lines = data["lines"]
+    size = data["image_size"]
+    fresh_scene()
+    cam = load(write_photo("square.jpg", tuple(size), camera_tiff(focal=5.9, focal35=25)))
+    s = cam.data.ftc
+
+    def norm(p):
+        return (p[0] / size[0], p[1] / size[1])
+
+    def place(index, a, b):
+        for key, p in zip(calibrate.vp_keys(index), [*lines[a], *lines[b]]):
+            calibrate.set_handle(s, key, norm(p))
+
+    with calibrate.suspended():
+        s.mode, s.vp_count, s.vp1_axis, s.vp2_axis = "VP", "2", "+X", "-Z"
+        place(1, "wall_door_bottom", "wall_threshold")
+        place(2, "vertical_left_jamb", "vertical_right_jamb")
+    calibrate.refresh(cam.data)
+    assert s.results.valid, s.results.error
+    assert s.results.focal_error > 0.05, s.results.focal_error
+    assert "unstable" in s.results.warnings
+
+    # EXIF 5.9 mm / 25 mm-eq on a square crop of a 4:3 sensor: ~2960 px.
+    assert abs(calibrate.known_focal_px(s) - 2964) < 15, calibrate.known_focal_px(s)
+    with calibrate.suspended():
+        s.vp_count, s.vp1_axis, s.vp2_axis = "1", "-Z", "+X"
+        place(1, "vertical_left_jamb", "vertical_right_jamb")
+        calibrate.set_handle(s, "hz_a", norm(lines["wall_threshold"][0]))
+        calibrate.set_handle(s, "hz_b", norm(lines["wall_threshold"][1]))
+    calibrate.refresh(cam.data)
+    assert s.results.valid, s.results.error
+    assert s.results.angle_error < 1.0, s.results.angle_error
+    assert "unstable" not in s.results.warnings
+    assert abs(math.degrees(s.results.roll) - 4.0) < 0.5, math.degrees(s.results.roll)
+    assert abs(math.degrees(s.results.pitch) + 32.7) < 0.5, math.degrees(s.results.pitch)
+
+    s.straighten = True
+    assert math.degrees(abs(s.results.removed_roll)) > 1.0
+    assert "straighten" in s.results.warnings
+
+
+@test
 def live_writes_only_in_session_or_apply():
     fresh_scene()
     cam = load(write_photo("live.jpg", (1200, 800)))

@@ -9,6 +9,7 @@ from bpy.types import Panel
 
 from . import calibrate
 from .draw import remaining_axis
+from .exif import is_native_aspect
 from .ops_load import background_for
 from .ops_modal import FTC_OT_calibrate
 
@@ -94,6 +95,8 @@ class FTC_PT_main(Panel):
         if data.direction_ref:
             row.label(text=data.direction_ref)
 
+        if data.focal_35mm_state != "MISSING" and not is_native_aspect((data.image_width, data.image_height)):
+            body.label(text="Cropped image: 35 mm equivalent taken on the uncropped 4:3 sensor", icon="INFO")
         missing_focal = data.focal_mm_state == "MISSING" and data.focal_35mm_state == "MISSING"
         missing_sensor = data.sensor_mm_state == "MISSING" and data.focal_35mm_state == "MISSING"
         if missing_focal or missing_sensor:
@@ -134,7 +137,7 @@ class FTC_PT_main(Panel):
             row.prop_enum(settings, "vp_count", "3")
             count = int(settings.vp_count)
             col.prop(settings, "vp1_axis", text=iface_("Axis 1"))
-            col.prop(settings, "vp2_axis", text=iface_("Horizon Axis") if count == 1 else iface_("Axis 2"))
+            col.prop(settings, "vp2_axis", text=iface_("Axis 2 Line") if count == 1 else iface_("Axis 2"))
             if count == 3:
                 info_row(col, iface_("Axis 3"), remaining_axis(settings.vp1_axis, settings.vp2_axis))
             col.separator()
@@ -223,7 +226,11 @@ class FTC_PT_main(Panel):
             box = body.box()
             box.label(text=line, icon="ERROR")
         col = body.column(align=True)
-        info_row(col, iface_("Focal Length"), f"{res.lens:.2f} mm  ({res.focal_px:.0f} px)")
+        focal = f"{res.lens:.2f} mm  ({res.focal_px:.0f} px)"
+        if res.focal_solved:
+            focal += f"  ±{100 * res.focal_error:.1f}%"
+        info_row(col, iface_("Focal Length"), focal, alert=res.focal_solved and res.focal_error > 0.05)
+        info_row(col, iface_("Orientation"), f"±{res.angle_error:.2f}°", alert=res.angle_error > 1.0)
         info_row(col, iface_("Sensor"), f"{res.sensor:.2f} mm")
         info_row(col, iface_("Field of View"), f"{math.degrees(res.fov_h):.2f}° × {math.degrees(res.fov_v):.2f}°")
         unit = context.scene.unit_settings.system
@@ -232,6 +239,8 @@ class FTC_PT_main(Panel):
         info_row(col, iface_("Pitch"), f"{math.degrees(res.pitch):.2f}°")
         info_row(col, iface_("Roll"), f"{math.degrees(res.roll):.2f}°")
         info_row(col, iface_("Yaw"), f"{math.degrees(res.yaw):.2f}°")
+        if settings.straighten:
+            info_row(col, iface_("Removed Roll"), f"{math.degrees(res.removed_roll):+.2f}°", alert=True)
 
     def draw_tools(self, context, layout):
         header, body = layout.panel("ftc_tools", default_closed=True)

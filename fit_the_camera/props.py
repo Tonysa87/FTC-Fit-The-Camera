@@ -126,6 +126,10 @@ class FTC_Results(PropertyGroup):
     pitch: FloatProperty(name="Pitch", subtype="ANGLE")
     roll: FloatProperty(name="Roll", subtype="ANGLE")
     yaw: FloatProperty(name="Yaw", subtype="ANGLE")
+    focal_error: FloatProperty(name="Focal Uncertainty", subtype="FACTOR")
+    angle_error: FloatProperty(name="Angle Uncertainty")
+    focal_solved: BoolProperty()
+    removed_roll: FloatProperty(name="Removed Roll", subtype="ANGLE")
 
 
 class FTC_Settings(PropertyGroup):

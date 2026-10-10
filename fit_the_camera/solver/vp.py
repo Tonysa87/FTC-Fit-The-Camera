@@ -58,28 +58,31 @@ def focal_from_two_vps(v1, v2, p) -> float:
     return float(np.sqrt(f2))
 
 
-def second_axis_from_horizon(d1, v1_h, horizon_dir, p, f) -> np.ndarray:
-    """Direction orthogonal to ``d1`` whose vanishing point lies on the image line
-    through the first vanishing point with direction ``horizon_dir``.
+def second_axis_from_line(d1, line, p, f) -> np.ndarray:
+    """Direction of the second axis from one image segment parallel to it.
 
-    The returned direction is oriented so that its image moves along ``horizon_dir``.
+    The second axis is orthogonal to ``d1``, so its vanishing point lies on the
+    vanishing line of the planes orthogonal to ``d1``: the points ``q`` with
+    ``(q - p, -f) . d1 = 0``. It is where the segment's line crosses it. Like the
+    other vanishing points, the result points in front of the camera; when the
+    crossing is at infinity it follows the segment from its first to its second end.
     """
-    h = np.asarray(horizon_dir, dtype=float)
-    if np.linalg.norm(h) < 1e-9:
-        raise SolverError("the horizon direction has zero length")
-    h = h / np.linalg.norm(h)
-    # Back-projected plane of the image line through v1 with direction h.
-    normal = np.cross(homogeneous_ray(v1_h, p, f), [h[0], h[1], 0.0])
-    d2 = np.cross(normal, d1)
+    a, b = (np.asarray(v, dtype=float) for v in line)
+    u = b - a
+    if np.linalg.norm(u) < 1e-9:
+        raise SolverError("the second axis line has zero length")
+    den = u @ d1[:2]
+    t = (f * d1[2] - (a - p) @ d1[:2]) / den if abs(den) > 1e-12 * np.linalg.norm(u) else None
+    if t is None or abs(t) * np.linalg.norm(u) > 1e9 * f:
+        d2 = np.array([u[0], u[1], 0.0])
+    else:
+        q = a + t * u
+        d2 = np.array([q[0] - p[0], q[1] - p[1], -f])
+    d2 -= (d2 @ d1) * d1
     n = np.linalg.norm(d2)
     if n < 1e-9:
-        raise SolverError("the horizon line passes through the principal point direction")
-    d2 /= n
-    # Image displacement of a point moving along d2 from the first vanishing point
-    # direction, used only to pick the sign.
-    if d2[:2] @ h < 0.0:
-        d2 = -d2
-    return d2
+        raise SolverError("the second axis line points at the first vanishing point")
+    return d2 / n
 
 
 def solve_vanishing_points(
@@ -89,7 +92,7 @@ def solve_vanishing_points(
     *,
     principal_point=None,
     focal_px: float | None = None,
-    horizon_dir=None,
+    axis2_line=None,
     origin=None,
     camera_distance: float = 10.0,
     reference: ReferenceDistance | None = None,
@@ -100,8 +103,9 @@ def solve_vanishing_points(
 
     * ``vp_lines``: one list of segments per vanishing point.
     * ``axes``: world axis of each vanishing point. With one vanishing point the
-      second entry is the axis of ``horizon_dir``.
-    * 1 point: ``focal_px`` and ``horizon_dir`` are required.
+      second entry is the axis of ``axis2_line``.
+    * 1 point: ``focal_px`` and ``axis2_line`` (one segment parallel to the second
+      axis) are required.
     * 2 points: the focal length is solved, the principal point is ``principal_point``
       (image centre by default).
     * 3 points: the principal point is the orthocentre of the vanishing points.
@@ -125,12 +129,12 @@ def solve_vanishing_points(
     if count == 1:
         if not focal_px or focal_px <= 0.0:
             raise SolverError("one vanishing point needs a known focal length")
-        if horizon_dir is None:
-            raise SolverError("one vanishing point needs the horizon direction")
+        if axis2_line is None:
+            raise SolverError("one vanishing point needs a line along the second axis")
         p = image_center(image_size) if principal_point is None else np.asarray(principal_point, float)
         f = float(focal_px)
         d1 = homogeneous_ray(vps[0], p, f)
-        d2 = second_axis_from_horizon(d1, vps[0], horizon_dir, p, f)
+        d2 = second_axis_from_line(d1, axis2_line, p, f)
     else:
         for v in vps:
             if not is_finite_vp(v, image_size):
@@ -146,7 +150,7 @@ def solve_vanishing_points(
     (i, si), (j, sj) = parsed[0], parsed[1]
     # Columns of world->camera are the world axes expressed in camera space.
     world_to_cam = complete_frame({i: si * d1, j: sj * d2})
-    rotation = finish_rotation(world_to_cam.T, straighten_horizon, pitch_offset)
+    rotation, removed_roll = finish_rotation(world_to_cam.T, straighten_horizon, pitch_offset, warnings)
     world_to_cam = rotation.T
 
     o = image_center(image_size) if origin is None else as_points(origin)[0]
@@ -176,4 +180,5 @@ def solve_vanishing_points(
         rotation=rotation,
         position=position,
         warnings=warnings,
+        removed_roll=removed_roll,
     )
