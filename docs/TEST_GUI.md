@@ -1,9 +1,10 @@
 # Test GUI in Blender (Windows) – da fare per la 1.0.0
 
-Stato: **non ancora provata in GUI** (né la 0.6.1 né la sezione Render della
-1.0.0). Tutti i test automatici passano (96 pytest, 26 test headless in Blender,
-compreso un render Cycles reale) e le sonde `scripts/probe.sh` (pannello, overlay,
-trascinamento simulato, render) sono pulite; manca la prova a mano.
+Stato: **prova a mano in corso** (2026-10-10). Tutti i test automatici passano
+(106 pytest, 29 test headless in Blender, compreso un render Cycles reale) e le
+sonde `scripts/probe.sh` (pannello, overlay, trascinamento simulato, render) sono
+pulite. Dopo questa prova arrivano l'orientamento "FTC" e il gizmo lungo la vista
+camera (vedi `CLAUDE.md`, *Status / next session*), da provare a loro volta.
 
 Zip: `\\wsl.localhost\Ubuntu-24.04\home\tony\Projects\FTC\dist\fit_the_camera-1.0.0.zip`
 (se manca: `pixi run build`).
