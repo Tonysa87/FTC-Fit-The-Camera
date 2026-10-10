@@ -7,9 +7,9 @@
     della foto, Cycles; compositor `FTC Compositing` (foto scalata › moltiplicata
     per il pass Shadow Catcher › Alpha Over col render) oppure uscita trasparente
     con le ombre nell'alpha.
-  - **Object Roles**: lista degli oggetti della scena con il ruolo (Oggetto CG,
-    Shadow Catcher, Holdout, Nascosto) e menu per i selezionati.
-  - **Shadow Catcher Plane**: piano shadow catcher sul piano di riferimento.
+  - **Object Roles**: lista degli oggetti della scena con gli interruttori
+    *Shadow Catcher* e *Holdout* (si escludono) e *Set Role of Selected* per i
+    selezionati. Cambiano solo le proprietà degli oggetti: FTC non crea oggetti.
 - **Misura di riferimento corretta**: gli estremi stanno sul piano di riferimento
   in qualunque punto. Prima venivano riportati sull'asse che passa per l'origine:
   una misura presa altrove (es. la larghezza della porta sulla soglia, con
@@ -47,16 +47,11 @@
   sotto-IFD rotto non fa perdere marca/modello/orientamento.
 - Traduzioni: "Flip Axis Direction" (prima mostrava "Scambia assi" di Blender),
   Risultati, Imbardata, Sposta lungo la vista, nuovi avvisi.
-- Il pulsante del piano diventa **New Shadow Catcher Plane**, su una riga a sé,
-  e il piano è una griglia: prima sembrava vuoto (bordi fuori inquadratura) e
-  veniva scambiato per "rendi shadow catcher la selezione" (che è *Set Role of
-  Selected*).
 - Render (audit): niente crash con config colore OCIO personalizzate, uscita
   video, Cycles disattivato; il compositor usa il view layer attivo; il bordo
   ritagliato viene disattivato; avviso se manca il file della foto; un oggetto in
-  Edit Mode non resta bloccato cliccando la lista dei ruoli o creando il piano;
-  il piano shadow catcher è legato alla camera (un duplicato non viene toccato) e
-  misura 10 × la distanza; un albero FTC condiviso con un'altra scena viene
+  Edit Mode non resta bloccato cliccando la lista dei ruoli;
+  un albero FTC condiviso con un'altra scena viene
   copiato; nel modo trasparente un compositor dell'utente viene disattivato;
   lista ruoli con inverti/ordina funzionanti; l'avviso "scena non preparata"
   controlla anche esposizione, gamma, curve e display.

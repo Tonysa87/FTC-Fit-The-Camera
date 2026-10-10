@@ -96,11 +96,8 @@ _IT = {
     "Scene not set up for the photo: use Prepare Render": "Scena non preparata per la foto: usa Prepara render",
     "Shadow catchers work only in Cycles": "Gli shadow catcher funzionano solo in Cycles",
     "Object Roles": "Ruoli oggetti",
-    "Render Role": "Ruolo nel render",
-    "CG Object": "Oggetto CG",
     "Set Role of Selected": "Ruolo dei selezionati",
-    "Shadow Catcher Plane": "Piano shadow catcher",
-    "New Shadow Catcher Plane": "Nuovo piano shadow catcher",
+    "No Role": "Nessun ruolo",
     "Render size has another aspect than the image: Apply or Calibrate fixes it": (
         "Il render ha proporzioni diverse dall'immagine: Applica o Calibra le correggono"
     ),

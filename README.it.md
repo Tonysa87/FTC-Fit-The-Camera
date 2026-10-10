@@ -43,10 +43,10 @@ Sidebar del viewport (N) › tab **FTC**.
 5. **Results** – focale, FOV, altezza, angoli, **incertezza** (focale ± %,
    orientamento ± °) e **aderenza guide** (scarto massimo); avvisi in giallo/rosso.
 6. **Render** – **Prepare Render** prepara la scena per renderizzare la CG sopra la
-   foto (vedi sotto); **Object Roles** elenca gli oggetti della scena con il loro
-   ruolo (*Oggetto CG*, *Shadow Catcher*, *Holdout*, *Nascosto*), modificabile riga
-   per riga o per tutti i selezionati; **New Shadow Catcher Plane** crea (o riporta) un
-   piano shadow catcher sul piano di riferimento calibrato.
+   foto (vedi sotto); **Object Roles** elenca gli oggetti della scena: per ognuno
+   si attiva *Shadow Catcher* o *Holdout*, oppure si assegnano ai selezionati con
+   *Set Role of Selected*. Cambiano solo le impostazioni degli oggetti, non viene
+   creato nulla.
 7. **Tools › Move Along View** – sposta oggetti/vertici lungo il raggio dalla camera
    (anche da *Object/Mesh › Transform*).
 
@@ -108,18 +108,17 @@ punto (non serve che siano sull'asse che passa per l'origine). Lungo la normale
   impostata a mano (lo dice un avviso).
 - **Cycles** consigliato: EEVEE non ha shadow catcher (gli holdout funzionano).
 
-**Ruoli** (*Object Roles*, proprietà native dell'oggetto):
+**Ruoli** (*Object Roles*): due interruttori per oggetto, che si escludono a
+vicenda; cambiano solo le proprietà native dell'oggetto (nessun oggetto viene
+creato). Gli oggetti senza ruolo sono la CG, renderizzata normalmente.
 
 | Ruolo | Cosa fa | Uso |
 | --- | --- | --- |
-| Oggetto CG | renderizzato normalmente | gli oggetti aggiunti alla foto |
-| Shadow Catcher | mostra la foto, riceve ombre e luce della CG, nasconde ciò che sta dietro (solo Cycles) | pavimento, tavolo, muri reali |
+| Shadow Catcher | mostra la foto, riceve ombre e luce della CG, nasconde ciò che sta dietro (solo Cycles) | pavimento, tavolo, muri reali (modellati da te) |
 | Holdout | mostra la foto e nasconde la CG dietro, senza ombre | oggetti reali davanti alla CG |
-| Nascosto | non renderizzato | geometria di riferimento |
 
-Il **piano shadow catcher** ha lato 10 × la distanza camera-origine, giace sul
-piano di riferimento (anche allineato alla scena) ed è a fil di ferro nel viewport
-per non coprire la foto; ripremendo il pulsante viene riportato sul piano attuale.
+Un clic su una riga seleziona l'oggetto. *Set Role of Selected* assegna *Shadow
+Catcher*, *Holdout* o *No Role* a tutti gli oggetti selezionati.
 
 ### Consigli (verificati su foto reali, vedi `tests/data`)
 

@@ -346,7 +346,6 @@ class FTC_PT_main(Panel):
         body.label(text="Object Roles")
         body.template_list("FTC_UL_roles", "", scene, "objects", scene, "ftc_role_index", rows=4)
         body.operator_menu_enum("ftc.set_role", "role", icon="RESTRICT_SELECT_OFF")
-        body.operator("ftc.add_catcher", icon="MESH_PLANE")
 
     def draw_tools(self, context, layout):
         header, body = layout.panel("ftc_tools", default_closed=True)

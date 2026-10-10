@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Render setup: CG over the photo, object roles and the shadow catcher plane.
+"""Render setup: CG over the photo, and the render roles of the scene objects.
 
 The photo is an sRGB image: it comes out of the render unchanged only with the
 Standard view transform (no look, exposure, gamma, curves or white balance),
@@ -11,7 +11,6 @@ the CG casts on the shadow catchers (with the pass on they leave the alpha of th
 render). For a transparent output the pass is off and the shadows stay in alpha.
 """
 
-import bmesh
 import bpy
 from bpy.props import BoolProperty, EnumProperty, IntProperty
 from bpy.types import Operator, UIList
@@ -22,46 +21,45 @@ from .ops_load import fit_scene_to_image
 
 TREE_NAME = "FTC Compositing"
 TREE_TAG = "ftc_compositing"
-CATCHER_NAME = "FTC Shadow Catcher"
-# Side of the shadow catcher plane, in camera distances from the origin, and its
-# grid: drawn as wireframe, a plain quad has all its edges outside the frame.
-CATCHER_SIZE = 10.0
-CATCHER_SEGMENTS = 20
 RENDERABLE = {"MESH", "CURVE", "SURFACE", "META", "FONT", "CURVES", "POINTCLOUD", "VOLUME", "GREASEPENCIL"}
 
 ROLE_ITEMS = [
-    ("OBJECT", "CG Object", "Rendered normally: a virtual object added to the photo", "OBJECT_DATA", 0),
     (
         "CATCHER",
         "Shadow Catcher",
         "Stand-in for a real surface of the photo: shows the photo, receives the shadows and light of the CG "
         "objects and hides what is behind it (Cycles only)",
         "SHADING_RENDERED",
-        1,
+        0,
     ),
     (
         "HOLDOUT",
         "Holdout",
         "Stand-in for a real object in front: shows the photo and hides the CG objects behind it, without shadows",
         "HOLDOUT_ON",
-        2,
+        1,
     ),
-    ("HIDDEN", "Hidden", "Not rendered: reference or helper geometry", "HIDE_ON", 3),
+    ("NONE", "No Role", "Remove the role: the object is rendered normally", "X", 2),
 ]
 
 
-def _get_role(obj):
-    if obj.hide_render:
-        return 3
-    if obj.is_shadow_catcher:
-        return 1
-    return 2 if obj.is_holdout else 0
+def _set_catcher(obj, value):
+    # The two roles exclude each other.
+    obj.is_shadow_catcher = value
+    if value:
+        obj.is_holdout = False
 
 
-def _set_role(obj, value):
-    obj.hide_render = value == 3
-    obj.is_shadow_catcher = value == 1
-    obj.is_holdout = value == 2
+def _set_holdout(obj, value):
+    obj.is_holdout = value
+    if value:
+        obj.is_shadow_catcher = False
+
+
+def set_role(obj, role: str) -> None:
+    """Only the object's own flags change: nothing is created."""
+    obj.is_shadow_catcher = role == "CATCHER"
+    obj.is_holdout = role == "HOLDOUT"
 
 
 def select_only(context, obj) -> None:
@@ -312,12 +310,14 @@ class FTC_OT_prepare_render(Operator):
 
 
 class FTC_UL_roles(UIList):
-    """Renderable objects of the scene with their role in the render"""
+    """Renderable objects of the scene with their render role"""
 
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
         row = layout.row(align=True)
         row.label(text=item.name, icon="OUTLINER_OB_" + item.type)
-        row.prop(item, "ftc_role", text="")
+        sub = row.row(align=True)
+        sub.prop(item, "ftc_catcher", text="Catcher", toggle=True)
+        sub.prop(item, "ftc_holdout", text="Holdout", toggle=True)
 
     def filter_items(self, context, data, propname):
         objects = getattr(data, propname)
@@ -333,13 +333,13 @@ class FTC_UL_roles(UIList):
 
 
 class FTC_OT_set_role(Operator):
-    """Give the selected objects a role in the render"""
+    """Give the selected objects a render role (only their settings change: nothing is created)"""
 
     bl_idname = "ftc.set_role"
     bl_label = "Set Role of Selected"
     bl_options = {"REGISTER", "UNDO"}
 
-    role: EnumProperty(name="Role", description="Role in the render", items=ROLE_ITEMS)
+    role: EnumProperty(name="Role", description="Render role", items=ROLE_ITEMS)
 
     @classmethod
     def poll(cls, context):
@@ -348,71 +348,29 @@ class FTC_OT_set_role(Operator):
     def execute(self, context):
         for obj in context.selected_objects:
             if obj.type in RENDERABLE:
-                obj.ftc_role = self.role
-        return {"FINISHED"}
-
-
-# ----------------------------------------------------------------------------
-# Shadow catcher plane
-
-
-def catcher_object(settings, scene):
-    """The shadow catcher plane made for this camera, if still in the scene."""
-    obj = settings.shadow_catcher
-    return obj if obj is not None and obj.name in scene.objects else None
-
-
-class FTC_OT_add_catcher(Operator):
-    bl_description = (
-        "Create a new plane on the calibrated reference plane as shadow catcher (the one made before for "
-        "this camera is moved there instead). To make selected objects shadow catchers, use Set Role of Selected"
-    )
-    bl_idname = "ftc.add_catcher"
-    bl_label = "New Shadow Catcher Plane"
-    bl_options = {"REGISTER", "UNDO"}
-
-    @classmethod
-    def poll(cls, context):
-        cam = calibrated_camera(context)
-        return cam is not None and cam.data.ftc.results.valid
-
-    def execute(self, context):
-        settings = calibrated_camera(context).data.ftc
-        size = CATCHER_SIZE * settings.results.distance
-        obj = catcher_object(settings, context.scene)
-        if obj is None:
-            obj = bpy.data.objects.new(CATCHER_NAME, bpy.data.meshes.new(CATCHER_NAME))
-            (context.collection or context.scene.collection).objects.link(obj)
-            settings.shadow_catcher = obj
-        elif obj.data.users > 1:
-            # Shared with a linked duplicate: reshape a copy only.
-            obj.data = obj.data.copy()
-        bm = bmesh.new()
-        bmesh.ops.create_grid(bm, x_segments=CATCHER_SEGMENTS, y_segments=CATCHER_SEGMENTS, size=size / 2)
-        bm.to_mesh(obj.data)
-        bm.free()
-        obj.matrix_world = calibrate.alignment_matrix(settings) @ calibrate.reference_frame(settings)
-        obj.ftc_role = "CATCHER"
-        # Wireframe in the viewport, so it does not cover the photo.
-        obj.display_type = "WIRE"
-        select_only(context, obj)
-        if context.scene.render.engine != "CYCLES":
+                set_role(obj, self.role)
+        if self.role == "CATCHER" and context.scene.render.engine != "CYCLES":
             self.report({"WARNING"}, "Shadow catchers work only in Cycles")
         return {"FINISHED"}
 
 
-classes = (FTC_OT_prepare_render, FTC_UL_roles, FTC_OT_set_role, FTC_OT_add_catcher)
+classes = (FTC_OT_prepare_render, FTC_UL_roles, FTC_OT_set_role)
 
 
 def register():
     for cls in classes:
         bpy.utils.register_class(cls)
-    bpy.types.Object.ftc_role = EnumProperty(
-        name="Render Role",
-        description="Role of the object when the CG is rendered over the photo",
-        items=ROLE_ITEMS,
-        get=_get_role,
-        set=_set_role,
+    bpy.types.Object.ftc_catcher = BoolProperty(
+        name="Shadow Catcher",
+        description=ROLE_ITEMS[0][2],
+        get=lambda obj: obj.is_shadow_catcher,
+        set=_set_catcher,
+    )
+    bpy.types.Object.ftc_holdout = BoolProperty(
+        name="Holdout",
+        description=ROLE_ITEMS[1][2],
+        get=lambda obj: obj.is_holdout,
+        set=_set_holdout,
     )
     bpy.types.Scene.ftc_role_index = IntProperty(
         name="Active Object", description="Object selected in the roles list", update=_role_index_changed
@@ -421,6 +379,7 @@ def register():
 
 def unregister():
     del bpy.types.Scene.ftc_role_index
-    del bpy.types.Object.ftc_role
+    del bpy.types.Object.ftc_holdout
+    del bpy.types.Object.ftc_catcher
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)
