@@ -356,6 +356,17 @@ def scale_cube_sets_the_scale():
     s.show_cube = False
     assert "cube_base" not in calibrate.active_handle_keys(s)
 
+    # Cube and reference distance exclude each other: only the chosen one is shown.
+    s.show_cube = True
+    s.mode = "VP"
+    s.scale_mode = "REFERENCE"
+    keys = calibrate.active_handle_keys(s)
+    assert {"ref_a", "ref_b"} <= set(keys) and not any(k.startswith("cube") for k in keys)
+    assert not calibrate.cube_visible(s)
+    s.scale_mode = "CUBE"
+    keys = calibrate.active_handle_keys(s)
+    assert {"cube_base", "cube_top"} <= set(keys) and not any(k.startswith("ref") for k in keys)
+
 
 @test
 def scale_cube_keeps_the_scale_across_changes():

@@ -274,8 +274,9 @@ class FTC_PT_main(Panel):
         sub = row.row()
         sub.active = settings.show_grid
         sub.prop(settings, "grid_opacity", text="", slider=True)
-        if not calibrate.cube_scales(settings):
-            # When the cube sets the scale it is always shown, with its size above.
+        if not calibrate.cube_scales(settings) and not calibrate.reference_scales(settings):
+            # When the cube sets the scale it is always shown, with its size above;
+            # with the reference distance it is hidden.
             row = body.row(heading="Scale Cube")
             row.prop(settings, "show_cube", text="")
             sub = row.row(align=True)

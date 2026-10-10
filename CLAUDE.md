@@ -1,13 +1,18 @@
 # FTC – Fit The Camera (Blender 5.2+ extension)
 
-Single-image camera calibration add-on. User docs: `README.md` (Italian). History:
-`docs/CHANGELOG.md`. Original spec: `FTC – Specifica addon Blender 5.2+.md` (says
+Single-image camera calibration add-on. User docs: `README.md` (English, GitHub /
+Extensions audience) and `README.it.md` (Italian); developer docs
+`docs/DEVELOPMENT.md` (Italian); publishing on extensions.blender.org:
+`docs/PUBLISHING.md`. History: `docs/CHANGELOG.md`. Original spec: `FTC – Specifica addon Blender 5.2+.md` (says
 "Camera Match": the final name is **FTC**, package `fit_the_camera`, tab "FTC").
 
 ## Status / next session
 - **v1.0.0** (0.6.1 + Render section: Prepare Render, Object Roles, Shadow Catcher
   Plane) is committed and built but **not yet tested in the GUI**. Next session:
   the user tests it on Windows following `docs/TEST_GUI.md`; fix what he reports.
+- GitHub: https://github.com/Tonysa87/FTC---Fit-The-Camera (public, `origin`),
+  release v1.0.0 with the zip. Not yet submitted to extensions.blender.org: needs
+  the GUI test, icon (PNG ≤256 px), featured image, ≥1 preview (`docs/PUBLISHING.md`).
 - `dist/` is git-ignored; only the latest zip matters (older ones may have been
   rebuilt by `blender-tests` with newer code before a version bump).
 
@@ -106,8 +111,10 @@ drag; the stored top is synced to it. Dragging the base moves the top with it
 and migrates pre-cube files (camera distance kept). Seeding skips `suspended()`.
 
 Cube UI: scale option *Scale Cube* (default) / *Reference Distance* in VP mode;
-size presets 10 cm…10 m + custom; outside cube scaling it is a visual check with
-only the base handle, toggled by `show_cube` in the Opacity panel. Edges are drawn
+size presets 10 cm…10 m + custom. Cube and Reference Distance are mutually
+exclusive on screen (`calibrate.reference_scales` hides the cube, asked by the
+user); in RECT / HORIZON it is a visual check with only the base handle, toggled
+by `show_cube` in the Opacity panel. Edges are drawn
 in the colours of the world axes they run along; the base is the corner nearest
 the camera, the cube extends away from it. The top can't be dragged below
 `ops_modal.MIN_CUBE_PX` above the base (it would flip).

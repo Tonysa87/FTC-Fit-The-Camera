@@ -10,7 +10,13 @@
   - **Object Roles**: lista degli oggetti della scena con il ruolo (Oggetto CG,
     Shadow Catcher, Holdout, Nascosto) e menu per i selezionati.
   - **Shadow Catcher Plane**: piano shadow catcher sul piano di riferimento.
+- Cubo di scala e *Misura di riferimento* si escludono: con la misura il cubo
+  sparisce dallo schermo (e dal pannello *Opacity*).
 - Sonda `render` (render di prova con cubo CG e ombra) e `paneltest` estesa.
+- Pubblicazione: repository GitHub, README in inglese (`README.md`) e italiano
+  (`README.it.md`), `LICENSE` GPL-3.0, `docs/DEVELOPMENT.md`,
+  `docs/PUBLISHING.md`; manifest con `website`, tag *Render*, senza la sezione
+  `[build]` di default.
 
 ## 0.6.1 – 2026-10-10 (audit)
 - *Nota + guide*: le guide scavalcano la focale nota solo se non riescono ad
