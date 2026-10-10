@@ -22,6 +22,8 @@ the real ground.
   point too far away.
 - **Align to the scene**: put the calibrated floor or wall on the 3D cursor, a
   face or an object.
+- **FTC transform orientation**: the photo's axes for Blender's own move, rotate
+  and scale tools and snapping, also after aligning the photo to the scene.
 - **Render over the photo**: one button sets colour management, transparent film
   and the compositor; shadow catcher and holdout roles for the objects that
   stand in for real surfaces and objects of the photo.
