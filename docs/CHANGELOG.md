@@ -47,6 +47,24 @@
   sotto-IFD rotto non fa perdere marca/modello/orientamento.
 - Traduzioni: "Flip Axis Direction" (prima mostrava "Scambia assi" di Blender),
   Risultati, Imbardata, Sposta lungo la vista, nuovi avvisi.
+- Secondo audit:
+  - Ctrl+Z durante la sessione è sempre l'undo della sessione (l'undo di Blender
+    tornava a prima della sessione perdendone le modifiche);
+  - la sessione non resta bloccata se il codice incontra un errore imprevisto;
+    l'overlay segue la camera anche subito dopo una rinomina;
+  - le proporzioni del render vengono corrette tenendo la larghezza (e la
+    percentuale) scelta da te, con un messaggio; Apply lo fa solo se la
+    calibrazione riesce; anche Prepare Render usa questa regola;
+  - Cubo › Misura di riferimento con maniglie mai toccate mantiene la scala; il
+    cubo resta nell'immagine passando a una parete; con un bersaglio di
+    allineamento il cambio di piano muove subito la camera;
+  - avviso anche per vincoli, driver, NLA, genitore animato e keyframe
+    dell'obiettivo (sovrascrivono la calibrazione);
+  - il compositor usa sempre la foto della camera di scena (anche dopo un nuovo
+    Load Image, la copia raddrizzata o un cambio di camera);
+  - la copia raddrizzata è davvero impacchettata in JPEG (pixel identici);
+  - Holdout: il tooltip spiega che proietta ancora ombre; avviso più chiaro
+    sugli shadow catcher fuori da Cycles (coprono la foto).
 - Render (audit): niente crash con config colore OCIO personalizzate, uscita
   video, Cycles disattivato; il compositor usa il view layer attivo; il bordo
   ritagliato viene disattivato; avviso se manca il file della foto; un oggetto in

@@ -47,6 +47,7 @@ def write_photo(name, size, tiff=None):
     """Save a JPEG of the given size, optionally with an EXIF block, and return its path."""
     img = bpy.data.images.new("tmp_" + name, *size)
     img.pixels.foreach_set(np.full(size[0] * size[1] * 4, 0.5, dtype=np.float32))
+    img.update()  # without it save() writes stale pixels
     path = os.path.join(SCRATCH, name)
     img.filepath_raw = path
     img.file_format = "JPEG"
@@ -497,9 +498,12 @@ def upright_copy_swaps_dimensions():
     cam = load(write_photo("rotated.jpg", (40, 20), camera_tiff(orientation=6)))
     s = cam.data.ftc
     assert s.camera_data.orientation == 6
+    source = s.image.pixels[0]
     assert bpy.ops.ftc.upright_image() == {"FINISHED"}
     assert s.image.size[:] == (20, 40)
     assert s.image.packed_file is not None
+    assert bytes(s.image.packed_file.data[:2]) == b"\xff\xd8", "packed as JPEG like the source"
+    assert abs(s.image.pixels[0] - source) < 0.02, (s.image.pixels[0], source)  # from the packed JPEG
     assert (scene.render.resolution_x, scene.render.resolution_y) == (20, 40)
     assert cam.data.background_images[0].image == s.image
 
@@ -643,7 +647,8 @@ def prepare_render_gives_back_the_photo():
     assert scene.render.engine == "CYCLES" and scene.render.film_transparent
     assert scene.view_settings.view_transform == "Standard" and scene.view_settings.look == "None"
     assert scene.view_settings.exposure == 0.0 and scene.display_settings.display_device == "sRGB"
-    assert (scene.render.resolution_x, scene.render.resolution_y) == (64, 48)
+    assert (scene.render.resolution_x, scene.render.resolution_y) == (100, 75)  # the photo's aspect
+    scene.render.resolution_x, scene.render.resolution_y = 64, 48
     assert scene.view_layers[0].cycles.use_pass_shadow_catcher
     tree = scene.compositing_node_group
     assert tree is not user_tree and tree.get("ftc_compositing") and user_tree.use_fake_user
@@ -790,6 +795,62 @@ def reference_distance_ignores_the_alignment_plane():
 
 
 @test
+def second_audit_fixes():
+    """Compositor photo follows the camera's, scale kept on mode/plane switches,
+    plane change with a target moves the camera, translation context."""
+    ops_render = importlib.import_module(PKG + ".ops_render")
+    scene, cam, syn = _calibrated_camera((1600, 1200))
+    s = cam.data.ftc
+    w, h = syn.image_size
+
+    # Cube -> Reference Distance with untouched reference handles keeps the scale.
+    calibrate.reset_handles(s)  # reference handles at their defaults
+    set_guides_from(s, syn)
+    calibrate.set_handle(s, "cube_base", tuple(np.array(syn.project([1.0, 0.5, 0.0])[0]) / (w, h)))
+    calibrate.set_handle(s, "cube_top", tuple(np.array(syn.project([1.0, 0.5, 1.0])[0]) / (w, h)))
+    with calibrate.suspended():
+        s.scale_mode, s.cube_size = "CUBE", "1"
+    calibrate.update(bpy.context, cam, apply=True)
+    distance = s.results.distance
+    s.scale_mode = "REFERENCE"
+    assert abs(s.results.distance - distance) < 1e-4 * distance, (s.results.distance, distance)
+    s.scale_mode = "CUBE"
+    assert abs(s.results.distance - distance) < 1e-4 * distance
+
+    # The cube stays in the image when the plane becomes a wall.
+    for plane in ("XZ", "YZ", "XY"):
+        s.ref_plane = plane
+        for key in ("cube_base", "cube_top"):
+            x, y = calibrate.handle(s, key)
+            assert -0.06 <= x <= 1.06 and -0.06 <= y <= 1.06, (plane, key, x, y)
+        assert abs(s.results.distance - distance) < 1e-4 * distance
+
+    # With a target, changing the plane moves the camera at once.
+    s.anchor_matrix = Matrix.Translation((1.0, 2.0, 0.0))
+    s.use_anchor = True
+    calibrate.update(bpy.context, cam, apply=True)
+    before = cam.matrix_world.copy()
+    s.ref_plane = "XZ"
+    assert (cam.matrix_world.translation - before.translation).length > 1e-3
+    s.ref_plane = "XY"
+    s.use_anchor = False
+
+    # The compositor shows the scene camera's current photo.
+    bpy.ops.ftc.prepare_render(output="PHOTO", use_cycles=True)
+    tree = scene.compositing_node_group
+    tree.use_fake_user = True  # a fake user does not make it "shared"
+    bpy.ops.ftc.prepare_render(output="PHOTO", use_cycles=True)
+    assert scene.compositing_node_group == tree
+    load(write_photo("second_photo.jpg", (80, 60)))
+    assert tree.nodes[ops_render.PHOTO_NODE].image == s.image and s.image.name.startswith("second_photo")
+
+    # Generic words are translated only in FTC's own context.
+    tr = importlib.import_module(PKG + ".translations")
+    assert ("FTC", "Results") in tr.translations_dict["it_IT"]
+    assert ("*", "Results") not in tr.translations_dict["it_IT"]
+
+
+@test
 def audit_edge_cases():
     """Session, camera, aspect, keyframes, faces and loading edge cases."""
     ops_modal = importlib.import_module(PKG + ".ops_modal")
@@ -803,20 +864,38 @@ def audit_edge_cases():
     assert calibrate.space_camera(space, scene) is None
     assert calibrate.space_camera(None, scene) == cam
 
-    # Apply gives the render the image's aspect again.
+    # Apply gives the render the image's aspect again, keeping its width.
+    size = calibrate.image_size(s)
     scene.render.resolution_x, scene.render.resolution_y = 1000, 1000
-    assert not calibrate.aspect_matches(scene, s)
+    assert not calibrate.aspect_matches(scene, size)
     assert bpy.ops.ftc.apply() == {"FINISHED"}
-    assert calibrate.aspect_matches(scene, s)
+    assert (scene.render.resolution_x, scene.render.resolution_y) == (1000, 750)
     scene.render.resolution_x, scene.render.resolution_y = 800, 600  # same aspect: kept
     bpy.ops.ftc.apply()
     assert (scene.render.resolution_x, scene.render.resolution_y) == (800, 600)
+    scene.render.pixel_aspect_x = 2.0  # stretched pixels change the aspect too
+    assert not calibrate.aspect_matches(scene, size)
+    scene.render.pixel_aspect_x = 1.0
 
-    # Keyframes on the camera are detected (they would override the calibration).
-    assert not calibrate.transform_animated(cam)
+    # Keyframes, constraints or an animated parent override the calibration.
+    assert not calibrate.transform_overridden(cam)
     cam.keyframe_insert("location")
-    assert calibrate.transform_animated(cam)
+    assert calibrate.transform_overridden(cam)
     cam.animation_data_clear()
+    track = cam.constraints.new("TRACK_TO")
+    assert calibrate.transform_overridden(cam)
+    track.enabled = False
+    assert not calibrate.transform_overridden(cam)
+    cam.constraints.remove(track)
+    cam.data.keyframe_insert("lens")
+    assert calibrate.transform_overridden(cam)
+    cam.data.animation_data_clear()
+    rig = bpy.data.objects.new("rig", None)
+    scene.collection.objects.link(rig)
+    cam.parent = rig
+    rig.keyframe_insert("rotation_euler")
+    assert calibrate.transform_overridden(cam)
+    cam.parent = None
 
     # Rotate 90° / Flip act at once during a session (simulated), and Blender's
     # undo re-solves the session camera.

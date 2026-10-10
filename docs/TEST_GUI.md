@@ -93,8 +93,15 @@ Zip: `\\wsl.localhost\Ubuntu-24.04\home\tony\Projects\FTC\dist\fit_the_camera-1.
 30. Durante la sessione: *Ruota 90°* / *Inverti* in *Align to Scene* muovono subito
     la camera; Ctrl+Spazio chiude la sessione senza lasciare testo nell'header.
 31. Metti un keyframe di posizione alla camera: compare l'avviso rosso.
-32. Cambia la risoluzione di render in 1000×1000: compare l'avviso; *Apply* la
-    riporta alle proporzioni della foto.
+32. Cambia la risoluzione di render in 1000×1000: compare l'avviso; *Apply* tiene
+    la larghezza 1000 e porta l'altezza alle proporzioni della foto (messaggio).
+33. Durante *Calibrate*, Ctrl+Z con il mouse sull'Outliner: annulla l'ultima
+    modifica della sessione (non torna a prima della sessione).
+34. *Prepare Render*, poi *Load Image* con un'altra foto: il nodo *Photo* nel
+    compositor mostra la nuova foto (F12 la usa).
+35. *Cubo di scala* › *Reference Distance* senza aver mai toccato le maniglie della
+    misura: la *Distanza* non cambia.
+36. Con *Align to Scene* attivo, cambia XY › XZ: la camera si sposta subito.
 
 ## Da riportare
 Comportamenti strani, errori in console (Window › Toggle System Console),

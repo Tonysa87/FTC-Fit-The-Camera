@@ -40,15 +40,22 @@ def _guides_changed(self, context):
     calibrate.settings_changed(self.id_data, context, reset_pitch=True)
 
 
-def _cube_seeded(reset_pitch):
-    """Update callback that first keeps the scene scale on the scale cube."""
+def _scale_mode_changed(self, context):
+    # The cached solution is still the one before the change: the new scale
+    # source is seeded from it, so the scene keeps its size.
+    calibrate.seed_cube(self.id_data)
+    calibrate.seed_reference(self.id_data)
+    calibrate.settings_changed(self.id_data, context, reset_pitch=False)
 
-    def update(self, context):
-        # The cached solution is still the one before the change: seed from it.
-        calibrate.seed_cube(self.id_data)
-        calibrate.settings_changed(self.id_data, context, reset_pitch=reset_pitch)
 
-    return update
+def _plane_changed(self, context):
+    calibrate.seed_cube(self.id_data)
+    calibrate.settings_changed(self.id_data, context, reset_pitch=True)
+    if self.use_anchor and calibrate.session_camera is None:
+        # Aligned to a target: the camera moves at once, like Rotate 90° and Flip.
+        cam = calibrate.view_camera(context)
+        if cam is not None and cam.data == self.id_data:
+            calibrate.update(context, cam, apply=True)
 
 
 def _third_axis_changed(self, context):
@@ -219,7 +226,7 @@ class FTC_Settings(PropertyGroup):
             ),
         ],
         default="CUBE",
-        update=_cube_seeded(reset_pitch=False),
+        update=_scale_mode_changed,
     )
     cube_size: EnumProperty(
         name="Cube Size",
@@ -409,7 +416,7 @@ class FTC_Settings(PropertyGroup):
             ("YZ", "YZ", "Wall facing +X, with Z up"),
         ],
         default="XY",
-        update=_cube_seeded(reset_pitch=True),
+        update=_plane_changed,
     )
     use_anchor: BoolProperty(
         name="Align to Scene",

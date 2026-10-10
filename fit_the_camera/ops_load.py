@@ -2,6 +2,7 @@
 """Load the reference image into a camera and read its EXIF data."""
 
 import os
+import tempfile
 
 import bpy
 import numpy as np
@@ -56,6 +57,18 @@ def fit_scene_to_image(scene, size) -> None:
     render = scene.render
     render.resolution_x, render.resolution_y = int(size[0]), int(size[1])
     render.pixel_aspect_x = render.pixel_aspect_y = 1.0
+
+
+def match_image_aspect(scene, size) -> bool:
+    """Give the render the image's aspect ratio, keeping its width and percentage
+    (the camera frame matches the image only with the same aspect). True when the
+    height had to change."""
+    if calibrate.aspect_matches(scene, size):
+        return False
+    render = scene.render
+    render.pixel_aspect_x = render.pixel_aspect_y = 1.0
+    render.resolution_y = max(4, round(render.resolution_x * size[1] / size[0]))
+    return True
 
 
 def view_through_camera(context, cam_obj) -> None:
@@ -145,6 +158,7 @@ class FTC_OT_load_image(Operator, ImportHelper):
         fit_scene_to_image(context.scene, size)
         view_through_camera(context, cam_obj)
         calibrate.refresh(cam_obj.data)
+        sync_render_photo(context.scene)
 
         data = settings.camera_data
         if data.orientation not in (0, 1):
@@ -152,6 +166,33 @@ class FTC_OT_load_image(Operator, ImportHelper):
         elif data.focal_mm_state == "MISSING" and data.focal_35mm_state == "MISSING":
             self.report({"WARNING"}, "Focal length not found in the image metadata")
         return {"FINISHED"}
+
+
+def pack_as_jpeg(image) -> None:
+    """Pack a generated image as JPEG, like its source photo: ``pack()`` alone
+    always stores a PNG, several times larger. Saved through a temporary file."""
+    folder = tempfile.mkdtemp(prefix="ftc_")
+    name = bpy.path.clean_name(image.name) + ".jpg"
+    path = os.path.join(folder, name)
+    try:
+        image.filepath_raw = path
+        image.file_format = "JPEG"
+        image.update()
+        image.save(filepath=path, quality=95)
+        image.pack()
+    finally:
+        if os.path.exists(path):
+            os.remove(path)
+        os.rmdir(folder)
+    # Where "Unpack" puts it: next to the .blend file.
+    image.filepath_raw = "//" + name
+
+
+def sync_render_photo(scene) -> None:
+    # Imported here: ops_render imports this module.
+    from .ops_render import sync_photo
+
+    sync_photo(scene)
 
 
 def _orient(pixels: np.ndarray, orientation: int) -> np.ndarray:
@@ -201,10 +242,12 @@ class FTC_OT_upright_image(Operator):
             rgba = np.ones((nh, nw, 4), dtype=np.float32)
             rgba[..., : src.channels] = upright
             image.pixels.foreach_set(rgba.ravel())
+        # Commit the pixels written above: without it, save/pack can read stale data.
+        image.update()
         if src.file_format == "JPEG":
-            # Packed as JPEG like the source: a PNG of a photo is several times larger.
-            image.file_format = "JPEG"
-        image.pack()
+            pack_as_jpeg(image)
+        else:
+            image.pack()
 
         set_background(cam_obj.data, image, previous=src)
         settings.image = image
@@ -216,6 +259,7 @@ class FTC_OT_upright_image(Operator):
         calibrate.reset_handles(settings)
         fit_scene_to_image(context.scene, (nw, nh))
         calibrate.refresh(cam_obj.data)
+        sync_render_photo(context.scene)
         calibrate.tag_redraw(context)
         return {"FINISHED"}
 
