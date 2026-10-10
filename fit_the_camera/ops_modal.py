@@ -269,13 +269,16 @@ class FTC_OT_calibrate(Operator):
                 area.tag_redraw()
                 return {"RUNNING_MODAL"}
             if event.type == "LEFTMOUSE" and event.value == "RELEASE":
+                calibrate.defer_uncertainty = False
                 if snapshot(settings) != session.drag_start:
                     self.push_undo(session, session.drag_start)
+                    self.changed(context, cam_obj, reset_pitch=False)
                 session.drag_key = None
                 session.pitch_drag = None
                 area.tag_redraw()
                 return {"RUNNING_MODAL"}
             if event.type in {"ESC", "RIGHTMOUSE"} and event.value == "PRESS":
+                calibrate.defer_uncertainty = False
                 restore(settings, session.drag_start)
                 session.drag_key = None
                 self.changed(context, cam_obj, reset_pitch=False)
@@ -311,6 +314,7 @@ class FTC_OT_calibrate(Operator):
         if event.type == "LEFTMOUSE":
             key = self.pick(settings, view, mouse) if view is not None else None
             if key is not None:
+                calibrate.defer_uncertainty = True
                 session.drag_key = key
                 session.drag_start = snapshot(settings)
                 session.last_mouse = mouse
@@ -469,6 +473,7 @@ classes = (FTC_OT_calibrate, FTC_OT_apply, FTC_OT_reset)
 
 def end_session() -> None:
     """Drop the running session without touching the scene (its data may be gone)."""
+    calibrate.defer_uncertainty = False
     session = FTC_OT_calibrate._session
     if session is not None and session.handler is not None:
         bpy.types.SpaceView3D.draw_handler_remove(session.handler, "WINDOW")

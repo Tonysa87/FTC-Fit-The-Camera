@@ -56,6 +56,8 @@ HANDLE_DEFAULTS = {
 session_camera: str | None = None
 
 _solutions: dict[int, CameraSolution] = {}
+# True while a handle is dragged: the uncertainty estimate (dozens of solves) waits.
+defer_uncertainty = False
 _updating = False
 
 
@@ -128,10 +130,12 @@ def active_handle_keys(settings) -> list[str]:
             keys += vp_keys(i)
         if count == 1:
             keys += ["hz_a", "hz_b"]
+        if count == 2 and settings.use_third_line:
+            keys += ["vp3_1a", "vp3_1b"]
         keys.append("origin")
         if settings.scale_mode == "REFERENCE":
             keys += ["ref_a", "ref_b"]
-        if settings.pp_mode == "MANUAL" and count != 3:
+        if settings.pp_mode == "MANUAL":
             keys.append("pp")
     elif settings.mode == "RECT":
         keys += [f"rect_{i}" for i in range(4)]
@@ -202,8 +206,14 @@ def solve(settings, overrides: dict | None = None) -> CameraSolution:
             a1, b1, a2, b2 = _points(settings, vp_keys(i))
             lines.append([(a1, b1), (a2, b2)])
         axes = [settings.vp1_axis, settings.vp2_axis, settings.vp3_axis][: max(count, 2)]
-        axis2_line = None
+        axis2_line = third_line = None
         focal = None
+        if count >= 2 and settings.use_known_focal:
+            focal = known_focal_px(settings)
+            if focal is None:
+                raise SolverError("the focal length is unknown: enter it in Camera Data")
+        if count == 2 and settings.use_third_line:
+            third_line = tuple(_points(settings, ["vp3_1a", "vp3_1b"]))
         if count == 1:
             focal = known_focal_px(settings)
             if focal is None:
@@ -219,8 +229,10 @@ def solve(settings, overrides: dict | None = None) -> CameraSolution:
             axes,
             size,
             principal_point=pp,
+            solve_principal_point=count == 3 and settings.pp_mode == "SOLVE",
             focal_px=focal,
             axis2_line=axis2_line,
+            third_axis_line=third_line,
             origin=at("origin"),
             camera_distance=settings.camera_distance,
             reference=reference,
@@ -228,8 +240,8 @@ def solve(settings, overrides: dict | None = None) -> CameraSolution:
         )
 
     if settings.mode == "RECT":
-        focal = known_focal_px(settings) if settings.rect_use_focal else None
-        if settings.rect_use_focal and focal is None:
+        focal = known_focal_px(settings) if settings.use_known_focal else None
+        if settings.use_known_focal and focal is None:
             raise SolverError("the focal length is unknown: enter it in Camera Data")
         return solve_rectangle(
             _points(settings, [f"rect_{i}" for i in range(4)]),
@@ -313,17 +325,22 @@ def _store_results(settings, solution: CameraSolution | None, error: str) -> Non
     bc = to_blender(solution, sensor)
     fov_h, fov_v = solution.fov
     warnings = list(solution.warnings)
-    focal_err, angle_err = uncertainty(settings, solution)
+    if defer_uncertainty:
+        # While a handle is being dragged: keep the last estimate, refresh on release.
+        focal_err, angle_err = res.focal_error, res.angle_error
+    else:
+        focal_err, angle_err = uncertainty(settings, solution)
     res.focal_error = min(focal_err, 10.0)
     res.angle_error = min(angle_err, 180.0)
     # A known focal length is an input, not something the guides can destabilise.
-    focal_solved = not (mode_needs_focal(settings) or (settings.mode == "RECT" and settings.rect_use_focal))
+    focal_solved = not (mode_needs_focal(settings) or settings.use_known_focal)
     res.focal_solved = focal_solved
     if (focal_solved and focal_err > UNSTABLE_FOCAL) or angle_err > UNSTABLE_ANGLE_DEG:
         warnings.insert(
             0,
             f"unstable calibration (focal ±{100 * min(focal_err, 9.99):.0f}%, angles ±{min(angle_err, 99):.1f}°): "
-            "use longer guides, further apart, or vanishing points closer to the image",
+            "use longer guides further apart, add a third axis line or a third vanishing point, "
+            "or use the known focal length",
         )
     res.warnings = "\n".join(warnings)
     res.removed_roll = math.radians(solution.removed_roll)

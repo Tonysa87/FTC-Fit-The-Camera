@@ -21,9 +21,9 @@ def guides(cam, axis):
 
 
 def axis_label(cam, axis):
-    """Signed label of the world axis whose direction runs away from the camera."""
-    d = cam.rotation.T @ AXIS_VECTORS[axis]
-    return ("+" if d[2] < 0 else "-") + axis
+    """Every EDGES segment runs from its first to its second point along +axis,
+    which is what an axis sign means for the solver."""
+    return "+" + axis
 
 
 def assert_matches(sol: CameraSolution, cam, position=True, f_tol=0.01, deg_tol=0.2, pos_tol=0.01):
@@ -78,6 +78,7 @@ def test_three_vanishing_points_recover_principal_point():
         [guides(cam, "X"), guides(cam, "Y"), guides(cam, "Z")],
         [axis_label(cam, "X"), axis_label(cam, "Y"), axis_label(cam, "Z")],
         cam.image_size,
+        solve_principal_point=True,
         origin=cam.project([0, 0, 0]),
         reference=reference(cam),
     )
@@ -102,18 +103,19 @@ def test_one_vanishing_point_with_known_focal():
 @pytest.mark.parametrize("flip_line", [False, True])
 def test_one_vertical_vanishing_point_and_an_x_line(flip_line):
     """Camera looking down at a wall: verticals vanish below the image, one line
-    along the wall gives X. The line's direction must not matter."""
+    along the wall gives X."""
     cam = make_camera(pitch=-33.0, yaw=8.0, roll=4.0, position=(0.4, -7.0, 4.5))
     line = cam.segment((-1.5, 0.0, 0.0), (1.5, 0.0, 0.0))
     sol = solve_vanishing_points(
         [guides(cam, "Z")],
-        [axis_label(cam, "Z"), axis_label(cam, "X")],
+        [axis_label(cam, "Z"), "-X" if flip_line else "+X"],
         cam.image_size,
         focal_px=cam.focal_px,
         axis2_line=line[::-1] if flip_line else line,
         origin=cam.project([0, 0, 0]),
         reference=reference(cam),
     )
+    # Reversing the line reverses the axis; the label says so.
     assert_matches(sol, cam)
 
 
@@ -202,3 +204,44 @@ def test_reported_angles():
     assert sol.camera_height == pytest.approx(2.5)
     level = CameraSolution((100, 100), 50.0, np.array([50.0, 50.0]), rotation_from_angles(0, 0, 0), np.zeros(3))
     assert level.fov[0] == pytest.approx(90.0)
+
+
+def test_three_vanishing_points_refined_with_centred_principal_point():
+    cam = make_camera(pitch=-30.0, yaw=40.0, roll=2.0, position=(-8.0, -9.0, 9.0))
+    rng = np.random.default_rng(11)
+    lines = [[seg + rng.normal(0, 0.5, (2, 2)) for seg in guides(cam, k)] for k in ("X", "Y", "Z")]
+    sol = solve_vanishing_points(
+        lines,
+        [axis_label(cam, "X"), axis_label(cam, "Y"), axis_label(cam, "Z")],
+        cam.image_size,
+        origin=cam.project([0, 0, 0]),
+        reference=reference(cam),
+    )
+    assert np.allclose(sol.principal_point, cam.principal_point)
+    assert_matches(sol, cam, pos_tol=0.02)
+
+
+def test_known_focal_refines_rotation_on_both_pairs(camera):
+    sol = solve_vanishing_points(
+        [guides(camera, "X"), guides(camera, "Y")],
+        [axis_label(camera, "X"), axis_label(camera, "Y")],
+        camera.image_size,
+        focal_px=camera.focal_px,
+        origin=camera.project([0, 0, 0]),
+        reference=reference(camera),
+    )
+    assert sol.focal_px == camera.focal_px
+    assert_matches(sol, camera)
+
+
+def test_refinement_handles_a_far_vanishing_point():
+    """Nearly frontal wall: X vanishes very far; three groups still converge."""
+    cam = make_camera(pitch=-32.0, yaw=1.0, roll=4.0, position=(0.3, -4.0, 1.6), focal_mm=30.0)
+    sol = solve_vanishing_points(
+        [guides(cam, "X"), guides(cam, "Y"), guides(cam, "Z")],
+        [axis_label(cam, "X"), axis_label(cam, "Y"), axis_label(cam, "Z")],
+        cam.image_size,
+        origin=cam.project([0, 0, 0]),
+        reference=reference(cam),
+    )
+    assert_matches(sol, cam)

@@ -2,6 +2,7 @@
 """Sidebar panel (tab "FTC") in the 3D view."""
 
 import math
+import textwrap
 
 import bpy
 from bpy.app.translations import pgettext_iface as iface_
@@ -24,6 +25,15 @@ def field(layout, data, prop, state):
     sub.alert = False
     sub.label(text="", icon=STATE_ICONS[state])
     return row
+
+
+def wrapped(layout, context, text, icon="NONE"):
+    """Label split over several lines to fit the sidebar width."""
+    width = context.region.width if context.region else 300
+    chars = max(20, int(width / (6.5 * context.preferences.system.ui_scale)))
+    col = layout.column(align=True)
+    for i, line in enumerate(textwrap.wrap(text, chars)):
+        col.label(text=line, icon=icon if i == 0 else "BLANK1")
 
 
 def info_row(layout, label, value, alert=False):
@@ -140,6 +150,13 @@ class FTC_PT_main(Panel):
             col.prop(settings, "vp2_axis", text=iface_("Axis 2 Line") if count == 1 else iface_("Axis 2"))
             if count == 3:
                 info_row(col, iface_("Axis 3"), remaining_axis(settings.vp1_axis, settings.vp2_axis))
+            if count == 2:
+                third = remaining_axis(settings.vp1_axis, settings.vp2_axis)
+                col.prop(settings, "use_third_line", text=iface_("Third Axis Line") + f" ({third})")
+            if count >= 2:
+                sub = col.row()
+                sub.enabled = has_focal
+                sub.prop(settings, "use_known_focal")
             col.separator()
             col.prop(settings, "scale_mode")
             if settings.scale_mode == "DISTANCE":
@@ -147,8 +164,9 @@ class FTC_PT_main(Panel):
             else:
                 col.prop(settings, "ref_axis")
                 col.prop(settings, "ref_length")
-            if count != 3:
-                col.prop(settings, "pp_mode")
+            col.prop(settings, "pp_mode")
+            if settings.pp_mode == "SOLVE" and count != 3:
+                col.label(text="Solve needs three vanishing points: using the centre", icon="INFO")
             if count == 1 and not has_focal:
                 col.label(text="Needs the focal length (Camera Data)", icon="ERROR")
         elif settings.mode == "RECT":
@@ -156,7 +174,7 @@ class FTC_PT_main(Panel):
             col.prop(settings, "rect_height")
             sub = col.row()
             sub.enabled = has_focal
-            sub.prop(settings, "rect_use_focal")
+            sub.prop(settings, "use_known_focal")
             col.prop(settings, "pp_mode")
         else:
             col.prop(settings, "camera_height")
@@ -237,11 +255,10 @@ class FTC_PT_main(Panel):
         if not res.valid:
             box = body.box()
             box.alert = True
-            box.label(text=res.error or iface_("Not solved"), icon="ERROR")
+            wrapped(box, context, res.error or iface_("Not solved"), icon="ERROR")
             return
         for line in res.warnings.splitlines():
-            box = body.box()
-            box.label(text=line, icon="ERROR")
+            wrapped(body.box(), context, line, icon="ERROR")
         col = body.column(align=True)
         focal = f"{res.lens:.2f} mm  ({res.focal_px:.0f} px)"
         if res.focal_solved:

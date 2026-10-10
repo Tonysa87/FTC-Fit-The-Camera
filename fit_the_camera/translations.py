@@ -64,6 +64,8 @@ _IT = {
     "Rotate 90°": "Ruota 90°",
     "Aligned To": "Allineato a",
     "Use Stored Target": "Usa bersaglio salvato",
+    "Third Axis Line": "Linea terzo asse",
+    "Solve needs three vanishing points: using the centre": "Risolvi richiede tre punti di fuga: uso il centro",
     # Results
     "Not solved": "Non risolto",
     "Field of View": "Campo visivo",
