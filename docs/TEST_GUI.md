@@ -61,7 +61,7 @@ Zip: `\\wsl.localhost\Ubuntu-24.04\home\tony\Projects\FTC\dist\fit_the_camera-1.
     `FTC Compositing` (Render Layers, Photo › Scale › Shadows on Photo › Alpha
     Over › Group Output + Viewer).
 19. Aggiungi un oggetto (es. un cubo appoggiato sul piano) e una luce Sun.
-    **Shadow Catcher Plane**: piano a fil di ferro sul pavimento, ruolo *Shadow
+    **New Shadow Catcher Plane**: piano a griglia fil di ferro sul pavimento, ruolo *Shadow
     Catcher*; la foto resta visibile nel viewport.
 20. F12: la CG sopra la foto con l'ombra sul pavimento; fuori dalla CG la foto è
     identica all'originale (nessun cambio di colori/contrasto).
@@ -72,7 +72,7 @@ Zip: `\\wsl.localhost\Ubuntu-24.04\home\tony\Projects\FTC\dist\fit_the_camera-1.
     trasparente; il compositor FTC sparisce, formato PNG RGBA.
 23. Con un tuo albero compositor già presente: Prepare Render lo sostituisce ma
     resta nel file (fake user, si ritrova nel selettore dei gruppi nodi).
-24. Allinea al 3D cursor e ripremi **Shadow Catcher Plane**: il piano segue,
+24. Allinea al 3D cursor e ripremi **New Shadow Catcher Plane**: il piano segue,
     senza duplicarsi.
 
 ## Misura di riferimento e cubo (correzioni dopo la prima prova)
@@ -84,6 +84,10 @@ Zip: `\\wsl.localhost\Ubuntu-24.04\home\tony\Projects\FTC\dist\fit_the_camera-1.
     avanti/indietro, poi l'origine: il cubo non si ribalta mai dall'altra parte.
 27. Con la misura di riferimento, cambia *Reference Plane* in *Align to Scene*
     (XY › XZ › YZ): la scala (*Distanza*) non cambia.
+
+33. Seleziona una tua mesh e usa *Set Role of Selected* › *Shadow Catcher*: diventa
+    shadow catcher lei (nessun oggetto nuovo). *New Shadow Catcher Plane* invece
+    crea il piano FTC, visibile come griglia nell'inquadratura.
 
 ## Robustezza della sessione (audit 1.0.0)
 28. *Calibrate*, poi chiudi la finestra (o apri una nuova finestra, calibra lì e

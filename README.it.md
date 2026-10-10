@@ -45,7 +45,7 @@ Sidebar del viewport (N) › tab **FTC**.
 6. **Render** – **Prepare Render** prepara la scena per renderizzare la CG sopra la
    foto (vedi sotto); **Object Roles** elenca gli oggetti della scena con il loro
    ruolo (*Oggetto CG*, *Shadow Catcher*, *Holdout*, *Nascosto*), modificabile riga
-   per riga o per tutti i selezionati; **Shadow Catcher Plane** crea (o riporta) un
+   per riga o per tutti i selezionati; **New Shadow Catcher Plane** crea (o riporta) un
    piano shadow catcher sul piano di riferimento calibrato.
 7. **Tools › Move Along View** – sposta oggetti/vertici lungo il raggio dalla camera
    (anche da *Object/Mesh › Transform*).

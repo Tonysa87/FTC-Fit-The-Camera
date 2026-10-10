@@ -47,6 +47,10 @@
   sotto-IFD rotto non fa perdere marca/modello/orientamento.
 - Traduzioni: "Flip Axis Direction" (prima mostrava "Scambia assi" di Blender),
   Risultati, Imbardata, Sposta lungo la vista, nuovi avvisi.
+- Il pulsante del piano diventa **New Shadow Catcher Plane**, su una riga a sé,
+  e il piano è una griglia: prima sembrava vuoto (bordi fuori inquadratura) e
+  veniva scambiato per "rendi shadow catcher la selezione" (che è *Set Role of
+  Selected*).
 - Render (audit): niente crash con config colore OCIO personalizzate, uscita
   video, Cycles disattivato; il compositor usa il view layer attivo; il bordo
   ritagliato viene disattivato; avviso se manca il file della foto; un oggetto in

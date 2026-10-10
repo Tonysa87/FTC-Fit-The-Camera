@@ -23,8 +23,10 @@ from .ops_load import fit_scene_to_image
 TREE_NAME = "FTC Compositing"
 TREE_TAG = "ftc_compositing"
 CATCHER_NAME = "FTC Shadow Catcher"
-# Side of the shadow catcher plane, in camera distances from the origin.
+# Side of the shadow catcher plane, in camera distances from the origin, and its
+# grid: drawn as wireframe, a plain quad has all its edges outside the frame.
 CATCHER_SIZE = 10.0
+CATCHER_SEGMENTS = 20
 RENDERABLE = {"MESH", "CURVE", "SURFACE", "META", "FONT", "CURVES", "POINTCLOUD", "VOLUME", "GREASEPENCIL"}
 
 ROLE_ITEMS = [
@@ -361,10 +363,12 @@ def catcher_object(settings, scene):
 
 
 class FTC_OT_add_catcher(Operator):
-    """Add a shadow catcher plane on the calibrated reference plane, or move the existing one there"""
-
+    bl_description = (
+        "Create a new plane on the calibrated reference plane as shadow catcher (the one made before for "
+        "this camera is moved there instead). To make selected objects shadow catchers, use Set Role of Selected"
+    )
     bl_idname = "ftc.add_catcher"
-    bl_label = "Shadow Catcher Plane"
+    bl_label = "New Shadow Catcher Plane"
     bl_options = {"REGISTER", "UNDO"}
 
     @classmethod
@@ -384,7 +388,7 @@ class FTC_OT_add_catcher(Operator):
             # Shared with a linked duplicate: reshape a copy only.
             obj.data = obj.data.copy()
         bm = bmesh.new()
-        bmesh.ops.create_grid(bm, x_segments=1, y_segments=1, size=size / 2)
+        bmesh.ops.create_grid(bm, x_segments=CATCHER_SEGMENTS, y_segments=CATCHER_SEGMENTS, size=size / 2)
         bm.to_mesh(obj.data)
         bm.free()
         obj.matrix_world = calibrate.alignment_matrix(settings) @ calibrate.reference_frame(settings)

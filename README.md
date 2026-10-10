@@ -124,8 +124,10 @@ ones):
 | Holdout | shows the photo and hides the objects behind it, no shadows | real objects in front of the CG |
 | Hidden | not rendered | reference geometry |
 
-**Shadow Catcher Plane** adds a shadow catcher on the calibrated reference plane
-(drawn as wireframe so it does not cover the photo).
+**New Shadow Catcher Plane** creates a plane on the calibrated reference plane as
+shadow catcher (drawn as a wireframe grid so it does not cover the photo; pressed
+again it moves the same plane). To turn your own objects into shadow catchers,
+select them and use *Set Role of Selected*.
 
 ## Tips
 
