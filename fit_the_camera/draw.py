@@ -19,7 +19,7 @@ from gpu_extras.batch import batch_for_shader
 
 from . import calibrate
 from .solver.common import plane_frame, vanishing_point
-from .solver.scale import CUBE_EDGES, cube_corners
+from .solver.scale import CUBE_EDGES, cube_corners, cube_top_px
 
 HANDLE_RADIUS = 8.0
 HANDLE_TICK = 3.5
@@ -201,14 +201,19 @@ def handle_co(settings, solution, key):
     """Normalised position where handle ``key`` is shown and picked. The cube's top
     handle sits on the top of the cube's vertical edge: the solver only uses the
     height along that edge."""
-    if key == "cube_top" and solution is not None:
-        corners = scale_cube(settings, solution)
-        if corners is not None:
-            top = project(solution, corners[4])[0]
-            if not np.isnan(top).any():
-                w, h = solution.image_size
-                return (float(top[0] / w), float(top[1] / h))
+    if key == "cube_top" and solution is not None and calibrate.cube_visible(settings):
+        base = calibrate.to_pixels(settings, calibrate.handle(settings, "cube_base"))
+        top = cube_top_px(solution, base, calibrate.cube_size(settings), calibrate.reference_plane(settings))
+        if top is not None:
+            w, h = solution.image_size
+            return (float(top[0] / w), float(top[1] / h))
     return calibrate.handle(settings, key)
+
+
+def length_text(unit_system, value) -> str:
+    """A length in scene units as Blender shows it (with the unit scale)."""
+    scale = bpy.context.scene.unit_settings.scale_length or 1.0
+    return bpy.utils.units.to_string(unit_system, "LENGTH", value * scale, precision=3)
 
 
 def plane_axes(plane):
@@ -421,7 +426,7 @@ def _cube(view, solution, settings, unit_system):
     if not np.isnan(top).any():
         s = ui_scale()
         pos = view.px_to_region(top)
-        size = bpy.utils.units.to_string(unit_system, "LENGTH", calibrate.cube_size(settings), precision=3)
+        size = length_text(unit_system, calibrate.cube_size(settings))
         text((pos[0] + 12 * s, pos[1] + 4 * s), size, NEUTRAL)
 
 
@@ -524,7 +529,7 @@ def draw_guides(view, settings, solution, session, unit_system):
                 color = colors[settings.ref_axis]
                 a, b = hpos("ref_a"), hpos("ref_b")
                 dashed(a, b, color, 1.0, 5.0)
-                length = bpy.utils.units.to_string(unit_system, "LENGTH", settings.ref_length, precision=3)
+                length = length_text(unit_system, settings.ref_length)
                 text((b[0] + 8 * s, b[1] - 16 * s), length, color)
         elif settings.mode == "RECT":
             pts = [hpos(f"rect_{i}") for i in range(4)]

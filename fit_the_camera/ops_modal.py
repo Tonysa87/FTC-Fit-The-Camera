@@ -12,8 +12,11 @@ from bpy.props import IntProperty
 from bpy.types import Operator
 
 from . import calibrate, draw
+from .solver import cube_top_px
 
 FINE_FACTOR = 0.2
+# Handles that only place or scale the scene, not its orientation.
+SCALE_KEYS = {"origin", "ref_a", "ref_b", "cube_base", "cube_top"}
 UNDO_LIMIT = 100
 
 # Events left to the viewport so that pan and zoom keep working.
@@ -113,6 +116,27 @@ def mouse_in_region(area, region, event) -> tuple[float, float] | None:
         if other.x <= x < other.x + other.width and other.y <= y < other.y + other.height:
             return None
     return x - region.x, y - region.y
+
+
+MIN_CUBE_PX = 4.0
+
+
+def above_base(base, top, pos):
+    """Keep the dragged cube top ``pos`` at least ``MIN_CUBE_PX`` above the base
+    along the edge (``base`` -> ``top``): past the base the cube would flip."""
+    axis = (top[0] - base[0], top[1] - base[1])
+    length = math.hypot(*axis)
+    if length < 1e-6:
+        return pos
+    u = (axis[0] / length, axis[1] / length)
+    lift = MIN_CUBE_PX - ((pos[0] - base[0]) * u[0] + (pos[1] - base[1]) * u[1])
+    return (pos[0] + lift * u[0], pos[1] + lift * u[1]) if lift > 0.0 else pos
+
+
+def push_undo(session, snap) -> None:
+    session.undo.append(snap)
+    del session.undo[:-UNDO_LIMIT]
+    session.redo.clear()
 
 
 def flip(axis: str) -> str:
@@ -246,9 +270,7 @@ class FTC_OT_calibrate(Operator):
         return best
 
     def push_undo(self, session, snap) -> None:
-        session.undo.append(snap)
-        del session.undo[:-UNDO_LIMIT]
-        session.redo.clear()
+        push_undo(session, snap)
 
     def changed(self, context, cam_obj, *, reset_pitch=True):
         calibrate.settings_changed(cam_obj.data, context, reset_pitch=reset_pitch)
@@ -359,7 +381,10 @@ class FTC_OT_calibrate(Operator):
         if event.type == "F" and not event.ctrl:
             self.push_undo(session, snapshot(settings))
             if settings.mode == "VP":
-                flip_axis(settings, session.active_vp + 1)
+                # The active group may be left over from another count: clamp it.
+                count = int(settings.vp_count)
+                last = 3 if count == 3 or (count == 2 and settings.use_third_line) else 2
+                flip_axis(settings, min(session.active_vp + 1, last))
             elif settings.mode == "RECT":
                 # Move the first corner to the next vertex.
                 cos = [calibrate.handle(settings, f"rect_{i}") for i in range(4)]
@@ -418,14 +443,31 @@ class FTC_OT_calibrate(Operator):
             dx, dy = dx * FINE_FACTOR, dy * FINE_FACTOR
         # Shown position: the cube's top handle stays on the cube's vertical edge.
         solution = calibrate.cached_solution(cam_obj.data)
-        pos = view.to_region(draw.handle_co(settings, solution, session.drag_key))
-        pos = (pos[0] + dx, pos[1] + dy)
+        start = view.to_region(draw.handle_co(settings, solution, session.drag_key))
+        pos = (start[0] + dx, start[1] + dy)
+        if session.drag_key == "cube_top":
+            pos = above_base(view.to_region(calibrate.handle(settings, "cube_base")), start, pos)
         if event.ctrl:
             target = self.snap_target(settings, view, session.drag_key, mouse)
             if target is not None:
                 pos = target
-        calibrate.set_handle(settings, session.drag_key, view.to_norm(*pos))
-        self.changed(context, cam_obj, reset_pitch=True)
+        key = session.drag_key
+        calibrate.set_handle(settings, key, view.to_norm(*pos))
+        if key == "cube_base" and solution is not None:
+            # The base moves the whole cube: its top follows, the scale stays.
+            w, h = calibrate.image_size(settings)
+            base = calibrate.to_pixels(settings, view.to_norm(*pos))
+            plane = calibrate.reference_plane(settings)
+            top = cube_top_px(solution, base, calibrate.cube_size(settings), plane)
+            if top is not None:
+                calibrate.set_handle(settings, "cube_top", (float(top[0] / w), float(top[1] / h)))
+        # Handles that only place or scale the scene keep the pitch correction.
+        self.changed(context, cam_obj, reset_pitch=key not in SCALE_KEYS)
+        if key == "cube_top":
+            # Keep the stored top on the edge, where it is shown.
+            solution = calibrate.cached_solution(cam_obj.data)
+            if solution is not None:
+                calibrate.set_handle(settings, key, draw.handle_co(settings, solution, key))
 
 
 # ----------------------------------------------------------------------------
@@ -508,8 +550,7 @@ class FTC_OT_flip_axis(Operator):
         settings = cam_obj.data.ftc
         session = FTC_OT_calibrate._session
         if session is not None and session.camera_name == cam_obj.name:
-            session.undo.append(snapshot(settings))
-            session.redo.clear()
+            push_undo(session, snapshot(settings))
         flip_axis(settings, self.index)
         calibrate.settings_changed(cam_obj.data, context, reset_pitch=True)
         return {"FINISHED"}

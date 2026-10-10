@@ -50,6 +50,9 @@ _IT = {
     "Known Only": "Solo nota",
     "vs Known": "Rispetto alla nota",
     "Focal length unknown: solved from the guides": "Focale sconosciuta: risolta dalle guide",
+    "Solved principal point: the focal length comes from the guides": (
+        "Punto principale risolto: la focale viene dalle guide"
+    ),
     "Camera Height": "Altezza camera",
     "Principal Point": "Punto principale",
     "Live Update": "Aggiornamento live",

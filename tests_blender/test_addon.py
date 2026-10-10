@@ -358,6 +358,59 @@ def scale_cube_sets_the_scale():
 
 
 @test
+def scale_cube_keeps_the_scale_across_changes():
+    """Switching to the cube, changing the reference plane to a wall and moving
+    the cube's base all keep the scene scale; old files keep their distance."""
+    from types import SimpleNamespace
+
+    draw = importlib.import_module(PKG + ".draw")
+    ops = importlib.import_module(PKG + ".ops_modal")
+    scene, cam, syn = _calibrated_camera((1920, 1080))
+    s = cam.data.ftc
+    distance = s.results.distance  # from the reference distance
+    s.scale_mode = "CUBE"
+    assert s.results.valid and abs(s.results.distance - distance) < 1e-6 * distance, s.results.error
+    for plane in ("XZ", "YZ", "XY"):
+        s.ref_plane = plane
+        assert s.results.valid, f"{plane}: {s.results.error}"
+        assert abs(s.results.distance - distance) < 1e-6 * distance, (plane, s.results.distance, distance)
+
+    # Drag the base through the modal operator's own code: the top follows.
+    view = draw.View(0.0, 0.0, 1920.0, 1080.0, (1920, 1080))
+    session = SimpleNamespace(drag_key="cube_base", last_mouse=(0.0, 0.0), pitch_drag=None)
+
+    def changed(ctx, camera, reset_pitch=True):
+        calibrate.settings_changed(camera.data, ctx, reset_pitch=reset_pitch)
+
+    fake = SimpleNamespace(changed=changed)
+    s.pitch_offset = 0.01
+    distance = s.results.distance
+    for _ in range(5):
+        ops.FTC_OT_calibrate.drag(fake, bpy.context, session, s, cam, view, SimpleNamespace(shift=False, ctrl=False),
+                                  (session.last_mouse[0] + 20.0, session.last_mouse[1] + 6.0))  # fmt: skip
+    assert abs(s.results.distance - distance) < 1e-6 * distance, s.results.distance
+    assert abs(s.pitch_offset - 0.01) < 1e-7  # scale handles keep the pitch correction
+
+    # A file saved before the cube: the camera keeps its distance from the origin.
+    s.cube_size = "2"
+    bpy.ops.ftc.apply()
+    distance = s.results.distance
+    s.handles.remove(s.handles.find("cube_top"))
+    calibrate.refresh(cam.data)
+    assert "cube_top" in s.handles
+    assert abs(s.results.distance - distance) < 1e-4 * distance, (s.results.distance, distance)
+
+
+@test
+def solved_principal_point_solves_the_focal_length():
+    _, cam, _ = _calibrated_camera((1920, 1080))
+    s = cam.data.ftc
+    s.camera_data.focal_35mm = 50.0
+    s.vp_count, s.pp_mode, s.focal_mode = "3", "SOLVE", "KNOWN"
+    assert calibrate.focal_source(s) == "SOLVE"
+
+
+@test
 def flip_axis_buttons_keep_a_right_handed_world():
     draw = importlib.import_module(PKG + ".draw")
     scene, cam, syn = _calibrated_camera((1920, 1080))

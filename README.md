@@ -70,9 +70,10 @@ nascondere in *Opacity*).
   edifici diversi, fughe di piastrelle). Con 3 gruppi o la focale nota l'**aderenza
   guide** lo rivela.
 - La focale EXIF può essere sbagliata (foto zoomate o ritagliate). Con *Nota +
-  guide*, se le guide la contraddicono nettamente prevalgono loro e un avviso
-  riporta di quanto l'hanno cambiata (riga *Rispetto alla nota* nei risultati).
-  Due punti di fuga di cui uno lontano non bastano a scoprirlo: servono 3 gruppi.
+  guide*, se le guide non riescono ad accordarsi con essa (scarto > 1°) e con la
+  propria vanno molto meglio, prevalgono loro e un avviso riporta di quanto
+  l'hanno cambiata (riga *Rispetto alla nota* nei risultati). Due punti di fuga
+  di cui uno lontano, o un rettangolo, non bastano a scoprirlo: servono 3 gruppi.
 - **Raddrizza orizzonte** forza il rollio a 0: se la foto è inclinata la camera
   non segue più le guide (l'avviso indica quanti gradi ha tolto).
 

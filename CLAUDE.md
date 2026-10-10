@@ -54,18 +54,24 @@ Single-image camera calibration add-on. User docs: `README.md` (Italian). Histor
 - EXIF focal can be wrong (zoomed/cropped deck photo: guides say ~8800 px, EXIF main
   camera ~2966 px) -> guide-misfit warning.
 - Straighten horizon on a rolled photo breaks the fit (warned with removed roll).
-- Known focal as a robust (Cauchy, ±5%) prior in the LM (`solver/refine.py`), two
-  starts (guides' own focal and the known one): 2 VPs measure f to ~2% with 2 px
-  noise, a rectangle only to ~11% (so EXIF dominates there). The deck photo's 3×
-  wrong EXIF is overruled by 3 VPs but not by 2 (one VP far away).
+- Known focal ("Known + Guides"): Gaussian prior (±5% ~ 1‰ guide noise) in the
+  LM; the guides overrule it only if the known-focal fit misfits > 1° and their
+  own fit is < 75% of that (`solver/vp.refine_known_focal`). A Cauchy prior was
+  tried and rejected: 10–25 px guide errors threw away a correct EXIF focal.
+  2 VPs measure f to ~2% with 2 px noise; a rectangle cannot detect even a 3x
+  wrong focal (corners within ~9 px), so it keeps the known value. The deck's 3x
+  wrong EXIF is overruled by 3 VPs, not by 2 (one VP far away).
 - Default guides/rectangle are generated for the known focal (`default_handles`),
   otherwise "guides overrule the known focal" fires on untouched guides.
 
 ## Scale cube
 `solver/scale.py`: base corner = base ray ∩ reference plane through the origin,
 vertical edge along the plane normal on the camera's side, top handle -> closest
-point on that edge (`closest_param_on_line`). Shown top handle = projected top
-corner (`draw.handle_co`), used for pick and drag too.
+point on that edge via its image-space foot, height taken in absolute value.
+Shown top handle = projected top corner (`draw.handle_co`), used for pick and
+drag; the stored top is synced to it. Dragging the base moves the top with it
+(scale kept); `calibrate.seed_cube` keeps the scale on plane / scale-mode changes
+and migrates pre-cube files (camera distance kept). Seeding skips `suspended()`.
 
 ## Open work
 - Possible: magnifier near the cursor while dragging; more than two lines per VP.

@@ -64,8 +64,12 @@ def axis_row(layout, settings, index, label):
 
 
 def draw_focal_mode(layout, settings, has_focal):
-    layout.prop(settings, "focal_mode")
-    if not has_focal and settings.focal_mode == "AUTO":
+    row = layout.row()
+    row.enabled = not calibrate.pp_solved(settings)
+    row.prop(settings, "focal_mode")
+    if not row.enabled:
+        layout.label(text="Solved principal point: the focal length comes from the guides", icon="INFO")
+    elif not has_focal and settings.focal_mode == "AUTO":
         layout.label(text="Focal length unknown: solved from the guides", icon="INFO")
     elif not has_focal and settings.focal_mode == "KNOWN":
         layout.label(text="Needs the focal length (Camera Data)", icon="ERROR")

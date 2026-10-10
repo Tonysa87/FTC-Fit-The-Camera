@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.6.1 – 2026-10-10 (audit)
+- *Nota + guide*: le guide scavalcano la focale nota solo se non riescono ad
+  accordarsi con essa (scarto > 1°) e con la propria vanno molto meglio. Prima
+  guide imprecise di 10–25 px bastavano a buttare via una focale EXIF corretta.
+  Il rettangolo tiene la focale nota (quattro angoli non bastano a scoprire uno zoom).
+- Avvisi indipendenti: "linee non parallele" non viene più nascosto da "le guide
+  scavalcano la focale".
+- Cubo di scala:
+  - non rompe più la calibrazione passando a una parete (XZ/YZ);
+  - cambiando piano o passando alla scala a cubo, la scala resta quella attuale;
+  - la base sposta tutto il cubo senza cambiare la scala;
+  - la cima conta solo lungo lo spigolo e non scende sotto la base;
+  - i file salvati prima del cubo mantengono la distanza della camera;
+  - le misure preimpostate rispettano la scala delle unità della scena.
+- Trascinare origine, misura di riferimento o cubo non azzera più la correzione
+  di beccheggio.
+- Con il punto principale risolto la focale viene sempre dalle guide (la scelta è
+  disattivata e spiegata).
+- Rettangolo di default valido anche con ultragrandangoli.
+- F con un gruppo attivo rimasto da un'altra modalità; limite dell'undo per il
+  pulsante d'inversione; descrizioni delle misure del cubo.
+
 ## 0.6.0 – 2026-10-10
 - **Cubo di scala** al posto di *Distanza camera*: cubo wireframe di lato noto
   (10 cm … 10 m o personalizzato) sul piano di riferimento; maniglia alla base sul

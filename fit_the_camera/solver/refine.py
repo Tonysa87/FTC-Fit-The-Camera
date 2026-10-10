@@ -111,12 +111,9 @@ def least_squares(fun, n_params: int, bounded) -> tuple[np.ndarray, float]:
 
 
 def focal_prior_residual(focal: float, known: float, weight: float) -> float:
-    """Robust (Cauchy) residual of a focal length against a known one: like
-    ``weight * log(focal / known)`` within ``FOCAL_PRIOR_SPREAD``, growing only
-    logarithmically beyond, so that guides clearly contradicting the known value
-    (a cropped or zoomed photo) win over it."""
-    u = math.log(focal / known) / FOCAL_PRIOR_SPREAD
-    return math.copysign(weight * FOCAL_PRIOR_SPREAD * math.sqrt(math.log1p(u * u)), u)
+    """Residual of a focal length against a known one, ``FOCAL_PRIOR_SPREAD``
+    weighing as much as a guide end point off by ``GUIDE_NOISE``."""
+    return weight * math.log(focal / known)
 
 
 def focal_prior_weight(image_size) -> float:
