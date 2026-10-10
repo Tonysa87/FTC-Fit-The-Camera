@@ -8,6 +8,7 @@ work on every GPU backend (OpenGL, Vulkan, Metal).
 from __future__ import annotations
 
 import math
+import textwrap
 
 import blf
 import bpy
@@ -282,8 +283,9 @@ def handle_marker(pos, color, *, hovered=False, active=False, frozen=False, firs
         circle(pos, r + 2.0 * HANDLE_TICK * s, color, 1.0, segments=32)
 
 
-def segment(a, b, color, width=1.0, trim_a=True, trim_b=True):
-    """Guide line between two handles, stopped at the handle rings."""
+def segment(a, b, color, width=1.0, trim_a=True, trim_b=True, arrow=False):
+    """Guide line between two handles, stopped at the handle rings. ``arrow``
+    adds a chevron before the second handle: the positive axis direction."""
     length = math.dist(a, b)
     r = handle_radius()
     cut = r * (trim_a + trim_b)
@@ -292,7 +294,13 @@ def segment(a, b, color, width=1.0, trim_a=True, trim_b=True):
     ux, uy = (b[0] - a[0]) / length, (b[1] - a[1]) / length
     ta = r if trim_a else 0.0
     tb = r if trim_b else 0.0
-    lines([(a[0] + ux * ta, a[1] + uy * ta), (b[0] - ux * tb, b[1] - uy * tb)], color, width)
+    end = (b[0] - ux * tb, b[1] - uy * tb)
+    coords = [(a[0] + ux * ta, a[1] + uy * ta), end]
+    size = 7.0 * ui_scale()
+    if arrow and length > cut + 2.0 * size:
+        for side in (1.0, -1.0):
+            coords += [end, (end[0] - size * (ux - 0.5 * side * uy), end[1] - size * (uy + 0.5 * side * ux))]
+    lines(coords, color, width)
 
 
 # ----------------------------------------------------------------------------
@@ -418,14 +426,16 @@ def draw_guides(view, settings, solution, session, unit_system):
 
         if settings.mode == "VP":
             count = int(settings.vp_count)
-            if count == 3:
+            third_line = count == 2 and settings.use_third_line
+            if count == 3 or third_line:
                 labels[2] = remaining_axis(labels[0], labels[1])
             for i in range(1, count + 1):
                 color = colors[axis_letter(labels[i - 1])]
                 k = calibrate.vp_keys(i)
                 width = GUIDE_WIDTH * (1.6 if session.active_vp == i - 1 else 1.0)
                 segs = [hpos(k[0]), hpos(k[1]), hpos(k[2]), hpos(k[3])]
-                segment(segs[0], segs[1], color, width)
+                # The first guide carries the axis sign: it gets the arrow.
+                segment(segs[0], segs[1], color, width, arrow=True)
                 segment(segs[2], segs[3], color, width)
                 vp = vanishing_point_px(settings, i)
                 if vp is not None:
@@ -441,8 +451,13 @@ def draw_guides(view, settings, solution, session, unit_system):
                 text((mid[0] + 8 * s, mid[1] + 8 * s), labels[i - 1], color)
             if count == 1:
                 color = colors[axis_letter(settings.vp2_axis)]
-                segment(hpos("hz_a"), hpos("hz_b"), color, GUIDE_WIDTH)
+                segment(hpos("hz_a"), hpos("hz_b"), color, GUIDE_WIDTH, arrow=True)
                 text((hpos("hz_b")[0] + 8 * s, hpos("hz_b")[1] + 8 * s), settings.vp2_axis, color)
+            if third_line:
+                color = colors[labels[2]]
+                a, b = hpos("vp3_1a"), hpos("vp3_1b")
+                segment(a, b, color, GUIDE_WIDTH)
+                text(((a[0] + b[0]) / 2 + 8 * s, (a[1] + b[1]) / 2 + 8 * s), labels[2], color)
             if settings.scale_mode == "REFERENCE":
                 color = colors[settings.ref_axis]
                 a, b = hpos("ref_a"), hpos("ref_b")
@@ -501,8 +516,10 @@ def draw_guides(view, settings, solution, session, unit_system):
         if not res.valid and res.error:
             text((view.x0 + 10 * s, view.y1 - 22 * s), res.error, ERROR_COLOR, 13.0)
         elif res.warnings:
-            for i, line in enumerate(res.warnings.splitlines()):
-                text((view.x0 + 10 * s, view.y1 - (22 + 18 * i) * s), line, HORIZON_COLOR, 12.0)
+            chars = max(30, int((view.x1 - view.x0 - 20 * s) / (6.5 * s)))
+            wrapped = [w for line in res.warnings.splitlines() for w in textwrap.wrap(line, chars)]
+            for i, line in enumerate(wrapped):
+                text((view.x0 + 10 * s, view.y1 - (22 + 16 * i) * s), line, HORIZON_COLOR, 12.0)
     finally:
         gpu.state.blend_set("NONE")
 

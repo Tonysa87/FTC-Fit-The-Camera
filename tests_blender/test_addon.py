@@ -86,8 +86,8 @@ EDGES = {
 
 
 def axis_label(syn, axis):
-    d = syn.rotation.T @ {"X": np.array([1.0, 0, 0]), "Y": np.array([0, 1.0, 0])}[axis]
-    return ("+" if d[2] < 0 else "-") + axis
+    """EDGES run from their first to their second point along +axis: the solver's sign convention."""
+    return "+" + axis
 
 
 def set_guides_from(settings, syn):
@@ -217,7 +217,7 @@ def rectangle_and_horizon_modes_solve():
     s = cam.data.ftc
     s.mode = "RECT"
     assert s.results.valid, s.results.error
-    s.rect_use_focal = True
+    s.use_known_focal = True
     assert s.results.valid, s.results.error
     s.mode = "HORIZON"
     s.camera_height = 1.7
@@ -283,6 +283,19 @@ def uncertainty_flags_far_vanishing_points():
     assert "unstable" not in s.results.warnings
     assert abs(math.degrees(s.results.roll) - 4.0) < 0.5, math.degrees(s.results.roll)
     assert abs(math.degrees(s.results.pitch) + 32.7) < 0.5, math.degrees(s.results.pitch)
+
+    # Two floor directions + one vertical line + the EXIF focal: stable too.
+    with calibrate.suspended():
+        s.vp_count, s.vp1_axis, s.vp2_axis = "2", "+X", "-Y"
+        s.use_third_line, s.use_known_focal = True, True
+        place(1, "tile_across_c", "tile_across_d")
+        place(2, "tile_depth_a", "tile_depth_b")
+        calibrate.set_handle(s, "vp3_1a", norm(lines["vertical_right_jamb"][0]))
+        calibrate.set_handle(s, "vp3_1b", norm(lines["vertical_right_jamb"][1]))
+    calibrate.refresh(cam.data)
+    assert s.results.valid, s.results.error
+    assert s.results.angle_error < 1.5, s.results.angle_error
+    assert s.results.height > 0.0
 
     s.straighten = True
     assert math.degrees(abs(s.results.removed_roll)) > 1.0

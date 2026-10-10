@@ -236,11 +236,23 @@ class FTC_Settings(PropertyGroup):
         unit="LENGTH",
         update=_changed,
     )
-    rect_use_focal: BoolProperty(
+    use_known_focal: BoolProperty(
         name="Use Known Focal Length",
-        description="Use the focal length from the camera data instead of solving it",
+        description=(
+            "Use the focal length from the camera data instead of solving it: the guides then only set the "
+            "orientation, which is much more stable when a vanishing point is far away"
+        ),
         default=False,
         update=_changed,
+    )
+    use_third_line: BoolProperty(
+        name="Third Axis Line",
+        description=(
+            "With two vanishing points, add one line along the third axis (e.g. a vertical edge): it joins "
+            "the calibration and keeps that axis on the image"
+        ),
+        default=False,
+        update=_guides_changed,
     )
 
     camera_height: FloatProperty(
@@ -272,6 +284,11 @@ class FTC_Settings(PropertyGroup):
         items=[
             ("CENTER", "Center", "Principal point at the image centre"),
             ("MANUAL", "Manual", "Drag the principal point in the viewport"),
+            (
+                "SOLVE",
+                "Solve",
+                "Three vanishing points only: solve it as their orthocentre (unstable when one is far away)",
+            ),
         ],
         default="CENTER",
         update=_changed,
