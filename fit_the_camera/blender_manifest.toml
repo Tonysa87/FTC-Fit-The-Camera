@@ -1,7 +1,7 @@
 schema_version = "1.0.0"
 
 id = "fit_the_camera"
-version = "0.5.1"
+version = "0.5.2"
 name = "FTC – Fit The Camera"
 tagline = "Match a camera to a photo with vanishing points or known shapes"
 maintainer = "Antonio Sartini"

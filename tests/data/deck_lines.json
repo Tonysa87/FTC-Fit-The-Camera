@@ -1,0 +1,81 @@
+{
+ "description": "Edges measured (sub-pixel) on a 3000x3000 phone photo of a house front with a wooden deck, pixels with origin bottom-left. The photo is zoomed or cropped: the EXIF focal (4.745 mm, main camera, 1/2\" 6.4 mm sensor -> ~2966 px) does not fit; the guides agree on ~8800 px (19 deg field of view).",
+ "image_size": [
+  3000,
+  3000
+ ],
+ "exif_focal_mm": 4.745,
+ "spec_sensor_mm": 6.4,
+ "lines": {
+  "depth_board_1": [
+   [
+    899.1,
+    1075.4
+   ],
+   [
+    759.1,
+    707.2
+   ]
+  ],
+  "depth_board_2": [
+   [
+    1352.1,
+    1074.8
+   ],
+   [
+    1310.9,
+    710.1
+   ]
+  ],
+  "depth_board_3": [
+   [
+    2174.6,
+    1079.2
+   ],
+   [
+    2276.6,
+    709.6
+   ]
+  ],
+  "across_shutter_bottom": [
+   [
+    1140.0,
+    2156.9
+   ],
+   [
+    2360.0,
+    2159.5
+   ]
+  ],
+  "across_deck_front": [
+   [
+    80.0,
+    699.6
+   ],
+   [
+    2900.0,
+    702.8
+   ]
+  ],
+  "vertical_frame_left": [
+   [
+    1174.0,
+    2130.1
+   ],
+   [
+    1183.2,
+    1160.2
+   ]
+  ],
+  "vertical_frame_right": [
+   [
+    2348.6,
+    2129.9
+   ],
+   [
+    2335.5,
+    1150.1
+   ]
+  ]
+ }
+}

@@ -115,6 +115,24 @@ def axis_direction(vp_h, lines, p, f) -> np.ndarray:
     return orient_along(homogeneous_ray(vp_h, p, f), lines[0], p, f)
 
 
+def max_misfit(groups, p, f, rotation) -> float:
+    """Largest angle (degrees) between a guide and the line from its midpoint to
+    the vanishing point of its axis; works for vanishing points at infinity."""
+    worst = 0.0
+    for axis, lines in groups:
+        d = rotation[axis, :]
+        v = np.array([f * d[0] - p[0] * d[2], f * d[1] - p[1] * d[2], -d[2]])  # K @ (d.x, d.y, -d.z)
+        for a, b in lines:
+            a, b = np.asarray(a, float), np.asarray(b, float)
+            u = b - a
+            t = v[:2] - (a + b) / 2.0 * v[2]
+            if np.linalg.norm(u) < 1e-9 or np.linalg.norm(t) < 1e-9:
+                continue
+            angle = math.degrees(math.atan2(abs(u[0] * t[1] - u[1] * t[0]), abs(u @ t)))
+            worst = max(worst, angle)
+    return worst
+
+
 def best_pair_focal(vps, p, image_size) -> float:
     """Focal length from the best conditioned pair of vanishing points."""
     best = None
@@ -197,6 +215,7 @@ def solve_vanishing_points(
         d1 = axis_direction(vps[0], vp_lines[0], p, f)
         d2 = second_axis_from_line(d1, axis2_line, p, f)
         rotation = complete_frame({i: si * d1, j: sj * d2}).T
+        groups = [(i, vp_lines[0]), (j, [axis2_line])]
     else:
         if count == 3 and solve_principal_point:
             for v in vps:
@@ -222,11 +241,12 @@ def solve_vanishing_points(
         groups = [(axis, lines) for axis, lines in zip((i, j, k), vp_lines)]
         if count == 2 and third_axis_line is not None:
             groups.append((k, [third_axis_line]))
+        groups = [(axis, [tuple(map(tuple, seg)) for seg in lines]) for axis, lines in groups]
         overdetermined = count == 3 or focal_px or third_axis_line is not None
         if overdetermined and not (count == 3 and solve_principal_point):
-            groups = [(axis, [tuple(map(tuple, seg)) for seg in lines]) for axis, lines in groups]
             f, rotation, _ = refine(groups, p, f, rotation, fix_focal=bool(focal_px))
 
+    misfit = max_misfit(groups, p, f, rotation)
     rotation, removed_roll = finish_rotation(rotation, straighten_horizon, pitch_offset, warnings)
     world_to_cam = rotation.T
 
@@ -258,4 +278,5 @@ def solve_vanishing_points(
         position=position,
         warnings=warnings,
         removed_roll=removed_roll,
+        guide_misfit=misfit,
     )

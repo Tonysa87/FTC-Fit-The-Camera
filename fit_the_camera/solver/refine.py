@@ -20,6 +20,12 @@ import numpy as np
 from .common import rotation_about
 
 MAX_ITERATIONS = 30
+# Bounds that keep a degenerate configuration from diverging: the focal length
+# stays within e^4 (x55) of its start and changes at most x2.7 per step; a step
+# turns the camera by at most ~30 degrees.
+MAX_LOG_FOCAL = 4.0
+MAX_LOG_FOCAL_STEP = 1.0
+MAX_ROTATION_STEP = 0.5
 _STEP = 1e-6
 
 
@@ -61,18 +67,29 @@ def refine(groups, p, f: float, rotation: np.ndarray, *, fix_focal: bool) -> tup
     """Levenberg-Marquardt on (log focal, small rotation in camera space).
 
     Returns the refined focal length, camera -> world rotation and the RMS
-    residual in pixels.
+    residual in pixels. Steps are bounded so that nearly degenerate guides (common
+    while a handle is being dragged) cannot throw the solution to infinity.
     """
     n_params = 3 if fix_focal else 4
     groups = _prepare(groups)
 
     def unpack(x):
-        focal = f if fix_focal else f * math.exp(x[3])
+        focal = f if fix_focal else f * math.exp(min(max(x[3], -MAX_LOG_FOCAL), MAX_LOG_FOCAL))
         return focal, rotation @ _small_rotation(x[:3])
+
+    def bounded(step):
+        rot = float(np.linalg.norm(step[:3]))
+        if rot > MAX_ROTATION_STEP:
+            step = step * (MAX_ROTATION_STEP / rot)
+        if not fix_focal and abs(step[3]) > MAX_LOG_FOCAL_STEP:
+            step = step * (MAX_LOG_FOCAL_STEP / abs(step[3]))
+        return step
 
     x = np.zeros(n_params)
     r = residuals(groups, p, *unpack(x))
     cost = float(r @ r)
+    if not math.isfinite(cost):
+        return f, rotation, math.inf
     damping = 1e-3
     for _ in range(MAX_ITERATIONS):
         jac = np.empty((len(r), n_params))
@@ -80,14 +97,20 @@ def refine(groups, p, f: float, rotation: np.ndarray, *, fix_focal: bool) -> tup
             dx = np.zeros(n_params)
             dx[i] = _STEP
             jac[:, i] = (residuals(groups, p, *unpack(x + dx)) - r) / _STEP
+        if not np.all(np.isfinite(jac)):
+            break
         a = jac.T @ jac
         g = jac.T @ r
-        improved = False
+        improved = done = False
         while damping < 1e10:
-            step = -np.linalg.solve(a + damping * np.diag(np.diag(a) + 1e-12), g)
+            try:
+                step = bounded(-np.linalg.solve(a + damping * np.diag(np.diag(a) + 1e-12), g))
+            except np.linalg.LinAlgError:
+                damping *= 10.0
+                continue
             r_new = residuals(groups, p, *unpack(x + step))
             cost_new = float(r_new @ r_new)
-            if cost_new < cost:
+            if math.isfinite(cost_new) and cost_new < cost:
                 x, r, improved = x + step, r_new, True
                 done = cost - cost_new < 1e-9 * max(cost, 1e-12)
                 cost = cost_new

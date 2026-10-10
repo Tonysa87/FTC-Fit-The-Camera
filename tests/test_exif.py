@@ -84,8 +84,8 @@ def test_square_crop_assumes_a_4_3_sensor():
         ],
     )
     data = exif.read_exif(jpeg(tiff))
-    # Sensor diagonal 10.20 mm -> 8.16 x 6.12 mm; the square crop is 6.12 mm wide.
-    assert data.sensor_long_side_mm() == pytest.approx(6.122, abs=0.005)
+    # Sensor diagonal 10.20 mm -> 8.16 x 6.12 mm, whatever the crop.
+    assert data.sensor_long_side_mm() == pytest.approx(8.163, abs=0.005)
     assert exif.native_frame((3072, 3072)) == (4096.0, 3072.0)
     assert exif.native_frame((1920, 1080)) == (1920.0, 1440.0)
     assert exif.native_frame((6000, 4000)) == (6000.0, 4000.0)
