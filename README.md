@@ -30,7 +30,7 @@ the real ground.
 ## Install
 
 1. Download `fit_the_camera-<version>.zip` from the
-   [Releases](https://github.com/Tonysa87/FTC---Fit-The-Camera/releases).
+   [Releases](https://github.com/Tonysa87/FTC-Fit-The-Camera/releases).
 2. In Blender 5.2 or later: *Edit › Preferences › Get Extensions › ⌄ ›
    Install from Disk…* and pick the zip.
 

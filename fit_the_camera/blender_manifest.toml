@@ -6,7 +6,7 @@ name = "FTC – Fit The Camera"
 tagline = "Match a camera to a photo with vanishing points or known shapes"
 maintainer = "Antonio Sartini"
 type = "add-on"
-website = "https://github.com/Tonysa87/FTC---Fit-The-Camera"
+website = "https://github.com/Tonysa87/FTC-Fit-The-Camera"
 
 tags = ["Camera", "3D View", "Render"]
 

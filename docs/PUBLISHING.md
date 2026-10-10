@@ -36,7 +36,7 @@ Il materiale pronto (icona, immagine in evidenza, anteprime, testi) sta in
 | Immagine in evidenza (*featured image*) | JPEG, PNG o WebP (obbligatoria; mostrata in home) | **da fare** |
 | Anteprime | almeno 1: JPEG, PNG, WebP o video MP4, con didascalia | **da fare** |
 | Descrizione | deve elencare tutto ciò che fa l'estensione | bozza sotto |
-| Support URL | issue tracker del repository | `https://github.com/Tonysa87/FTC---Fit-The-Camera/issues` |
+| Support URL | issue tracker del repository | `https://github.com/Tonysa87/FTC-Fit-The-Camera/issues` |
 | Website | nel manifest | GitHub |
 
 Immagini: niente logo di Blender, niente GIF pesanti nella descrizione. Le
@@ -89,7 +89,7 @@ Match a camera to a single image – a photo, a render or a drawing – then ren
   surfaces and objects of the photo
 
 Sidebar › FTC tab. Interface in English and Italian.
-Documentation: https://github.com/Tonysa87/FTC---Fit-The-Camera
+Documentation: https://github.com/Tonysa87/FTC-Fit-The-Camera
 ```
 
 ## Fonti
