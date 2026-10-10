@@ -54,7 +54,7 @@ def apply_now(context) -> None:
     cam = calibrated_camera(context)
     if cam is None:
         return
-    if FTC_OT_calibrate.running():
+    if FTC_OT_calibrate.running() and cam.name == calibrate.session_camera:
         calibrate.settings_changed(cam.data, context, reset_pitch=False)
     else:
         calibrate.update(context, cam, apply=True)

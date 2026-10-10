@@ -24,7 +24,7 @@ from .solver import (
     solve_vanishing_points,
     to_blender,
 )
-from .solver.common import plane_frame
+from .solver.common import parse_axis, plane_frame, ray
 
 # Default guide layout, in normalised image coordinates (0..1, origin bottom-left).
 # Vanishing point 1 (+X) converges to the right, 2 (+Y) to the left, 3 downwards,
@@ -69,26 +69,58 @@ _updating = False
 # Settings access
 
 
-TRANSFORM_PATHS = {"location", "rotation_euler", "rotation_quaternion", "rotation_axis_angle", "delta_location"}
+TRANSFORM_PATHS = {
+    "location",
+    "rotation_euler",
+    "rotation_quaternion",
+    "rotation_axis_angle",
+    "delta_location",
+    "delta_rotation_euler",
+    "delta_rotation_quaternion",
+}
+LENS_PATHS = {"lens", "shift_x", "shift_y", "sensor_width", "sensor_height", "sensor_fit", "type"}
 
 
-def transform_animated(obj) -> bool:
-    """``obj`` has location / rotation keyframes, which override the calibration
-    at the next frame change or render."""
-    anim = obj.animation_data
-    if anim is None or anim.action is None:
+def _animated(id_data, paths) -> bool:
+    """``id_data`` has keyframes (action or NLA) or drivers on any of ``paths``."""
+    anim = id_data.animation_data
+    if anim is None:
         return False
+    if any(d.data_path in paths for d in anim.drivers):
+        return True
     from bpy_extras import anim_utils
 
-    bag = anim_utils.action_get_channelbag_for_slot(anim.action, anim.action_slot)
-    return bag is not None and any(fc.data_path in TRANSFORM_PATHS for fc in bag.fcurves)
+    pairs = [(anim.action, anim.action_slot)] if anim.action is not None else []
+    pairs += [(s.action, getattr(s, "action_slot", None)) for t in anim.nla_tracks for s in t.strips if s.action]
+    for action, slot in pairs:
+        bag = anim_utils.action_get_channelbag_for_slot(action, slot) if slot is not None else None
+        if bag is not None and any(fc.data_path in paths for fc in bag.fcurves):
+            return True
+    return False
 
 
-def aspect_matches(scene, settings) -> bool:
-    """The render has the image's aspect ratio (to the pixel)."""
-    w, h = image_size(settings)
-    rx, ry = scene.render.resolution_x, scene.render.resolution_y
-    return not (w and h) or abs(ry - rx * h / w) <= 1.0
+def transform_overridden(obj) -> bool:
+    """Something replaces the calibration written into the camera at the next
+    frame change or render: keyframes, drivers or constraints on its transform
+    (or on a parent's), or keyframes on its lens."""
+    if _animated(obj.data, LENS_PATHS):
+        return True
+    while obj is not None:
+        if _animated(obj, TRANSFORM_PATHS):
+            return True
+        if any(c.enabled and c.influence > 0.0 for c in obj.constraints):
+            return True
+        obj = obj.parent
+    return False
+
+
+def aspect_matches(scene, size) -> bool:
+    """The render (with its pixel aspect) has the aspect ratio of an image of
+    ``size`` pixels, to the pixel."""
+    w, h = size
+    render = scene.render
+    stretch = render.pixel_aspect_x / render.pixel_aspect_y
+    return not (w and h) or abs(render.resolution_y - render.resolution_x * stretch * h / w) <= 1.0
 
 
 def space_camera(space, scene):
@@ -474,7 +506,12 @@ def seed_cube(cam_data, solution: CameraSolution | None = None) -> None:
     size, plane = cube_size(settings), reference_plane(settings)
     base = to_pixels(settings, handle(settings, "cube_base"))
     top = cube_top_px(solution, base, size, plane)
-    if top is None:
+
+    def inside(p):
+        return p is not None and -0.05 * w <= p[0] <= 1.05 * w and -0.05 * h <= p[1] <= 1.05 * h
+
+    if not (inside(base) and inside(top)):
+        # E.g. a base left on the floor when the plane becomes a wall.
         # Half an edge from the origin along the plane, so both handles stay pickable.
         frame = plane_frame(plane)
         near = project_point(solution, 0.5 * size * (frame[:, 0] + frame[:, 1]))
@@ -487,6 +524,41 @@ def seed_cube(cam_data, solution: CameraSolution | None = None) -> None:
     with suspended():
         set_handle(settings, "cube_base", (float(base[0] / w), float(base[1] / h)))
         set_handle(settings, "cube_top", (float(top[0] / w), float(top[1] / h)))
+
+
+def seed_reference(cam_data) -> None:
+    """When the reference distance takes over the scale with its handles still
+    untouched (the defaults), lay them out for the current scale: the scene keeps
+    its size, as when the cube takes over."""
+    settings = cam_data.ftc
+    if _updating or not reference_scales(settings):
+        return
+    solution = cached_solution(cam_data)
+    if solution is None:
+        return
+    defaults = default_handles(settings)
+    if any(math.dist(handle(settings, k), defaults[k]) > 1e-6 for k in ("ref_a", "ref_b")):
+        return
+    w, h = image_size(settings)
+    frame = plane_frame(settings.ref_measure_plane)
+    normal = frame[:, 2]
+    start_px = to_pixels(settings, defaults["ref_a"])
+    direction = solution.rotation @ ray(start_px, solution.principal_point, solution.focal_px)
+    den = normal @ direction
+    if abs(den) < 1e-9:
+        return
+    t = -(normal @ solution.position) / den
+    if t <= 0.0:
+        return
+    start = solution.position + t * direction
+    k, _ = parse_axis(settings.ref_axis)
+    axis = np.eye(3)[k]
+    for sign in (1.0, -1.0):
+        end = project_point(solution, start + sign * settings.ref_length * axis)
+        if end is not None and 0.0 <= end[0] <= w and 0.0 <= end[1] <= h:
+            with suspended():
+                set_handle(settings, "ref_b", (float(end[0] / w), float(end[1] / h)))
+            return
 
 
 def project_point(solution: CameraSolution, point):

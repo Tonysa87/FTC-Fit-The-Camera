@@ -12,7 +12,7 @@ from bpy.props import IntProperty
 from bpy.types import Operator
 
 from . import calibrate, draw
-from .ops_load import fit_scene_to_image
+from .ops_load import match_image_aspect
 from .solver import cube_top_px
 
 FINE_FACTOR = 0.2
@@ -90,12 +90,10 @@ def restore(settings, snap: dict) -> None:
 
 def session_camera(session):
     """The session's camera object, followed through a rename; ``None`` if gone."""
-    obj = bpy.data.objects.get(session.camera_name)
-    if obj is None or obj.as_pointer() != session.camera_ptr:
-        obj = next((o for o in bpy.data.objects if o.as_pointer() == session.camera_ptr), None)
-        if obj is not None:
-            session.camera_name = calibrate.session_camera = obj.name
-    return obj if obj is not None and obj.type == "CAMERA" else None
+    obj = draw.session_camera(session)
+    if obj is not None:
+        calibrate.session_camera = obj.name
+    return obj
 
 
 def clear_header(session) -> None:
@@ -230,7 +228,8 @@ class FTC_OT_calibrate(Operator):
 
         settings = cam_obj.data.ftc
         calibrate.ensure_handles(settings)
-        match_image_aspect(context.scene, settings)
+        if match_image_aspect(context.scene, calibrate.image_size(settings)):
+            self.report({"INFO"}, "Render height changed to the image's aspect ratio")
         session = Session(cam_obj, area, region)
         session.handler = bpy.types.SpaceView3D.draw_handler_add(draw.draw_overlay, (session,), "WINDOW", "POST_PIXEL")
         FTC_OT_calibrate._session = session
@@ -310,6 +309,15 @@ class FTC_OT_calibrate(Operator):
     # Event loop
 
     def modal(self, context, event):
+        try:
+            return self._modal(context, event)
+        except Exception:
+            # Blender would drop the handler without cancel(): never leave a
+            # session behind that nothing can end.
+            end_session()
+            raise
+
+    def _modal(self, context, event):
         session = FTC_OT_calibrate._session
         if session is None:
             return {"CANCELLED"}
@@ -356,8 +364,9 @@ class FTC_OT_calibrate(Operator):
             return {"RUNNING_MODAL"}
 
         in_area = area.x <= event.mouse_x < area.x + area.width and area.y <= event.mouse_y < area.y + area.height
-        if event.type == "Z" and (event.ctrl or event.oskey) and in_area:
-            # The session's own undo over its area (elsewhere Blender's undo runs).
+        if event.type == "Z" and (event.ctrl or event.oskey):
+            # Always the session's own undo: Blender's would go back to before the
+            # session (no undo step is pushed while it runs) and lose its edits.
             if event.value == "PRESS":
                 self.undo_redo(context, session, settings, cam_obj, redo=event.shift)
             return {"RUNNING_MODAL"}
@@ -526,11 +535,12 @@ class FTC_OT_apply(Operator):
 
     def execute(self, context):
         cam_obj = _panel_camera(context)
-        match_image_aspect(context.scene, cam_obj.data.ftc)
         solution = calibrate.update(context, cam_obj, apply=True)
         if solution is None:
             self.report({"ERROR"}, cam_obj.data.ftc.results.error or "The calibration cannot be solved")
             return {"CANCELLED"}
+        if match_image_aspect(context.scene, calibrate.image_size(cam_obj.data.ftc)):
+            self.report({"INFO"}, "Render height changed to the image's aspect ratio")
         return {"FINISHED"}
 
 
@@ -592,13 +602,6 @@ class FTC_OT_flip_axis(Operator):
 
 
 classes = (FTC_OT_calibrate, FTC_OT_apply, FTC_OT_reset, FTC_OT_flip_axis)
-
-
-def match_image_aspect(scene, settings) -> None:
-    """Give the render the image's aspect ratio (the size is kept if it already
-    has it): the camera frame only matches the image with the same aspect."""
-    if not calibrate.aspect_matches(scene, settings):
-        fit_scene_to_image(scene, calibrate.image_size(settings))
 
 
 def end_session() -> None:

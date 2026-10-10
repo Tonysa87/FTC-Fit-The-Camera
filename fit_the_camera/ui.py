@@ -14,6 +14,7 @@ from .exif import is_native_aspect
 from .ops_load import background_for
 from .ops_modal import FTC_OT_calibrate
 
+OVERRIDDEN = "Keyframes, drivers or constraints on the camera (or its parent) override the calibration"
 STATE_ICONS = {"EXIF": "CHECKMARK", "MISSING": "ERROR", "MANUAL": "GREASEPENCIL"}
 
 
@@ -110,14 +111,14 @@ class FTC_PT_main(Panel):
             box.label(text=iface_("Image stored rotated (EXIF orientation {})").format(data.orientation), icon="ERROR")
             box.operator("ftc.upright_image", icon="FILE_REFRESH")
 
-        if not calibrate.aspect_matches(context.scene, settings):
+        if not calibrate.aspect_matches(context.scene, calibrate.image_size(settings)):
             box = layout.box()
             box.alert = True
             box.label(text="Render size has another aspect than the image: Apply or Calibrate fixes it", icon="ERROR")
-        if calibrate.transform_animated(cam_obj):
+        if calibrate.transform_overridden(cam_obj):
             box = layout.box()
             box.alert = True
-            box.label(text="The camera has location/rotation keyframes: they override the calibration", icon="ERROR")
+            wrapped(box, context, iface_(OVERRIDDEN), icon="ERROR")
         self.draw_camera_data(context, layout, settings)
         self.draw_calibration(context, layout, settings)
         self.draw_display(context, layout, cam_obj, settings)
@@ -296,7 +297,7 @@ class FTC_PT_main(Panel):
 
     def draw_results(self, context, layout, settings):
         header, body = layout.panel("ftc_results", default_closed=False)
-        header.label(text="Results")
+        header.label(text="Results", text_ctxt="FTC")
         if body is None:
             return
         res = settings.results
@@ -325,7 +326,7 @@ class FTC_PT_main(Panel):
         info_row(col, iface_("Distance"), bpy.utils.units.to_string(unit, "LENGTH", res.distance, precision=3))
         info_row(col, iface_("Pitch"), f"{math.degrees(res.pitch):.2f}°")
         info_row(col, iface_("Roll"), f"{math.degrees(res.roll):.2f}°")
-        info_row(col, iface_("Yaw"), f"{math.degrees(res.yaw):.2f}°")
+        info_row(col, iface_("Yaw", "FTC"), f"{math.degrees(res.yaw):.2f}°")
         if settings.straighten:
             info_row(col, iface_("Removed Roll"), f"{math.degrees(res.removed_roll):+.2f}°", alert=True)
 
@@ -341,7 +342,10 @@ class FTC_PT_main(Panel):
         if not ops_render.color_ready(scene):
             body.label(text="Scene not set up for the photo: use Prepare Render", icon="INFO")
         if scene.render.engine != "CYCLES" and ops_render.has_catchers(scene):
-            body.label(text="Shadow catchers work only in Cycles", icon="ERROR")
+            wrapped(body, context, iface_(ops_render.CATCHER_EEVEE), icon="ERROR")
+        tree = scene.compositing_node_group
+        if tree is not None and tree.get(ops_render.TREE_TAG) and sum(v.use for v in scene.view_layers) > 1:
+            wrapped(body, context, iface_("Only the active view layer is composited over the photo"), icon="INFO")
 
         body.label(text="Object Roles")
         body.template_list("FTC_UL_roles", "", scene, "objects", scene, "ftc_role_index", rows=4)

@@ -79,8 +79,6 @@ _IT = {
     "Measured On": "Misurata su",
     "Solve needs three vanishing points: using the centre": "Risolvi richiede tre punti di fuga: uso il centro",
     # Results
-    "Results": "Risultati",
-    "Yaw": "Imbardata",
     "Not solved": "Non risolto",
     "Field of View": "Campo visivo",
     "Orientation": "Orientamento",
@@ -94,15 +92,17 @@ _IT = {
     "View Transform: Standard, the photo unchanged": "Trasformazione vista: Standard, foto invariata",
     "Film: Transparent": "Pellicola: trasparente",
     "Scene not set up for the photo: use Prepare Render": "Scena non preparata per la foto: usa Prepara render",
-    "Shadow catchers work only in Cycles": "Gli shadow catcher funzionano solo in Cycles",
+    "Shadow catchers work only in Cycles: in other engines they cover the photo": (
+        "Gli shadow catcher funzionano solo in Cycles: negli altri motori coprono la foto"
+    ),
     "Object Roles": "Ruoli oggetti",
     "Set Role of Selected": "Ruolo dei selezionati",
     "No Role": "Nessun ruolo",
     "Render size has another aspect than the image: Apply or Calibrate fixes it": (
         "Il render ha proporzioni diverse dall'immagine: Applica o Calibra le correggono"
     ),
-    "The camera has location/rotation keyframes: they override the calibration": (
-        "La camera ha keyframe di posizione/rotazione: sovrascrivono la calibrazione"
+    "Keyframes, drivers or constraints on the camera (or its parent) override the calibration": (
+        "Keyframe, driver o vincoli sulla camera (o sul suo genitore) sovrascrivono la calibrazione"
     ),
     "Only the active view layer is composited over the photo": (
         "Solo il view layer attivo viene composto sulla foto"
@@ -113,7 +113,13 @@ _IT = {
     "Scale with Distance": "Scala con la distanza",
 }
 
+# Generic words, translated only where FTC asks with its own context ("FTC"):
+# registered in the default context they would change the rest of Blender too.
+CONTEXT = "FTC"
+_IT_FTC = {"Results": "Risultati", "Yaw": "Imbardata"}
+
 translations_dict = {"it_IT": {("*", en): it for en, it in _IT.items()}}
+translations_dict["it_IT"].update({(CONTEXT, en): it for en, it in _IT_FTC.items()})
 translations_dict["it_IT"].update({("Operator", en): it for en, it in _IT.items()})
 
 

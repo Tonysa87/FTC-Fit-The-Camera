@@ -12,15 +12,18 @@ render). For a transparent output the pass is off and the shadows stay in alpha.
 """
 
 import bpy
+from bpy.app.handlers import persistent
 from bpy.props import BoolProperty, EnumProperty, IntProperty
 from bpy.types import Operator, UIList
 
 from . import calibrate
 from .ops_align import calibrated_camera
-from .ops_load import fit_scene_to_image
+from .ops_load import match_image_aspect
 
 TREE_NAME = "FTC Compositing"
 TREE_TAG = "ftc_compositing"
+PHOTO_NODE = "FTC Photo"
+CATCHER_EEVEE = "Shadow catchers work only in Cycles: in other engines they cover the photo"
 RENDERABLE = {"MESH", "CURVE", "SURFACE", "META", "FONT", "CURVES", "POINTCLOUD", "VOLUME", "GREASEPENCIL"}
 
 ROLE_ITEMS = [
@@ -35,7 +38,8 @@ ROLE_ITEMS = [
     (
         "HOLDOUT",
         "Holdout",
-        "Stand-in for a real object in front: shows the photo and hides the CG objects behind it, without shadows",
+        "Stand-in for a real object in front: shows the photo and hides the CG objects behind it. It still "
+        "casts shadows: turn off Object > Visibility > Shadow if its shadow is already in the photo",
         "HOLDOUT_ON",
         1,
     ),
@@ -139,7 +143,7 @@ def compositor_tree(scene):
             tree = bpy.data.node_groups.new(TREE_NAME, "CompositorNodeTree")
             tree[TREE_TAG] = True
         scene.compositing_node_group = tree
-    elif tree.users > 1:
+    elif sum(s.compositing_node_group == tree for s in bpy.data.scenes) > 1:
         # Shared with another scene: rebuilding it would change that scene too.
         tree = tree.copy()
         scene.compositing_node_group = tree
@@ -159,6 +163,7 @@ def build_compositor(scene, image, layer_name: str, shadow_pass: bool):
     render.layer = layer_name
     render.location = (-300, 160)
     photo = nodes.new("CompositorNodeImage")
+    photo.name = PHOTO_NODE
     photo.label = "Photo"
     photo.image = image
     photo.location = (-700, -160)
@@ -194,6 +199,31 @@ def build_compositor(scene, image, layer_name: str, shadow_pass: bool):
     link(over.outputs["Image"], viewer.inputs["Image"])
     scene.render.use_compositing = True
     return tree
+
+
+def sync_photo(scene) -> None:
+    """Show the scene camera's photo in the FTC compositor: the camera or its
+    photo may have changed since Prepare Render."""
+    tree = scene.compositing_node_group
+    cam = scene.camera
+    if tree is None or not tree.get(TREE_TAG) or cam is None or cam.type != "CAMERA":
+        return
+    node = tree.nodes.get(PHOTO_NODE)
+    image = cam.data.ftc.image
+    if node is not None and image is not None and node.image != image:
+        node.image = image
+
+
+@persistent
+def _on_render_pre(scene, *_args):
+    sync_photo(scene)
+
+
+def render_layer(scene, active):
+    """View layer to put over the photo: the active one, or the first rendered."""
+    if active.use:
+        return active
+    return next((layer for layer in scene.view_layers if layer.use), active)
 
 
 def drop_compositor(scene) -> None:
@@ -280,13 +310,13 @@ class FTC_OT_prepare_render(Operator):
         render.film_transparent = True
         # A cropped border render would squeeze the whole photo into the region.
         render.use_crop_to_border = False
-        fit_scene_to_image(scene, calibrate.image_size(settings))
+        match_image_aspect(scene, calibrate.image_size(settings))
         over_photo = self.output == "PHOTO"
         for layer in scene.view_layers:
             if hasattr(layer, "cycles"):
                 layer.cycles.use_pass_shadow_catcher = over_photo and cycles
         if over_photo:
-            build_compositor(scene, settings.image, context.view_layer.name, shadow_pass=cycles)
+            build_compositor(scene, settings.image, render_layer(scene, context.view_layer).name, shadow_pass=cycles)
             if sum(layer.use for layer in scene.view_layers) > 1:
                 warnings.append("Only the active view layer is composited over the photo")
             if not settings.image.has_data and not settings.image.size[0]:
@@ -299,7 +329,7 @@ class FTC_OT_prepare_render(Operator):
                 warnings.append("Compositing turned off for the transparent output")
             set_alpha_output(render.image_settings)
         if not cycles and has_catchers(scene):
-            warnings.append("Shadow catchers work only in Cycles")
+            warnings.append(CATCHER_EEVEE)
         for text in warnings:
             self.report({"WARNING"}, text)
         return {"FINISHED"}
@@ -350,7 +380,7 @@ class FTC_OT_set_role(Operator):
             if obj.type in RENDERABLE:
                 set_role(obj, self.role)
         if self.role == "CATCHER" and context.scene.render.engine != "CYCLES":
-            self.report({"WARNING"}, "Shadow catchers work only in Cycles")
+            self.report({"WARNING"}, CATCHER_EEVEE)
         return {"FINISHED"}
 
 
@@ -360,6 +390,7 @@ classes = (FTC_OT_prepare_render, FTC_UL_roles, FTC_OT_set_role)
 def register():
     for cls in classes:
         bpy.utils.register_class(cls)
+    bpy.app.handlers.render_pre.append(_on_render_pre)
     bpy.types.Object.ftc_catcher = BoolProperty(
         name="Shadow Catcher",
         description=ROLE_ITEMS[0][2],
@@ -378,6 +409,8 @@ def register():
 
 
 def unregister():
+    if _on_render_pre in bpy.app.handlers.render_pre:
+        bpy.app.handlers.render_pre.remove(_on_render_pre)
     del bpy.types.Scene.ftc_role_index
     del bpy.types.Object.ftc_holdout
     del bpy.types.Object.ftc_catcher

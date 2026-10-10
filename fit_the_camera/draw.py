@@ -448,14 +448,24 @@ def axis_letter(label: str) -> str:
     return label.lstrip("+-")
 
 
+def session_camera(session):
+    """The session's camera object, followed through a rename; ``None`` if gone."""
+    obj = bpy.data.objects.get(session.camera_name)
+    if obj is None or obj.as_pointer() != session.camera_ptr:
+        obj = next((o for o in bpy.data.objects if o.as_pointer() == session.camera_ptr), None)
+        if obj is not None:
+            session.camera_name = obj.name
+    return obj if obj is not None and obj.type == "CAMERA" else None
+
+
 def draw_overlay(session):
     """POST_PIXEL draw callback for the calibration session."""
     context = bpy.context
     region = context.region
     if region is None or region.as_pointer() != session.region_ptr:
         return
-    cam_obj = bpy.data.objects.get(session.camera_name)
-    if cam_obj is None or cam_obj.type != "CAMERA":
+    cam_obj = session_camera(session)
+    if cam_obj is None:
         return
     settings = cam_obj.data.ftc
     view = View.try_create(region, context.region_data, cam_obj, context.scene, calibrate.image_size(settings))

@@ -67,6 +67,22 @@ Extensions audience) and `README.it.md` (Italian); developer docs
   `redo_post` re-solve; `ops_align.apply_now` calls `settings_changed` in a session.
 - `ops_align.active_face` returns the BMesh with the face: a face outlives a
   freed BMesh only by luck (ReferenceError).
+- Ctrl+Z is always the session's undo (no undo step is pushed while the modal
+  runs: Blender's undo would drop the session's edits). `modal` wraps `_modal`
+  and ends the session on an exception. `draw.session_camera` follows renames.
+- Aspect: `ops_load.match_image_aspect` keeps the render width/percentage and sets
+  the height (pixel aspect included); Apply only after a successful solve.
+- `calibrate.seed_reference`: Cube -> Reference with untouched (default) reference
+  handles lays them out for the current scale; `seed_cube` falls back near the
+  origin when its handles would leave the image (floor base on a wall plane).
+- `calibrate.transform_overridden`: keyframes/NLA/drivers on transform or lens,
+  enabled constraints, animated parents -> red warning.
+- `ops_render.sync_photo` (render_pre handler + Load Image/upright) keeps the
+  compositor's "FTC Photo" node on the scene camera's photo.
+- Generated images: call `image.update()` after `pixels.foreach_set` before
+  `save()`, or stale pixels are written. `pack()` of a generated image always
+  stores PNG: the upright copy is saved as a temp JPEG, packed, then deleted.
+- Generic words ("Results", "Yaw") are translated in the private "FTC" context.
 
 ## Conventions (keep consistent)
 - Image px: origin bottom-left, y up; handles normalised 0..1. Camera = Blender
