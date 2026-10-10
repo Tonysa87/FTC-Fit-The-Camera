@@ -2,7 +2,59 @@
 
 Estensione per Blender 5.2+ che calibra una camera su una singola immagine
 (foto, render, disegno): focale, sensore, posizione e rotazione, con scala reale.
-Specifica completa: `FTC – Specifica addon Blender 5.2+.md`.
+Specifica originale: `FTC – Specifica addon Blender 5.2+.md` (il nome definitivo è
+FTC; la specifica parla ancora di "Camera Match"). Storia delle versioni:
+[`docs/CHANGELOG.md`](docs/CHANGELOG.md).
+
+## Uso
+
+Sidebar del viewport (N) › tab **FTC**.
+
+1. **Load Image** – usa la camera attiva (o la crea), imposta lo sfondo, adatta la
+   risoluzione, legge l'EXIF e inquadra la camera. Foto salvate ruotate
+   (orientamento EXIF): **Make Upright Copy**.
+2. **Camera Data** – marca, modello, focale reale, equivalente 35 mm, sensore,
+   GPS, direzione; ogni campo è *da EXIF*, *mancante* (rosso) o *manuale*.
+   Il sensore va inserito come nelle schede tecniche (lato lungo del sensore
+   intero), anche per foto ritagliate. Immagini non 4:3 / 3:2 sono trattate come
+   ritaglio centrato di un sensore 4:3 (come fanno i telefoni).
+3. **Calibration** – modalità e parametri, poi **Calibrate** (operatore modale nel
+   viewport camera). Scorciatoie nell'header: trascina = sposta maniglia,
+   Shift = fine, Ctrl = snap, 1/2/3 = asse, F = inverti verso, H = raddrizza,
+   Ctrl+Z / Ctrl+Shift+Z = undo/redo interni, Invio = applica, Esc/RMB = esci.
+4. **Align to Scene** – porta il piano calibrato (XY, XZ, YZ) sul 3D cursor, sulla
+   faccia attiva (Edit Mode) o sull'oggetto attivo; Ruota 90° / Inverti.
+5. **Results** – focale, FOV, altezza, angoli, **incertezza** (focale ± %,
+   orientamento ± °) e **aderenza guide** (scarto massimo); avvisi in giallo/rosso.
+6. **Tools › Move Along View** – sposta oggetti/vertici lungo il raggio dalla camera
+   (anche da *Object/Mesh › Transform*).
+
+### Modalità
+
+| Modalità | Input | Note |
+| --- | --- | --- |
+| Punti di fuga 1 | 2 guide per l'asse 1 + una linea lungo l'asse 2 | richiede la focale |
+| Punti di fuga 2 | 2 guide per asse | opzioni: *Usa focale nota*, *Linea terzo asse* |
+| Punti di fuga 3 | 2 guide per asse | punto principale al centro (default), manuale o *Risolvi* (ortocentro, instabile) |
+| Rettangolo noto | 4 angoli, larghezza/altezza reali | su XY, XZ o YZ; focale nota opzionale |
+| Orizzonte | linea d'orizzonte, altezza camera, yaw | richiede la focale |
+
+### Consigli (verificati su foto reali, vedi `tests/data`)
+
+- Il verso **+** di un asse va lungo la **prima** guida del gruppo, dalla prima alla
+  seconda maniglia (freccia sulla guida). F lo inverte.
+- Due punti di fuga **solo sul pavimento** non misurano la verticale: le estrusioni
+  in Z possono deviare di gradi. Aggiungi la **Linea terzo asse** (uno stipite) o
+  usa 3 punti di fuga; con la focale nota l'incertezza scende sotto 1°.
+- Un punto di fuga lontanissimo (parete quasi frontale) rende la focale
+  indeterminabile: usa la focale nota o linee in un'altra direzione.
+- Le linee "che sembrano parallele" non sempre lo sono (binari luci, facciate di
+  edifici diversi, fughe di piastrelle). Con 3 gruppi o la focale nota l'**aderenza
+  guide** lo rivela.
+- La focale EXIF può essere sbagliata (foto zoomate o ritagliate): se le guide la
+  contraddicono compare un avviso; prova a far calcolare la focale.
+- **Raddrizza orizzonte** forza il rollio a 0: se la foto è inclinata la camera
+  non segue più le guide (l'avviso indica quanti gradi ha tolto).
 
 ## Struttura
 
@@ -10,38 +62,45 @@ Specifica completa: `FTC – Specifica addon Blender 5.2+.md`.
 fit_the_camera/          # l'estensione (questa cartella diventa lo zip)
   blender_manifest.toml
   __init__.py            # registrazione dei moduli
-  solver/                # numpy puro, senza bpy
-    common.py            # convenzioni, CameraSolution, geometria condivisa
-    vp.py  plane.py  horizon.py  convert.py
+  solver/                # numpy puro, senza bpy (testabile con pytest)
+    common.py            # convenzioni, CameraSolution, piani, reframe
+    vp.py                # punti di fuga 1/2/3, segni degli assi, aderenza
+    refine.py            # minimi quadrati (Levenberg-Marquardt) su tutte le guide
+    plane.py             # rettangolo noto (omografia, vincoli di Zhang)
+    horizon.py           # orizzonte
+    convert.py           # soluzione -> camera Blender, focale da mm / 35 mm
   exif.py                # parser EXIF in Python puro (JPEG, TIFF, PNG, WebP)
   props.py               # PropertyGroup salvato su ogni Camera (camera.ftc)
-  calibrate.py           # ponte impostazioni -> solver -> camera Blender
-  ops_load.py            # Carica immagine, copia raddrizzata (orientamento EXIF)
+  calibrate.py           # impostazioni -> solver -> camera; incertezza; avvisi
+  ops_load.py            # Carica immagine, copia raddrizzata
   ops_modal.py           # operatore modale, undo interno, Applica/Reset
-  ops_align.py           # allineamento del piano calibrato a cursore, faccia o oggetto
+  ops_align.py           # allineamento alla scena
   ops_move_view.py       # Move Along View
   draw.py                # overlay gpu (guide, maniglie, griglia, orizzonte)
-  ui.py                  # pannello nella sidebar, tab "FTC"
-  translations.py        # traduzione italiana dell'interfaccia
-tests/                   # pytest: solver ed EXIF, fuori da Blender
-tests_blender/           # test dentro Blender (headless e con GUI simulata)
+  ui.py                  # pannello
+  translations.py        # traduzione italiana
+tests/                   # pytest: solver, EXIF, dati da foto reali, fuzz
+tests/data/              # linee misurate al sub-pixel su foto reali (senza foto)
+tests_blender/           # test dentro Blender (headless; GUI simulata facoltativa)
 scripts/                 # build, Blender locale, runner dei test
+samples/                 # foto di prova (ignorata da git: contengono GPS)
+docs/CHANGELOG.md
 ```
 
 ## Convenzioni
 
 - Coordinate immagine in pixel, origine in basso a sinistra, y verso l'alto.
   Le maniglie sono salvate normalizzate 0–1 nello stesso sistema.
-- Sistema camera = quello di Blender: x a destra, y in alto, sguardo lungo −Z.
+- Sistema camera = Blender: x a destra, y in alto, sguardo lungo −Z.
 - Mondo destrorso con Z in alto. `rotation` del solver è camera→mondo e va
   direttamente in `matrix_world`.
-- Yaw in gradi, orario da +Y (come una bussola con il nord su +Y).
+- Segno degli assi: lungo la prima guida del gruppo (prima → seconda maniglia),
+  calcolato con la velocità d'immagine, stabile anche con punti di fuga all'infinito.
+- Yaw in gradi, orario da +Y (bussola con il nord su +Y).
 - Piano di riferimento: XY (pavimento), XZ (parete rivolta a −Y), YZ (parete
-  rivolta a +X), con y locale verso l'alto sulle pareti. L'allineamento alla
-  scena porta questo piano sul bersaglio (cursore, faccia, oggetto).
-- Il sensore si applica al lato lungo dell'immagine (`sensor_fit` HORIZONTAL o
-  VERTICAL secondo l'orientamento). Senza sensore noto si usa 36 mm, che dà la
-  focale equivalente 35 mm.
+  rivolta a +X), y locale verso l'alto sulle pareti.
+- Sensore = lato lungo del sensore intero; la parte coperta dall'immagine si
+  ricava dal formato nativo (`exif.native_frame`).
 
 ## Ambiente di sviluppo (Ubuntu / WSL)
 
@@ -49,26 +108,24 @@ Serve [pixi](https://pixi.sh). Python e numpy sono gli stessi di Blender 5.2 (3.
 
 ```bash
 pixi install
-pixi run test            # solver ed EXIF (pytest)
+pixi run test            # solver, EXIF, foto reali, fuzz (pytest)
 pixi run lint            # ruff
 pixi run validate        # valida il manifest con Blender
-pixi run blender-tests   # build + installazione in un profilo isolato + test headless
+pixi run blender-tests   # build + installazione in profilo isolato + test headless
 pixi run check           # tutto quanto sopra
 pixi run build           # crea dist/fit_the_camera-<versione>.zip
-pixi run gui-tests       # facoltativo: GUI simulata, apre una finestra Blender via WSLg
+pixi run gui-tests       # facoltativo: GUI simulata via WSLg (a volte si blocca all'avvio)
 ```
 
-Al primo uso gli script scaricano Blender 5.2 per Linux in `.tools/`
-(verificato con sha256). I test usano un profilo utente temporaneo: le
-preferenze reali di Blender non vengono toccate.
+Al primo uso gli script scaricano Blender 5.2 per Linux in `.tools/` (sha256
+verificato). I test usano un profilo utente temporaneo: le preferenze reali di
+Blender non vengono toccate.
 
 ## Installazione su Windows
 
 1. `pixi run build` crea lo zip in `dist/`.
-2. In Blender: *Edit › Preferences › Get Extensions › ⌄ › Install from Disk…* e
-   scegli lo zip (raggiungibile da Windows in
-   `\\wsl.localhost\Ubuntu-24.04\home\tony\Projects\FTC\dist\`).
-3. Per aggiornare, reinstalla lo zip nuovo nello stesso modo.
+2. Blender: *Edit › Preferences › Get Extensions › ⌄ › Install from Disk…* e scegli
+   `\\wsl.localhost\Ubuntu-24.04\home\tony\Projects\FTC\dist\fit_the_camera-<versione>.zip`.
+3. Per aggiornare, reinstalla lo zip nuovo e riavvia Blender.
 
-Per l'interfaccia in italiano: *Preferences › Interface › Translation*, lingua
-Italiano, con le voci *Interface* e *Tooltips* attive.
+Interfaccia in italiano: *Preferences › Interface › Translation*, lingua Italiano.
