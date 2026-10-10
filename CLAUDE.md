@@ -4,6 +4,13 @@ Single-image camera calibration add-on. User docs: `README.md` (Italian). Histor
 `docs/CHANGELOG.md`. Original spec: `FTC – Specifica addon Blender 5.2+.md` (says
 "Camera Match": the final name is **FTC**, package `fit_the_camera`, tab "FTC").
 
+## Status / next session
+- **v0.6.1** (scale cube, focal "Known + Guides", axis flip buttons, audit fixes) is
+  committed and built but **not yet tested in the GUI**. Next session: the user
+  tests it on Windows following `docs/TEST_GUI.md`; fix what he reports.
+- `dist/` is git-ignored; only the latest zip matters (older ones may have been
+  rebuilt by `blender-tests` with newer code before a version bump).
+
 ## Working with the user
 - The user (Antonio) writes Italian: reply in Italian. Full autonomy on technical
   choices; ask only for real product decisions.
@@ -21,6 +28,12 @@ Single-image camera calibration add-on. User docs: `README.md` (Italian). Histor
   Test scripts isolate every `BLENDER_USER_*` dir; never touch `~/.config/blender`.
 - Headless `gpu.init()` + `GPUOffScreen` works (llvmpipe): used to test drawing and to
   render overlay snapshots for visual checks.
+- `bash scripts/probe.sh <name>` runs a diagnostic in headless Blender on a fresh
+  build (`scripts/probes/`, output in `dist/probes/`): `paneltest` (every panel
+  section with a mock layout that validates props/operators), `drawall` (overlay in
+  864 configs), `dragsim` (modal drag code on the cube handles), `planes`,
+  `timing`, `snap` (overlay PNGs). Panels cannot be drawn headless otherwise; set
+  ui_scale in mocks (it is 0 in background mode).
 
 ## Architecture
 - `solver/` is numpy-only (no bpy), imported by pytest via `tests/conftest.py`
@@ -29,6 +42,13 @@ Single-image camera calibration add-on. User docs: `README.md` (Italian). Histor
   `solve()`, `refresh()` (results + cache), `update()` (writes camera),
   `settings_changed()` (property update callback), `uncertainty()` (nudges every
   guide handle by 1‰ of the long side), `alignment_matrix()`, `seed_third_axis()`.
+- Focal: `focal_source()` -> "KNOWN" / "AUTO" (known refined by the guides) /
+  "SOLVE"; 1 VP and horizon always KNOWN, solved principal point always SOLVE.
+  `_focal_inputs()` maps it to `focal_px` / `known_focal_px` for the solvers.
+- `default_handles()` builds the default layout for the known focal (VPs at
+  ±focal from the centre, rectangle projected by a virtual camera, shrunk to fit
+  and kept in front); `HANDLE_DEFAULTS` is the fallback and the "untouched"
+  reference of `seed_third_axis`.
 - Camera is written only during a live calibration session or via Apply/align ops.
 - Modal operator state lives in `ops_modal.Session` (not the operator): draw handler
   reads it; `session.view` (frame rect) is cached from the last draw because camera
@@ -44,7 +64,18 @@ Single-image camera calibration add-on. User docs: `README.md` (Italian). Histor
   of a 4:3 sensor (`exif.native_frame`). 35 mm equivalent uses the native diagonal.
 - UI strings in English, Italian in `translations.py` (only add-on specific phrases:
   registered translations are global). Every button needs a tooltip (test enforces).
-- Line widths 1 px; handles are thin target symbols in the axis colour.
+- Line widths 1 px; handles are thin target symbols in the axis colour; arrows
+  `draw.ARROW_SIZE` (10.5 px, +50% asked by the user).
+- The world is always right-handed: the third axis is derived (`draw.third_axis`,
+  signed) and its guide arrow follows the solution (`draw.runs_backwards`).
+  Flipping axis 3 flips axis 2, or axis 1 when axis 2 is Z (`ops_modal.flip_axis`,
+  used by the ⇄ buttons and by F; F clamps a stale `active_vp`).
+- Handles in `ops_modal.SCALE_KEYS` (origin, reference, cube) never reset the
+  pitch correction. Session undo goes through `ops_modal.push_undo` (capped).
+- Enum items are stored by index in .blend files: never reorder them
+  (`scale_mode`: CUBE took index 0 from the old DISTANCE, REFERENCE stays 1).
+- Lengths in scene units; cube presets are metres divided by
+  `unit_settings.scale_length`; overlay labels go through `draw.length_text`.
 
 ## Lessons from real photos (`samples/`, git-ignored: GPS; measured lines in `tests/data/`)
 - Two floor vanishing points leave the vertical unmeasured (±6° on the lift photo):
@@ -73,5 +104,22 @@ drag; the stored top is synced to it. Dragging the base moves the top with it
 (scale kept); `calibrate.seed_cube` keeps the scale on plane / scale-mode changes
 and migrates pre-cube files (camera distance kept). Seeding skips `suspended()`.
 
+Cube UI: scale option *Scale Cube* (default) / *Reference Distance* in VP mode;
+size presets 10 cm…10 m + custom; outside cube scaling it is a visual check with
+only the base handle, toggled by `show_cube` in the Opacity panel. Edges are drawn
+in the colours of the world axes they run along; the base is the corner nearest
+the camera, the cube extends away from it. The top can't be dragged below
+`ops_modal.MIN_CUBE_PX` above the base (it would flip).
+
+## Known limitations
+- A known rectangle cannot detect a zoomed photo (keeps the EXIF focal); two VPs
+  with one far away cannot either. Three VPs can.
+- Dragging the cube top horizontally changes the scale by the component along a
+  tilted edge (by design: only the height along the edge counts).
+- Old (<0.6) files: `use_known_focal` is gone, they start in "Known + Guides";
+  their untouched hand-made default guides (~22 mm equivalent) may then warn.
+
 ## Open work
-- Possible: magnifier near the cursor while dragging; more than two lines per VP.
+- Pending: the user's GUI test of 0.6.1 (`docs/TEST_GUI.md`).
+- Possible: magnifier near the cursor while dragging; more than two lines per VP;
+  turn the `paneltest` / `drawall` probes into regular Blender tests.
