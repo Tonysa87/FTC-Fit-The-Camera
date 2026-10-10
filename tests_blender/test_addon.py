@@ -913,6 +913,9 @@ def audit_edge_cases():
         assert ops_modal.session_camera(session) == cam and calibrate.session_camera == "Renamed"
         ops_modal._on_undo()
         assert not session.stop_requested
+        # Apply ends the session, like Enter.
+        assert bpy.ops.ftc.apply() == {"FINISHED"}
+        assert not ops_modal.FTC_OT_calibrate.running()
     finally:
         ops_modal.end_session()
     assert not ops_modal.FTC_OT_calibrate.running()

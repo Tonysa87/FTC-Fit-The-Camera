@@ -523,7 +523,7 @@ def _panel_camera(context):
 
 
 class FTC_OT_apply(Operator):
-    """Solve the calibration and write it into the camera"""
+    """Solve the calibration and write it into the camera; a running calibration session ends, like Enter"""
 
     bl_idname = "ftc.apply"
     bl_label = "Apply"
@@ -541,6 +541,10 @@ class FTC_OT_apply(Operator):
             return {"CANCELLED"}
         if match_image_aspect(context.scene, calibrate.image_size(cam_obj.data.ftc)):
             self.report({"INFO"}, "Render height changed to the image's aspect ratio")
+        if FTC_OT_calibrate.running():
+            # Like Enter: the modal operator sees no session at its next event and stops.
+            end_session()
+            calibrate.tag_redraw(context)
         return {"FINISHED"}
 
 

@@ -33,6 +33,11 @@ Sidebar del viewport (N) › tab **FTC**.
    viewport camera). Scorciatoie nell'header: trascina = sposta maniglia,
    Shift = fine, Ctrl = snap, 1/2/3 = asse, F = inverti verso, H = raddrizza,
    Ctrl+Z / Ctrl+Shift+Z = undo/redo interni, Invio = applica, Esc/RMB = esci.
+   Con *Live Update* (default) la camera segue le guide mentre trascini; Invio o
+   **Apply** la scrivono e chiudono la sessione. Fuori dalla sessione, le
+   modifiche fatte nel pannello spostano la camera solo con **Apply**. Nella vista
+   camera la foto si muove con la camera: il risultato si vede dagli oggetti
+   della scena o dalla posizione della camera.
    Accanto a ogni asse un pulsante ne inverte il verso.
    **Focale**: *Nota + guide* (default: parte dalla focale di Camera Data e le guide
    la correggono per quanto la misurano; se è sconosciuta la risolvono), *Solo
