@@ -27,22 +27,26 @@ from .common import (
     is_finite_vp,
     orthonormalize,
     parse_axis,
+    plane_frame,
     ray,
     vanishing_point,
 )
 from .refine import focal_prior_weight, refine
-from .scale import ScaleCube, cube_distance
+from .scale import ScaleCube, cube_distance, plane_point
 
 
 @dataclass
 class ReferenceDistance:
-    """A known world distance between two image points on the world axis that
-    passes through the origin."""
+    """A known world distance between two image points. The start lies on the
+    reference ``plane`` (through the world origin), anywhere on it. With an
+    ``axis`` in the plane the end lies on the plane too; with the plane normal
+    (a height) the end lies on the line along the normal through the start."""
 
     axis: str
     start: tuple[float, float]
     end: tuple[float, float]
     length: float
+    plane: str = "XY"
 
 
 def orthocenter(a, b, c) -> np.ndarray:
@@ -54,6 +58,32 @@ def orthocenter(a, b, c) -> np.ndarray:
     if abs(np.linalg.det(m)) < 1e-9 * max(1.0, float(np.abs(m).max()) ** 2):
         raise SolverError("the three vanishing points are collinear")
     return np.linalg.solve(m, rhs)
+
+
+BEYOND_HORIZON_REF = "the {} reference handle is beyond the horizon of its plane: move it closer"
+
+
+def reference_distance(reference: ReferenceDistance, origin_ray, world_to_cam, p, f) -> float:
+    """Distance from the camera of the world origin (seen along ``origin_ray``)
+    that makes the reference ``reference.length`` long."""
+    if reference.length <= 0.0:
+        raise SolverError("the reference distance is zero")
+    k, _ = parse_axis(reference.axis)
+    frame = plane_frame(reference.plane)
+    start = plane_point(reference.start, origin_ray, world_to_cam, frame[:, 2], p, f)
+    if start is None:
+        raise SolverError(BEYOND_HORIZON_REF.format("first"))
+    if abs(frame[k, 2]) > 0.5:
+        # A height: the end is on the line along the normal through the start.
+        unit_length = abs(closest_param_on_line(start, world_to_cam[:, k], ray(reference.end, p, f)))
+    else:
+        end = plane_point(reference.end, origin_ray, world_to_cam, frame[:, 2], p, f)
+        if end is None:
+            raise SolverError(BEYOND_HORIZON_REF.format("second"))
+        unit_length = float(np.linalg.norm(end - start))
+    if unit_length < 1e-9 * np.linalg.norm(start):
+        raise SolverError("the reference distance is zero")
+    return reference.length / unit_length
 
 
 INCOMPATIBLE = (
@@ -302,14 +332,7 @@ def solve_vanishing_points(
     o = image_center(image_size) if origin is None else as_points(origin)[0]
     r_o = ray(o, p, f)
     if reference is not None:
-        k, _ = parse_axis(reference.axis)
-        axis_cam = world_to_cam[:, k]
-        t_a = closest_param_on_line(r_o, axis_cam, ray(reference.start, p, f))
-        t_b = closest_param_on_line(r_o, axis_cam, ray(reference.end, p, f))
-        unit_length = abs(t_b - t_a)
-        if unit_length < 1e-9 or reference.length <= 0.0:
-            raise SolverError("the reference distance is zero")
-        distance = reference.length / unit_length
+        distance = reference_distance(reference, r_o, world_to_cam, p, f)
     elif cube is not None:
         distance = cube_distance(cube, r_o, world_to_cam, p, f)
     else:

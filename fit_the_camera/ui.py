@@ -110,6 +110,14 @@ class FTC_PT_main(Panel):
             box.label(text=iface_("Image stored rotated (EXIF orientation {})").format(data.orientation), icon="ERROR")
             box.operator("ftc.upright_image", icon="FILE_REFRESH")
 
+        if not calibrate.aspect_matches(context.scene, settings):
+            box = layout.box()
+            box.alert = True
+            box.label(text="Render size has another aspect than the image: Apply or Calibrate fixes it", icon="ERROR")
+        if calibrate.transform_animated(cam_obj):
+            box = layout.box()
+            box.alert = True
+            box.label(text="The camera has location/rotation keyframes: they override the calibration", icon="ERROR")
         self.draw_camera_data(context, layout, settings)
         self.draw_calibration(context, layout, settings)
         self.draw_display(context, layout, cam_obj, settings)
@@ -193,6 +201,7 @@ class FTC_PT_main(Panel):
             if settings.scale_mode == "CUBE":
                 draw_cube_size(col, settings)
             else:
+                col.prop(settings, "ref_measure_plane")
                 col.prop(settings, "ref_axis")
                 col.prop(settings, "ref_length")
             col.prop(settings, "pp_mode")
@@ -329,8 +338,7 @@ class FTC_PT_main(Panel):
         row = body.row()
         row.scale_y = 1.4
         row.operator("ftc.prepare_render", icon="SCENE")
-        view = scene.view_settings
-        if view.view_transform != "Standard" or view.look != "None" or not scene.render.film_transparent:
+        if not ops_render.color_ready(scene):
             body.label(text="Scene not set up for the photo: use Prepare Render", icon="INFO")
         if scene.render.engine != "CYCLES" and ops_render.has_catchers(scene):
             body.label(text="Shadow catchers work only in Cycles", icon="ERROR")

@@ -61,6 +61,48 @@ def test_two_vanishing_points_x_and_z():
     assert_matches(sol, cam)
 
 
+@pytest.mark.parametrize(
+    ("plane", "axis", "start", "end"),
+    [
+        # On the floor but away from the origin's axis line (the lift door case).
+        ("XY", "X", (-1.5, -1.3, 0), (0.9, -1.3, 0)),
+        ("XY", "Y", (1.2, -1.5, 0), (1.2, 1.0, 0)),
+        # A height standing anywhere on the floor.
+        ("XY", "Z", (1.0, -1.5, 0), (1.0, -1.5, 2.2)),
+        # On a wall (XZ through the origin), along X and as a height above it.
+        ("XZ", "X", (-1.0, 0, 1.5), (1.5, 0, 1.5)),
+        ("XZ", "Z", (0.5, 0, 0.3), (0.5, 0, 2.0)),
+    ],
+)
+def test_reference_distance_anywhere_on_the_plane(camera, plane, axis, start, end):
+    start, end = np.array(start, float), np.array(end, float)
+    length = float(np.linalg.norm(end - start))
+    ref = ReferenceDistance(axis, tuple(camera.project(start)[0]), tuple(camera.project(end)[0]), length, plane)
+    sol = solve_vanishing_points(
+        [guides(camera, "X"), guides(camera, "Y")],
+        [axis_label(camera, "X"), axis_label(camera, "Y")],
+        camera.image_size,
+        origin=camera.project([0, 0, 0]),
+        reference=ref,
+    )
+    assert_matches(sol, camera)
+
+
+def test_reference_distance_beyond_the_horizon(camera):
+    ref = ReferenceDistance("X", (0.0, camera.image_size[1] - 1.0), (10.0, camera.image_size[1] - 1.0), 1.0)
+    above = camera.project([0, 1e6, 0])[0][1] < camera.image_size[1] - 1.0
+    if not above:
+        pytest.skip("the horizon is not inside the image")
+    with pytest.raises(SolverError, match="beyond the horizon"):
+        solve_vanishing_points(
+            [guides(camera, "X"), guides(camera, "Y")],
+            [axis_label(camera, "X"), axis_label(camera, "Y")],
+            camera.image_size,
+            origin=camera.project([0, 0, 0]),
+            reference=ref,
+        )
+
+
 def test_camera_distance_scale(camera):
     sol = solve_vanishing_points(
         [guides(camera, "X"), guides(camera, "Y")],

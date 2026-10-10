@@ -10,6 +10,52 @@
   - **Object Roles**: lista degli oggetti della scena con il ruolo (Oggetto CG,
     Shadow Catcher, Holdout, Nascosto) e menu per i selezionati.
   - **Shadow Catcher Plane**: piano shadow catcher sul piano di riferimento.
+- **Misura di riferimento corretta**: gli estremi stanno sul piano di riferimento
+  in qualunque punto. Prima venivano riportati sull'asse che passa per l'origine:
+  una misura presa altrove (es. la larghezza della porta sulla soglia, con
+  l'origine più indietro) dava una scala sbagliata (−5% sulla foto
+  dell'ascensore). Lungo la normale al piano la misura è un'altezza sopra il
+  primo estremo. I file salvati con una misura lontana dall'asse dell'origine
+  cambiano scala alla riapertura (ora è quella giusta).
+- La misura di riferimento ha il suo piano (*Measured On*, default XY): cambiare
+  il piano in *Align to Scene* non cambia più la scala.
+- Incertezza: una misura o un cubo vicini all'orizzonte non danno più un falso
+  "calibrazione instabile".
+- Il cubo di scala non si ribalta più trascinando la base o l'origine: in un
+  piano si estende nel verso in cui guarda la camera, su una parete verso l'alto.
+- Sessione di calibrazione (audit):
+  - chiudere la finestra della sessione non la lascia più "appesa" (Calibrate
+    ripartiva solo ricaricando il file);
+  - cambiare la camera di vista, o caricare un'immagine in un'altra camera, chiude
+    la sessione invece di lasciarla invisibile a bloccare i clic;
+  - *Ruota 90°*, *Inverti* e l'allineamento su faccia hanno effetto subito anche
+    durante la sessione;
+  - rinominare la camera non chiude la sessione; il testo nell'header viene
+    sempre tolto (anche dopo Ctrl+Spazio o cambio workspace);
+  - l'undo di Blender (menu Edit, Undo History) durante la sessione ricalcola la
+    soluzione; Ctrl+Z fuori dall'area della sessione è l'undo di Blender;
+  - Invio con guide non risolvibili lo dice invece di chiudere in silenzio;
+    *Reset Guides* rispetta il limite dell'undo.
+- Camera locale non-camera (empty, luce) gestita; avviso se la camera ha keyframe
+  di posizione/rotazione (sovrascrivono la calibrazione) o se il render ha
+  proporzioni diverse dall'immagine (Apply e Calibrate le correggono).
+- Allineamento su faccia: corretto un riferimento a una faccia BMesh già
+  liberata; una faccia senza area viene rifiutata.
+- Caricamento: un file non immagine non lascia un'immagine vuota; la copia
+  raddrizzata di un JPEG viene impacchettata come JPEG (un PNG era molte volte più
+  grande); EXIF: orientamento fuori 1–8, focali e sensori assurdi ignorati, un
+  sotto-IFD rotto non fa perdere marca/modello/orientamento.
+- Traduzioni: "Flip Axis Direction" (prima mostrava "Scambia assi" di Blender),
+  Risultati, Imbardata, Sposta lungo la vista, nuovi avvisi.
+- Render (audit): niente crash con config colore OCIO personalizzate, uscita
+  video, Cycles disattivato; il compositor usa il view layer attivo; il bordo
+  ritagliato viene disattivato; avviso se manca il file della foto; un oggetto in
+  Edit Mode non resta bloccato cliccando la lista dei ruoli o creando il piano;
+  il piano shadow catcher è legato alla camera (un duplicato non viene toccato) e
+  misura 10 × la distanza; un albero FTC condiviso con un'altra scena viene
+  copiato; nel modo trasparente un compositor dell'utente viene disattivato;
+  lista ruoli con inverti/ordina funzionanti; l'avviso "scena non preparata"
+  controlla anche esposizione, gamma, curve e display.
 - Cubo di scala e *Misura di riferimento* si escludono: con la misura il cubo
   sparisce dallo schermo (e dal pannello *Opacity*).
 - Sonda `render` (render di prova con cubo CG e ombra) e `paneltest` estesa.

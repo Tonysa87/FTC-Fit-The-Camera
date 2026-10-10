@@ -60,6 +60,14 @@ Extensions audience) and `README.it.md` (Italian); developer docs
   reads it; `session.view` (frame rect) is cached from the last draw because camera
   and view matrices only agree at draw time.
 
+- Session robustness: `Session` keeps the camera pointer (`session_camera()`
+  follows renames), `cancel()` + `end_session()` clear the draw handler and the
+  header (`clear_header`, any screen); the modal ends when the area's camera
+  (`calibrate.space_camera`) is no longer the session camera; `undo_post` /
+  `redo_post` re-solve; `ops_align.apply_now` calls `settings_changed` in a session.
+- `ops_align.active_face` returns the BMesh with the face: a face outlives a
+  freed BMesh only by luck (ReferenceError).
+
 ## Conventions (keep consistent)
 - Image px: origin bottom-left, y up; handles normalised 0..1. Camera = Blender
   (looks along -Z). `CameraSolution.rotation` is camera->world.
@@ -101,6 +109,14 @@ Extensions audience) and `README.it.md` (Italian); developer docs
 - Default guides/rectangle are generated for the known focal (`default_handles`),
   otherwise "guides overrule the known focal" fires on untouched guides.
 
+## Reference distance
+`solver/vp.reference_distance`: the start = ray ∩ `ref_measure_plane` ("Measured
+On", its own plane: the alignment `ref_plane` must not change the scale) through
+the origin (anywhere on it); an in-plane axis -> the end on the plane too, Euclidean
+length; the plane-normal axis -> a height on the normal line through the start.
+(Until 1.0.0 both ends were taken on the axis line through the origin: 5% wrong
+scale on the lift photo with the reference on the threshold, reported by the user.)
+
 ## Scale cube
 `solver/scale.py`: base corner = base ray ∩ reference plane through the origin,
 vertical edge along the plane normal on the camera's side, top handle -> closest
@@ -115,8 +131,10 @@ size presets 10 cm…10 m + custom. Cube and Reference Distance are mutually
 exclusive on screen (`calibrate.reference_scales` hides the cube, asked by the
 user); in RECT / HORIZON it is a visual check with only the base handle, toggled
 by `show_cube` in the Opacity panel. Edges are drawn
-in the colours of the world axes they run along; the base is the corner nearest
-the camera, the cube extends away from it. The top can't be dragged below
+in the colours of the world axes they run along; in the plane the cube extends
+the way the camera looks (`-rotation[:, 2]`, an axis seen nearly across keeps +,
+`scale.ACROSS`), on walls upwards: rules based on base or origin flipped it while
+dragging (reported by the user). `uncertainty()` solves with the scale fixed. The top can't be dragged below
 `ops_modal.MIN_CUBE_PX` above the base (it would flip).
 
 ## Render setup (`ops_render.py`)
@@ -133,8 +151,14 @@ the camera, the cube extends away from it. The top can't be dragged below
   (alpha 0 under the shadow) -> photo × pass, then Alpha Over. Transparent output
   needs the pass off (shadows in alpha). EEVEE: no shadow catcher.
 - `Object.ftc_role` is a get/set enum over native `hide_render` / `is_shadow_catcher`
-  / `is_holdout` (nothing stored). Catcher plane tagged `ftc_shadow_catcher`, placed
-  at `alignment_matrix @ reference_frame`, display WIRE (else it hides the photo).
+  / `is_holdout` (nothing stored). Catcher plane = `settings.shadow_catcher`
+  (pointer, not an ID tag: duplicates copy tags), placed at
+  `alignment_matrix @ reference_frame`, display WIRE (else it hides the photo).
+- Engine / display / view / look enums are dynamic (static `enum_items` lists only
+  NONE / EEVEE): set them with `_try_set` (TypeError when missing: custom OCIO,
+  Cycles disabled). Alpha output: try `color_mode = "RGBA"`, else IMAGE + PNG.
+  Selection changes only in Object Mode (`select_only`): changing the active
+  object leaves an Edit Mode object stuck.
 - Probe `render` writes `dist/probes/render_photo.png` / `render_alpha.png`.
 
 ## Known limitations

@@ -23,11 +23,9 @@ from .ops_load import fit_scene_to_image
 TREE_NAME = "FTC Compositing"
 TREE_TAG = "ftc_compositing"
 CATCHER_NAME = "FTC Shadow Catcher"
-CATCHER_TAG = "ftc_shadow_catcher"
 # Side of the shadow catcher plane, in camera distances from the origin.
 CATCHER_SIZE = 10.0
 RENDERABLE = {"MESH", "CURVE", "SURFACE", "META", "FONT", "CURVES", "POINTCLOUD", "VOLUME", "GREASEPENCIL"}
-ALPHA_FORMATS = {"PNG", "OPEN_EXR", "OPEN_EXR_MULTILAYER", "TIFF", "WEBP", "TARGA", "TARGA_RAW", "JPEG2000", "DPX"}
 
 ROLE_ITEMS = [
     ("OBJECT", "CG Object", "Rendered normally: a virtual object added to the photo", "OBJECT_DATA", 0),
@@ -64,13 +62,11 @@ def _set_role(obj, value):
     obj.is_holdout = value == 2
 
 
-def _role_index_changed(scene, context):
-    """Clicking an object in the roles list selects it in the viewport."""
-    if not 0 <= scene.ftc_role_index < len(scene.objects):
-        return
-    obj = scene.objects[scene.ftc_role_index]
+def select_only(context, obj) -> None:
+    """Make ``obj`` the only selected and the active object, in Object Mode only:
+    changing the active object leaves an object in Edit Mode stuck in it."""
     layer = context.view_layer
-    if obj.name not in layer.objects or not obj.visible_get(view_layer=layer):
+    if context.mode != "OBJECT" or obj.name not in layer.objects or not obj.visible_get(view_layer=layer):
         return
     for other in layer.objects.selected:
         other.select_set(False)
@@ -78,21 +74,52 @@ def _role_index_changed(scene, context):
     layer.objects.active = obj
 
 
+def _role_index_changed(scene, context):
+    """Clicking an object in the roles list selects it in the viewport."""
+    if 0 <= scene.ftc_role_index < len(scene.objects):
+        select_only(context, scene.objects[scene.ftc_role_index])
+
+
 # ----------------------------------------------------------------------------
 # Scene setup
 
 
-def set_color_management(scene) -> None:
-    """Display settings that give back the photo unchanged."""
-    scene.display_settings.display_device = "sRGB"
-    view = scene.view_settings
-    view.view_transform = "Standard"
-    view.look = "None"
+def _try_set(data, prop, value) -> bool:
+    """Set an enum whose items depend on the setup (engines, OCIO config)."""
+    try:
+        setattr(data, prop, value)
+    except TypeError:
+        return False
+    return True
+
+
+def set_color_management(scene) -> bool:
+    """Display settings that give back the photo unchanged. False when the colour
+    configuration (OCIO) has no sRGB display or Standard view to set."""
+    display, view = scene.display_settings, scene.view_settings
+    found = _try_set(display, "display_device", "sRGB") and _try_set(view, "view_transform", "Standard")
+    _try_set(view, "look", "None")
     view.exposure = 0.0
     view.gamma = 1.0
     view.use_curve_mapping = False
     view.use_white_balance = False
     scene.render.image_settings.color_management = "FOLLOW_SCENE"
+    return found
+
+
+def color_ready(scene) -> bool:
+    """The scene shows the photo unchanged, with a transparent film."""
+    view = scene.view_settings
+    return (
+        scene.render.film_transparent
+        and scene.display_settings.display_device == "sRGB"
+        and view.view_transform == "Standard"
+        and view.look == "None"
+        and view.exposure == 0.0
+        and view.gamma == 1.0
+        and not view.use_curve_mapping
+        and not view.use_white_balance
+    )
 
 
 def _socket(sockets, identifier):
@@ -106,14 +133,22 @@ def compositor_tree(scene):
     if tree is None or not tree.get(TREE_TAG):
         if tree is not None:
             tree.use_fake_user = True
-        tree = bpy.data.node_groups.new(TREE_NAME, "CompositorNodeTree")
-        tree[TREE_TAG] = True
+        # An FTC tree left without users (the scene got another one) is reused.
+        tree = next((t for t in bpy.data.node_groups if t.get(TREE_TAG) and t.users == 0), None)
+        if tree is None:
+            tree = bpy.data.node_groups.new(TREE_NAME, "CompositorNodeTree")
+            tree[TREE_TAG] = True
+        scene.compositing_node_group = tree
+    elif tree.users > 1:
+        # Shared with another scene: rebuilding it would change that scene too.
+        tree = tree.copy()
         scene.compositing_node_group = tree
     return tree
 
 
-def build_compositor(scene, image, shadow_pass: bool):
-    """Render over the photo, the photo darkened by the Shadow Catcher pass."""
+def build_compositor(scene, image, layer_name: str, shadow_pass: bool):
+    """Render of the view layer ``layer_name`` over the photo, the photo
+    darkened by the Shadow Catcher pass."""
     tree = compositor_tree(scene)
     tree.nodes.clear()
     tree.interface.clear()
@@ -121,6 +156,7 @@ def build_compositor(scene, image, shadow_pass: bool):
     nodes, link = tree.nodes, tree.links.new
 
     render = nodes.new("CompositorNodeRLayers")
+    render.layer = layer_name
     render.location = (-300, 160)
     photo = nodes.new("CompositorNodeImage")
     photo.label = "Photo"
@@ -167,6 +203,17 @@ def drop_compositor(scene) -> None:
         scene.compositing_node_group = None
         if tree.users == 0:
             bpy.data.node_groups.remove(tree)
+
+
+def set_alpha_output(image) -> None:
+    """Keep the output format if it stores alpha, otherwise switch to PNG."""
+    try:
+        image.color_mode = "RGBA"
+    except TypeError:
+        if getattr(image, "media_type", "IMAGE") != "IMAGE":
+            image.media_type = "IMAGE"
+        image.file_format = "PNG"
+        image.color_mode = "RGBA"
 
 
 def has_catchers(scene) -> bool:
@@ -222,27 +269,39 @@ class FTC_OT_prepare_render(Operator):
 
     def execute(self, context):
         scene = context.scene
+        render = scene.render
         settings = calibrated_camera(context).data.ftc
-        if self.use_cycles:
-            scene.render.engine = "CYCLES"
-        cycles = scene.render.engine == "CYCLES"
-        set_color_management(scene)
-        scene.render.film_transparent = True
+        warnings = []
+        if self.use_cycles and not _try_set(render, "engine", "CYCLES"):
+            warnings.append("Cycles is not available (add-on disabled): engine unchanged")
+        cycles = render.engine == "CYCLES"
+        if not set_color_management(scene):
+            warnings.append("Custom colour configuration: set a view that leaves the photo unchanged by hand")
+        render.film_transparent = True
+        # A cropped border render would squeeze the whole photo into the region.
+        render.use_crop_to_border = False
         fit_scene_to_image(scene, calibrate.image_size(settings))
         over_photo = self.output == "PHOTO"
         for layer in scene.view_layers:
             if hasattr(layer, "cycles"):
                 layer.cycles.use_pass_shadow_catcher = over_photo and cycles
         if over_photo:
-            build_compositor(scene, settings.image, shadow_pass=cycles)
+            build_compositor(scene, settings.image, context.view_layer.name, shadow_pass=cycles)
+            if sum(layer.use for layer in scene.view_layers) > 1:
+                warnings.append("Only the active view layer is composited over the photo")
+            if not settings.image.has_data and not settings.image.size[0]:
+                warnings.append("The photo file is missing: the render will have no background")
         else:
             drop_compositor(scene)
-            image = scene.render.image_settings
-            if image.file_format not in ALPHA_FORMATS:
-                image.file_format = "PNG"
-            image.color_mode = "RGBA"
+            if scene.compositing_node_group is not None:
+                # A compositor of the user's would not give the plain transparent render.
+                render.use_compositing = False
+                warnings.append("Compositing turned off for the transparent output")
+            set_alpha_output(render.image_settings)
         if not cycles and has_catchers(scene):
-            self.report({"WARNING"}, "Shadow catchers work only in Cycles")
+            warnings.append("Shadow catchers work only in Cycles")
+        for text in warnings:
+            self.report({"WARNING"}, text)
         return {"FINISHED"}
 
 
@@ -261,11 +320,14 @@ class FTC_UL_roles(UIList):
     def filter_items(self, context, data, propname):
         objects = getattr(data, propname)
         helper = bpy.types.UI_UL_list
-        flags = helper.filter_items_by_name(self.filter_name, self.bitflag_filter_item, objects, "name")
+        flags = helper.filter_items_by_name(
+            self.filter_name, self.bitflag_filter_item, objects, "name", reverse=self.use_filter_invert
+        )
         if not flags:
             flags = [self.bitflag_filter_item] * len(objects)
         flags = [f if o.type in RENDERABLE else 0 for f, o in zip(flags, objects)]
-        return flags, helper.sort_items_by_name(objects, "name")
+        order = helper.sort_items_by_name(objects, "name") if self.use_filter_sort_alpha else []
+        return flags, order
 
 
 class FTC_OT_set_role(Operator):
@@ -292,8 +354,10 @@ class FTC_OT_set_role(Operator):
 # Shadow catcher plane
 
 
-def catcher_object(scene):
-    return next((o for o in scene.objects if o.get(CATCHER_TAG)), None)
+def catcher_object(settings, scene):
+    """The shadow catcher plane made for this camera, if still in the scene."""
+    obj = settings.shadow_catcher
+    return obj if obj is not None and obj.name in scene.objects else None
 
 
 class FTC_OT_add_catcher(Operator):
@@ -310,13 +374,15 @@ class FTC_OT_add_catcher(Operator):
 
     def execute(self, context):
         settings = calibrated_camera(context).data.ftc
-        size = CATCHER_SIZE * max(settings.results.distance, calibrate.cube_size(settings), 1e-3)
-        obj = catcher_object(context.scene)
+        size = CATCHER_SIZE * settings.results.distance
+        obj = catcher_object(settings, context.scene)
         if obj is None:
-            mesh = bpy.data.meshes.new(CATCHER_NAME)
-            obj = bpy.data.objects.new(CATCHER_NAME, mesh)
-            obj[CATCHER_TAG] = True
+            obj = bpy.data.objects.new(CATCHER_NAME, bpy.data.meshes.new(CATCHER_NAME))
             (context.collection or context.scene.collection).objects.link(obj)
+            settings.shadow_catcher = obj
+        elif obj.data.users > 1:
+            # Shared with a linked duplicate: reshape a copy only.
+            obj.data = obj.data.copy()
         bm = bmesh.new()
         bmesh.ops.create_grid(bm, x_segments=1, y_segments=1, size=size / 2)
         bm.to_mesh(obj.data)
@@ -325,12 +391,7 @@ class FTC_OT_add_catcher(Operator):
         obj.ftc_role = "CATCHER"
         # Wireframe in the viewport, so it does not cover the photo.
         obj.display_type = "WIRE"
-        layer = context.view_layer
-        for other in layer.objects.selected:
-            other.select_set(False)
-        if obj.name in layer.objects:
-            obj.select_set(True)
-            layer.objects.active = obj
+        select_only(context, obj)
         if context.scene.render.engine != "CYCLES":
             self.report({"WARNING"}, "Shadow catchers work only in Cycles")
         return {"FINISHED"}

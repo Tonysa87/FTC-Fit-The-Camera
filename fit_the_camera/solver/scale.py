@@ -28,6 +28,10 @@ class ScaleCube:
     plane: str = "XY"
 
 
+# Cosine below which the camera looks across a plane axis (about 78°): the cube
+# keeps that axis' + direction instead of following the noise of the guides.
+ACROSS = 0.2
+
 BEYOND_HORIZON = "the scale cube's base corner is beyond the horizon of the reference plane: move it closer"
 
 
@@ -39,6 +43,15 @@ def _plane_hit(centre, direction, normal) -> np.ndarray | None:
         return None
     s = -(normal @ centre) / den
     return centre + s * direction if s > 0.0 else None
+
+
+def plane_point(image_point, origin_ray, world_to_cam, normal_world, p, f) -> np.ndarray | None:
+    """Camera-space point of the plane through the world origin (seen along
+    ``origin_ray`` at unit distance) with world ``normal_world``, at
+    ``image_point``; ``None`` beyond the plane's horizon."""
+    origin = np.asarray(origin_ray, float)
+    hit = _plane_hit(-origin, ray(image_point, p, f), world_to_cam @ normal_world)
+    return None if hit is None else hit + origin
 
 
 def cube_distance(cube: ScaleCube, origin_ray, world_to_cam, p, f) -> float:
@@ -53,11 +66,9 @@ def cube_distance(cube: ScaleCube, origin_ray, world_to_cam, p, f) -> float:
         raise SolverError("the scale cube size must be positive")
     origin = np.asarray(origin_ray, float)  # world origin at unit distance
     normal = world_to_cam @ plane_frame(cube.plane)[:, 2]
-    # The plane passes through ``origin``: work relative to it.
-    base = _plane_hit(-origin, ray(cube.base, p, f), normal)
+    base = plane_point(cube.base, origin, world_to_cam, plane_frame(cube.plane)[:, 2], p, f)
     if base is None:
         raise SolverError(BEYOND_HORIZON)
-    base = base + origin
     up = normal if normal @ origin < 0.0 else -normal  # towards the camera
     p = np.asarray(p, float)
     foot = p + f * base[:2] / -base[2]
@@ -77,9 +88,11 @@ def cube_corners(solution: CameraSolution, base_px, size: float, plane: str) -> 
     image point ``base_px``; ``None`` if that point is not on the plane.
 
     Corner ``i`` is offset by ``size`` along the plane's x if ``i & 1``, its y if
-    ``i & 2`` and its normal if ``i & 4``: the cube extends away from the camera
-    in the plane and towards it along the normal, so corner 4 tops the edge at
-    ``base_px``.
+    ``i & 2`` and its normal if ``i & 4``. Along the normal the cube rises towards
+    the camera, so corner 4 tops the edge at ``base_px``. In the plane it extends
+    the way the camera looks (on a wall: up), whatever the base and the origin:
+    a rule based on them flips the cube while a handle is dragged across the
+    camera. An axis the camera looks nearly across keeps its + direction.
     """
     frame = plane_frame(plane)
     u, v, n = frame[:, 0], frame[:, 1], frame[:, 2]
@@ -87,9 +100,14 @@ def cube_corners(solution: CameraSolution, base_px, size: float, plane: str) -> 
     base = _plane_hit(centre, solution.rotation @ ray(base_px, solution.principal_point, solution.focal_px), n)
     if base is None:
         return None
-    away = base - centre
-    u = u if away @ u >= 0.0 else -u
-    v = v if away @ v >= 0.0 else -v
+    forward = -np.asarray(solution.rotation, float)[:, 2]
+
+    def ahead(axis):
+        return -axis if forward @ axis < -ACROSS else axis
+
+    u = ahead(u)
+    if plane == "XY":
+        v = ahead(v)
     n = n if centre @ n >= 0.0 else -n
     return np.array([base + size * ((i & 1) * u + (i >> 1 & 1) * v + (i >> 2 & 1) * n) for i in range(8)])
 

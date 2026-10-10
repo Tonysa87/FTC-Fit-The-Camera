@@ -84,9 +84,39 @@ def test_cube_corners_stand_on_the_plane_towards_the_camera(camera, plane, base,
     corners = cube_corners(as_solution(camera), camera.project(base)[0], 2.0, plane)
     assert np.allclose(corners[0], base, atol=1e-9)
     assert np.allclose(corners[4], np.add(base, np.multiply(up, 2.0)), atol=1e-9)
-    # The cube extends away from the camera within the plane.
-    for corner in (1, 2):
-        assert (corners[corner] - corners[0]) @ (corners[0] - camera.position) > 0.0
+    # In the plane the cube extends the way the camera looks; on a wall it goes up.
+    forward = -camera.rotation[:, 2]
+    assert (corners[1] - corners[0]) @ forward > -0.2 * 2.0
+    if plane == "XY":
+        assert (corners[2] - corners[0]) @ forward > -0.2 * 2.0
+    else:
+        assert np.allclose(corners[2] - corners[0], (0, 0, 2.0), atol=1e-9)
+
+
+def test_cube_keeps_its_direction_while_the_origin_moves():
+    """Moving the origin (the camera position relative to it) must not flip the cube."""
+    directions = set()
+    for x in np.linspace(-0.5, 0.5, 11):
+        cam = make_camera(pitch=-35.0, yaw=0.0, position=(x, -6.0, 4.0))
+        corners = cube_corners(as_solution(cam), (cam.image_size[0] * 0.5, cam.image_size[1] * 0.3), 1.0, "XY")
+        directions.add(tuple(np.round(np.r_[corners[1] - corners[0], corners[2] - corners[0]], 9)))
+    assert len(directions) == 1, directions
+
+
+def test_cube_keeps_its_direction_while_the_base_moves():
+    """Dragging the base across the camera (left to right, near to far) must not
+    flip the cube to the other side."""
+    cam = make_camera(pitch=-35.0, yaw=0.0, position=(0.0, -6.0, 4.0))
+    solution = as_solution(cam)
+    w, h = cam.image_size
+    directions = set()
+    for x in np.linspace(0.05, 0.95, 19) * w:
+        for y in np.linspace(0.05, 0.6, 8) * h:
+            corners = cube_corners(solution, (x, y), 1.0, "XY")
+            if corners is None:
+                continue
+            directions.add(tuple(np.round(np.r_[corners[1] - corners[0], corners[2] - corners[0]], 9)))
+    assert len(directions) == 1, directions
 
 
 def test_cube_corners_none_beyond_the_horizon():

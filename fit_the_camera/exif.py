@@ -108,7 +108,9 @@ class ExifData:
         native_long, native_short = native_frame(size)
         if self.focal_mm and self.focal_35mm:
             diagonal = FULL_FRAME_DIAGONAL_MM * self.focal_mm / self.focal_35mm
-            return diagonal * native_long / math.hypot(native_long, native_short)
+            value = diagonal * native_long / math.hypot(native_long, native_short)
+            if 1.0 < value < 100.0:
+                return value
         unit = FOCAL_PLANE_UNITS_MM.get(self.focal_plane_unit or 2)
         if unit and self.focal_plane_x_res:
             pixel_pitch = unit / self.focal_plane_x_res
@@ -204,12 +206,30 @@ def _dms(value, ref, negative: str) -> float | None:
     return -degrees if isinstance(ref, str) and ref.upper().startswith(negative) else degrees
 
 
+# Plausible focal lengths (mm): anything else is a corrupt tag.
+FOCAL_RANGE_MM = (0.5, 5000.0)
+
+
+def _in_range(value, low, high):
+    return value if value is not None and low <= value <= high else None
+
+
 def parse_tiff(data: bytes) -> ExifData:
     """Parse a TIFF/EXIF block."""
     reader = _Reader(data)
     ifd0 = reader.ifd(reader.unpack("I", 4))
-    exif = reader.ifd(ifd0[TAG_EXIF_IFD]) if isinstance(ifd0.get(TAG_EXIF_IFD), int) else {}
-    gps = reader.ifd(ifd0[TAG_GPS_IFD]) if isinstance(ifd0.get(TAG_GPS_IFD), int) else {}
+
+    def sub_ifd(tag):
+        # A broken sub-IFD must not lose what IFD0 holds (make, model, orientation).
+        if not isinstance(ifd0.get(tag), int):
+            return {}
+        try:
+            return reader.ifd(ifd0[tag])
+        except (struct.error, IndexError, ValueError, OverflowError, TypeError, KeyError):
+            return {}
+
+    exif = sub_ifd(TAG_EXIF_IFD)
+    gps = sub_ifd(TAG_GPS_IFD)
 
     def text(d, tag):
         v = d.get(tag)
@@ -226,14 +246,14 @@ def parse_tiff(data: bytes) -> ExifData:
         model=text(ifd0, TAG_MODEL),
         lens_make=text(exif, TAG_LENS_MAKE),
         lens_model=text(exif, TAG_LENS_MODEL),
-        focal_mm=_first_number(exif.get(TAG_FOCAL_LENGTH)),
-        focal_35mm=_first_number(exif.get(TAG_FOCAL_35MM)),
+        focal_mm=_in_range(_first_number(exif.get(TAG_FOCAL_LENGTH)), *FOCAL_RANGE_MM),
+        focal_35mm=_in_range(_first_number(exif.get(TAG_FOCAL_35MM)), *FOCAL_RANGE_MM),
         pixel_x=integer(exif, TAG_PIXEL_X),
         pixel_y=integer(exif, TAG_PIXEL_Y),
         focal_plane_x_res=_first_number(exif.get(TAG_FOCAL_PLANE_X_RES)),
         focal_plane_y_res=_first_number(exif.get(TAG_FOCAL_PLANE_Y_RES)),
         focal_plane_unit=integer(exif, TAG_FOCAL_PLANE_UNIT),
-        orientation=integer(ifd0, TAG_ORIENTATION),
+        orientation=_in_range(integer(ifd0, TAG_ORIENTATION), 1, 8),
         gps_latitude=_dms(gps.get(GPS_LAT), gps.get(GPS_LAT_REF), "S"),
         gps_longitude=_dms(gps.get(GPS_LON), gps.get(GPS_LON_REF), "W"),
         gps_direction=_bearing(gps.get(GPS_DIRECTION)),
