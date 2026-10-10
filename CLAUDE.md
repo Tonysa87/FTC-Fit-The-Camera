@@ -28,7 +28,7 @@ Extensions audience) and `README.it.md` (Italian); developer docs
      GUI test by the user, then: move tag v1.0.0 to the final commit (user
      authorized it), push, GitHub release with the zip, submission to
      extensions.blender.org with `extensions_listing/`.
-- GitHub: https://github.com/Tonysa87/FTC---Fit-The-Camera (public, `origin`).
+- GitHub: https://github.com/Tonysa87/FTC-Fit-The-Camera (public, `origin`).
   Tag v1.0.0 is still on the old a67c8f0 and no GitHub release exists yet.
 - `extensions_listing/` (git-ignored, asked by the user): everything to upload to
   extensions.blender.org (icon, featured 1920×1080, previews, description.md) and

@@ -11,7 +11,7 @@ versioni: [`docs/CHANGELOG.md`](docs/CHANGELOG.md). Sviluppo:
 ## Installazione
 
 1. Scarica `fit_the_camera-<versione>.zip` dalle
-   [Release](https://github.com/Tonysa87/FTC---Fit-The-Camera/releases).
+   [Release](https://github.com/Tonysa87/FTC-Fit-The-Camera/releases).
 2. Blender 5.2 o successivo: *Edit › Preferences › Get Extensions › ⌄ ›
    Install from Disk…* e scegli lo zip.
 3. Interfaccia in italiano: *Preferences › Interface › Translation*, lingua
