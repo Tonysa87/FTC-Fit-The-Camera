@@ -65,11 +65,12 @@ def focal_px_from_mm(focal_mm: float, sensor_long_side_mm: float, image_size) ->
     return focal_mm * max(image_size) / sensor_long_side_mm
 
 
-def focal_px_from_35mm(focal_35mm: float, image_size) -> float:
+def focal_px_from_35mm(focal_35mm: float, image_size, native_frame=None) -> float:
     """Focal length in pixels from the 35 mm equivalent focal length.
 
-    The equivalence is defined on the diagonal (43.27 mm for a 36x24 mm frame),
-    so it holds for any image aspect ratio.
+    The equivalence is defined on the diagonal (43.27 mm for a 36x24 mm frame) of
+    the uncropped frame: ``native_frame`` (long, short side in image pixels) when
+    the image is a crop, else the image itself.
     """
-    w, h = image_size
+    w, h = native_frame or image_size
     return focal_35mm * float(np.hypot(w, h)) / float(np.hypot(36.0, 24.0))

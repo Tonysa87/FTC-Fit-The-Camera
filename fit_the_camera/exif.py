@@ -37,6 +37,30 @@ FOCAL_PLANE_UNITS_MM = {2: 25.4, 3: 10.0, 4: 1.0, 5: 0.001}
 # Diagonal of a 36x24 mm frame, the reference of 35 mm equivalent focal lengths.
 FULL_FRAME_DIAGONAL_MM = math.hypot(36.0, 24.0)
 
+# Image aspect ratios taken as the sensor's own (uncropped) frame.
+NATIVE_ASPECTS = (4.0 / 3.0, 3.0 / 2.0)
+
+
+def native_frame(image_size) -> tuple[float, float]:
+    """Long and short side, in image pixels, of the sensor frame the image comes from.
+
+    4:3 and 3:2 images are taken as uncropped. Any other aspect (1:1, 16:9, ...)
+    is taken as the largest centred crop of a 4:3 sensor, which is what phones do;
+    their 35 mm equivalent focal length refers to that uncropped frame.
+    """
+    long_side, short_side = float(max(image_size)), float(min(image_size))
+    aspect = long_side / short_side
+    if any(abs(aspect - n) / n < 0.01 for n in NATIVE_ASPECTS):
+        return long_side, short_side
+    if aspect > 4.0 / 3.0:
+        return long_side, long_side * 3.0 / 4.0
+    return short_side * 4.0 / 3.0, short_side
+
+
+def is_native_aspect(image_size) -> bool:
+    return native_frame(image_size) == (float(max(image_size)), float(min(image_size)))
+
+
 _TYPE_SIZES = {1: 1, 2: 1, 3: 2, 4: 4, 5: 8, 6: 1, 7: 1, 8: 2, 9: 4, 10: 8, 11: 4, 12: 8}
 _MAX_ENTRIES = 1000
 
@@ -79,9 +103,10 @@ class ExifData:
         """
         size = (self.pixel_x, self.pixel_y) if self.pixel_x and self.pixel_y else image_size
         if self.focal_mm and self.focal_35mm and size and all(size):
+            # Sensor diagonal from the crop factor, spread over the native frame.
             diagonal = FULL_FRAME_DIAGONAL_MM * self.focal_mm / self.focal_35mm
-            long_side, short_side = max(size), min(size)
-            return diagonal * long_side / math.hypot(long_side, short_side)
+            pixel_pitch = diagonal / math.hypot(*native_frame(size))
+            return pixel_pitch * max(size)
         unit = FOCAL_PLANE_UNITS_MM.get(self.focal_plane_unit or 2)
         if size and all(size) and unit and self.focal_plane_x_res and self.focal_plane_y_res:
             # Focal plane resolutions refer to the image as stored (x = width).

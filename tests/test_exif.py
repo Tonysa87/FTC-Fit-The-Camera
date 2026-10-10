@@ -72,6 +72,25 @@ def test_phone_photo(endian, wrap):
     assert data.sensor_long_side_mm() == pytest.approx(9.896, abs=0.01)
 
 
+def test_square_crop_assumes_a_4_3_sensor():
+    """1:1 phone photo: the 35 mm equivalent refers to the uncropped 4:3 sensor."""
+    tiff = build_tiff(
+        ifd0=[(exif.TAG_MAKE, ASCII, "motorola")],
+        exif_ifd=[
+            (exif.TAG_FOCAL_LENGTH, RATIONAL, [(5895, 1000)]),
+            (exif.TAG_FOCAL_35MM, SHORT, 25),
+            (exif.TAG_PIXEL_X, LONG, 3072),
+            (exif.TAG_PIXEL_Y, LONG, 3072),
+        ],
+    )
+    data = exif.read_exif(jpeg(tiff))
+    # Sensor diagonal 10.20 mm -> 8.16 x 6.12 mm; the square crop is 6.12 mm wide.
+    assert data.sensor_long_side_mm() == pytest.approx(6.122, abs=0.005)
+    assert exif.native_frame((3072, 3072)) == (4096.0, 3072.0)
+    assert exif.native_frame((1920, 1080)) == (1920.0, 1440.0)
+    assert exif.native_frame((6000, 4000)) == (6000.0, 4000.0)
+
+
 def test_focal_plane_resolution_sensor():
     tiff = build_tiff(
         ifd0=[(exif.TAG_MAKE, ASCII, "Canon")],

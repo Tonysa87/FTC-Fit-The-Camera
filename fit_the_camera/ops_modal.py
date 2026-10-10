@@ -176,6 +176,8 @@ class FTC_OT_calibrate(Operator):
             mode += f" ({settings.vp_count})"
         if settings.freeze:
             mode += "  [" + iface_("Freeze Guides") + "]"
+        if settings.straighten:
+            mode += "  [" + iface_("Straighten Horizon") + "]"
         text = f"FTC  {mode}  |  " + iface_(STATUS_KEYS)
         if text != session.status:
             session.status = text

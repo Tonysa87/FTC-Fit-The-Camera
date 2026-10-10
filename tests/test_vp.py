@@ -87,14 +87,30 @@ def test_three_vanishing_points_recover_principal_point():
 
 def test_one_vanishing_point_with_known_focal():
     cam = make_camera(pitch=-8.0, yaw=5.0, roll=1.5, position=(0.5, -10.0, 1.6))
-    v_x = cam.project(cam.position + 1e7 * np.array([1.0, 0, 0]))[0]
-    v_y = cam.project(cam.position + 1e7 * np.array([0, 1.0, 0]))[0]
     sol = solve_vanishing_points(
         [guides(cam, "Y")],
-        [axis_label(cam, "Y"), "+X"],
+        [axis_label(cam, "Y"), axis_label(cam, "X")],
         cam.image_size,
         focal_px=cam.focal_px,
-        horizon_dir=v_x - v_y,
+        axis2_line=cam.segment((-2, 0.5, 0), (2, 0.5, 0)),
+        origin=cam.project([0, 0, 0]),
+        reference=reference(cam),
+    )
+    assert_matches(sol, cam)
+
+
+@pytest.mark.parametrize("flip_line", [False, True])
+def test_one_vertical_vanishing_point_and_an_x_line(flip_line):
+    """Camera looking down at a wall: verticals vanish below the image, one line
+    along the wall gives X. The line's direction must not matter."""
+    cam = make_camera(pitch=-33.0, yaw=8.0, roll=4.0, position=(0.4, -7.0, 4.5))
+    line = cam.segment((-1.5, 0.0, 0.0), (1.5, 0.0, 0.0))
+    sol = solve_vanishing_points(
+        [guides(cam, "Z")],
+        [axis_label(cam, "Z"), axis_label(cam, "X")],
+        cam.image_size,
+        focal_px=cam.focal_px,
+        axis2_line=line[::-1] if flip_line else line,
         origin=cam.project([0, 0, 0]),
         reference=reference(cam),
     )
@@ -103,7 +119,7 @@ def test_one_vanishing_point_with_known_focal():
 
 def test_one_vanishing_point_requires_focal(camera):
     with pytest.raises(SolverError):
-        solve_vanishing_points([guides(camera, "Y")], ["+Y", "+X"], camera.image_size, horizon_dir=(1, 0))
+        solve_vanishing_points([guides(camera, "Y")], ["+Y", "+X"], camera.image_size, axis2_line=((0, 0), (1, 0)))
 
 
 def test_noisy_guides_stay_within_tolerance():

@@ -148,7 +148,7 @@ def solve_rectangle(
         if tilt < FRONTAL_LIMIT_DEG:
             warnings.append("the rectangle is almost facing the camera: the focal length estimate is unstable")
 
-    rotation = finish_rotation(world_to_cam.T, straighten_horizon, pitch_offset)
+    rotation, removed_roll = finish_rotation(world_to_cam.T, straighten_horizon, pitch_offset, warnings)
     position = -rotation @ origin_cam
     return CameraSolution(
         image_size=(int(w), int(h)),
@@ -157,4 +157,5 @@ def solve_rectangle(
         rotation=rotation,
         position=position,
         warnings=warnings,
+        removed_roll=removed_roll,
     )

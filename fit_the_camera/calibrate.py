@@ -7,8 +7,10 @@ import math
 from contextlib import contextmanager
 
 import bpy
+import numpy as np
 from mathutils import Matrix
 
+from .exif import native_frame
 from .solver import (
     CameraSolution,
     ReferenceDistance,
@@ -41,10 +43,10 @@ HANDLE_DEFAULTS = {
     "ref_a": (0.50, 0.30),
     "ref_b": (0.62, 0.34),
     "pp": (0.50, 0.50),
-    "rect_0": (0.30, 0.20),
-    "rect_1": (0.70, 0.20),
-    "rect_2": (0.62, 0.42),
-    "rect_3": (0.38, 0.42),
+    "rect_0": (0.20, 0.12),
+    "rect_1": (0.80, 0.12),
+    "rect_2": (0.66, 0.45),
+    "rect_3": (0.34, 0.45),
     "hz_a": (0.80, 0.55),
     "hz_b": (0.20, 0.55),
 }
@@ -160,7 +162,7 @@ def known_focal_px(settings) -> float | None:
     if data.focal_mm_state != "MISSING" and data.focal_mm > 0.0 and sensor:
         return focal_px_from_mm(data.focal_mm, sensor, size)
     if data.focal_35mm_state != "MISSING" and data.focal_35mm > 0.0:
-        return focal_px_from_35mm(data.focal_35mm, size)
+        return focal_px_from_35mm(data.focal_35mm, size, native_frame(size))
     return None
 
 
@@ -172,16 +174,24 @@ def mode_needs_focal(settings) -> bool:
 # Solving
 
 
-def _points(settings, keys):
-    return [to_pixels(settings, handle(settings, k)) for k in keys]
+def solve(settings, overrides: dict | None = None) -> CameraSolution:
+    """Solve the camera described by ``settings``; raises ``SolverError``.
 
-
-def solve(settings) -> CameraSolution:
-    """Solve the camera described by ``settings``; raises ``SolverError``."""
+    ``overrides`` replaces some handle positions (normalised), without touching
+    the stored settings.
+    """
     size = image_size(settings)
     if not size[0] or not size[1]:
         raise SolverError("no image loaded")
-    pp = to_pixels(settings, handle(settings, "pp")) if settings.pp_mode == "MANUAL" else None
+
+    def at(key):
+        co = overrides.get(key) if overrides else None
+        return to_pixels(settings, co if co is not None else handle(settings, key))
+
+    def _points(_settings, keys):
+        return [at(k) for k in keys]
+
+    pp = at("pp") if settings.pp_mode == "MANUAL" else None
     common = {"straighten_horizon": settings.straighten, "pitch_offset": settings.pitch_offset}
 
     if settings.mode == "VP":
@@ -191,14 +201,14 @@ def solve(settings) -> CameraSolution:
             a1, b1, a2, b2 = _points(settings, vp_keys(i))
             lines.append([(a1, b1), (a2, b2)])
         axes = [settings.vp1_axis, settings.vp2_axis, settings.vp3_axis][: max(count, 2)]
-        horizon_dir = None
+        axis2_line = None
         focal = None
         if count == 1:
             focal = known_focal_px(settings)
             if focal is None:
                 raise SolverError("one vanishing point needs the focal length: enter it in Camera Data")
             a, b = _points(settings, ["hz_a", "hz_b"])
-            horizon_dir = (b[0] - a[0], b[1] - a[1])
+            axis2_line = (a, b)
         reference = None
         if settings.scale_mode == "REFERENCE":
             ra, rb = _points(settings, ["ref_a", "ref_b"])
@@ -209,8 +219,8 @@ def solve(settings) -> CameraSolution:
             size,
             principal_point=pp,
             focal_px=focal,
-            horizon_dir=horizon_dir,
-            origin=to_pixels(settings, handle(settings, "origin")),
+            axis2_line=axis2_line,
+            origin=at("origin"),
             camera_distance=settings.camera_distance,
             reference=reference,
             **common,
@@ -249,6 +259,43 @@ def solve(settings) -> CameraSolution:
     )
 
 
+# Handles that only place or scale the result, not its orientation or focal length.
+_POSE_ONLY_KEYS = {"origin", "ref_a", "ref_b", "pp"}
+# Assumed placement error of a handle, as a fraction of the long image side.
+PLACEMENT_ERROR = 1e-3
+UNSTABLE_FOCAL = 0.05
+UNSTABLE_ANGLE_DEG = 1.0
+
+
+def calibrate_keys(settings) -> list[str]:
+    return [k for k in active_handle_keys(settings) if k not in _POSE_ONLY_KEYS]
+
+
+def uncertainty(settings, solution: CameraSolution) -> tuple[float, float]:
+    """Spread of the focal length (fraction) and orientation (degrees) when every
+    guide handle is misplaced by ``PLACEMENT_ERROR`` of the long image side.
+
+    Linear estimate: each handle coordinate is nudged in turn and the changes are
+    added in quadrature. Returns ``inf`` when a nudge makes the input unsolvable.
+    """
+    w, h = image_size(settings)
+    step = PLACEMENT_ERROR * max(w, h)
+    focal_var = angle_var = 0.0
+    for key in calibrate_keys(settings):
+        co = handle(settings, key)
+        for axis, size in ((0, w), (1, h)):
+            moved = list(co)
+            moved[axis] += step / size
+            try:
+                nudged = solve(settings, {key: tuple(moved)})
+            except SolverError:
+                return math.inf, math.inf
+            focal_var += ((nudged.focal_px - solution.focal_px) / solution.focal_px) ** 2
+            cos = (np.trace(solution.rotation.T @ nudged.rotation) - 1.0) / 2.0
+            angle_var += math.degrees(math.acos(min(1.0, max(-1.0, cos)))) ** 2
+    return math.sqrt(focal_var), math.sqrt(angle_var)
+
+
 def cached_solution(cam_data) -> CameraSolution | None:
     return _solutions.get(cam_data.session_uid)
 
@@ -263,7 +310,21 @@ def _store_results(settings, solution: CameraSolution | None, error: str) -> Non
     sensor = known_sensor_mm(settings)
     bc = to_blender(solution, sensor)
     fov_h, fov_v = solution.fov
-    res.warnings = "\n".join(solution.warnings)
+    warnings = list(solution.warnings)
+    focal_err, angle_err = uncertainty(settings, solution)
+    res.focal_error = min(focal_err, 10.0)
+    res.angle_error = min(angle_err, 180.0)
+    # A known focal length is an input, not something the guides can destabilise.
+    focal_solved = not (mode_needs_focal(settings) or (settings.mode == "RECT" and settings.rect_use_focal))
+    res.focal_solved = focal_solved
+    if (focal_solved and focal_err > UNSTABLE_FOCAL) or angle_err > UNSTABLE_ANGLE_DEG:
+        warnings.insert(
+            0,
+            f"unstable calibration (focal ±{100 * min(focal_err, 9.99):.0f}%, angles ±{min(angle_err, 99):.1f}°): "
+            "use longer guides, further apart, or vanishing points closer to the image",
+        )
+    res.warnings = "\n".join(warnings)
+    res.removed_roll = math.radians(solution.removed_roll)
     res.focal_px = solution.focal_px
     res.lens = bc.lens
     res.sensor = bc.sensor_width

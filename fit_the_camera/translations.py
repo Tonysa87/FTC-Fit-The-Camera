@@ -35,7 +35,10 @@ _IT = {
     "Axis 1": "Asse 1",
     "Axis 2": "Asse 2",
     "Axis 3": "Asse 3",
-    "Horizon Axis": "Asse orizzonte",
+    "Axis 2 Line": "Linea asse 2",
+    "Cropped image: 35 mm equivalent taken on the uncropped 4:3 sensor": (
+        "Immagine ritagliata: equivalente 35 mm riferito al sensore 4:3 intero"
+    ),
     "Camera Distance": "Distanza camera",
     "Reference Distance": "Misura di riferimento",
     "Reference Axis": "Asse di riferimento",
@@ -57,6 +60,8 @@ _IT = {
     # Results
     "Not solved": "Non risolto",
     "Field of View": "Campo visivo",
+    "Orientation": "Orientamento",
+    "Removed Roll": "Rollio rimosso",
     # Move Along View
     "Distance Factor": "Fattore distanza",
     "Scale with Distance": "Scala con la distanza",

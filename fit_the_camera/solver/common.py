@@ -34,6 +34,8 @@ class CameraSolution:
     rotation: np.ndarray
     position: np.ndarray
     warnings: list[str] = field(default_factory=list)
+    # Roll (degrees) taken out by "straighten horizon"; 0 when the option is off.
+    removed_roll: float = 0.0
 
     @property
     def forward(self) -> np.ndarray:
@@ -205,10 +207,29 @@ def adjust_pitch(rotation: np.ndarray, delta: float) -> np.ndarray:
     return rotation_about(axis, delta) @ rotation
 
 
-def finish_rotation(rotation: np.ndarray, straighten_horizon: bool, pitch_offset: float) -> np.ndarray:
+# Below this, removing the roll does not visibly move the guides.
+ROLL_WARNING_DEG = 0.05
+
+
+def finish_rotation(
+    rotation: np.ndarray, straighten_horizon: bool, pitch_offset: float, warnings: list[str]
+) -> tuple[np.ndarray, float]:
+    """Apply the user's straighten / pitch adjustments to a solved rotation.
+
+    Returns the new rotation and the roll removed by straightening, in degrees.
+    Straightening a camera that is really rolled breaks the fit with the guides,
+    so that case is reported in ``warnings``.
+    """
+    removed = 0.0
     if straighten_horizon:
+        right, up = rotation[:, 0], rotation[:, 1]
+        removed = math.degrees(math.atan2(right[2], up[2]))
         rotation = straighten(rotation)
-    return adjust_pitch(rotation, pitch_offset)
+        if abs(removed) > ROLL_WARNING_DEG:
+            warnings.append(
+                f"straighten horizon removed {removed:+.1f}° of roll: the camera no longer matches the guides"
+            )
+    return adjust_pitch(rotation, pitch_offset), removed
 
 
 def closest_param_on_line(origin, direction, ray_dir) -> float:

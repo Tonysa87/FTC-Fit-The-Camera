@@ -63,7 +63,8 @@ def solve_horizon(
     cam_basis = np.column_stack([up, heading_cam, np.cross(heading_cam, up)])
     world_basis = np.column_stack([z_world, heading_world, np.cross(heading_world, z_world)])
     rotation = world_basis @ cam_basis.T  # camera -> world
-    rotation = finish_rotation(rotation, straighten_horizon, pitch_offset)
+    warnings: list[str] = []
+    rotation, removed_roll = finish_rotation(rotation, straighten_horizon, pitch_offset, warnings)
 
     return CameraSolution(
         image_size=(int(w), int(h)),
@@ -71,4 +72,6 @@ def solve_horizon(
         principal_point=np.asarray(p, float),
         rotation=rotation,
         position=np.array([0.0, 0.0, float(camera_height)]),
+        warnings=warnings,
+        removed_roll=removed_roll,
     )
