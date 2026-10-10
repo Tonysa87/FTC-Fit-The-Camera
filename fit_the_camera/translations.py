@@ -70,6 +70,8 @@ _IT = {
     "Not solved": "Non risolto",
     "Field of View": "Campo visivo",
     "Orientation": "Orientamento",
+    "Guide Fit": "Aderenza guide",
+    "max {:.2f}°": "max {:.2f}°",
     "Removed Roll": "Rollio rimosso",
     # Move Along View
     "Distance Factor": "Fattore distanza",

@@ -40,6 +40,12 @@ def _guides_changed(self, context):
     calibrate.settings_changed(self.id_data, context, reset_pitch=True)
 
 
+def _third_axis_changed(self, context):
+    # The cached solution is still the one before the change: seed from it.
+    calibrate.seed_third_axis(self.id_data)
+    calibrate.settings_changed(self.id_data, context, reset_pitch=True)
+
+
 def _manual(field):
     """Update callback marking a camera data field as entered by hand."""
 
@@ -88,7 +94,7 @@ class FTC_CameraData(PropertyGroup):
     focal_35mm_state: EnumProperty(items=FIELD_STATE_ITEMS, default="MISSING")
     sensor_mm: FloatProperty(
         name="Sensor Width",
-        description="Sensor size along the long side of the image",
+        description="Long side of the camera sensor, as in its specifications (for cropped photos too)",
         min=0.0,
         soft_max=100.0,
         subtype="DISTANCE_CAMERA",
@@ -130,6 +136,7 @@ class FTC_Results(PropertyGroup):
     angle_error: FloatProperty(name="Angle Uncertainty")
     focal_solved: BoolProperty()
     removed_roll: FloatProperty(name="Removed Roll", subtype="ANGLE")
+    guide_misfit: FloatProperty(name="Guide Fit", subtype="ANGLE")
 
 
 class FTC_Settings(PropertyGroup):
@@ -156,7 +163,7 @@ class FTC_Settings(PropertyGroup):
             ("3", "3", "Three vanishing points: solves focal length and principal point"),
         ],
         default="2",
-        update=_guides_changed,
+        update=_third_axis_changed,
     )
     vp1_axis: EnumProperty(
         name="Vanishing Point 1",
@@ -252,7 +259,7 @@ class FTC_Settings(PropertyGroup):
             "the calibration and keeps that axis on the image"
         ),
         default=False,
-        update=_guides_changed,
+        update=_third_axis_changed,
     )
 
     camera_height: FloatProperty(

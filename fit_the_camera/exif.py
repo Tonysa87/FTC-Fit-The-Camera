@@ -96,23 +96,23 @@ class ExifData:
         return " ".join(parts) or None
 
     def sensor_long_side_mm(self, image_size=None) -> float | None:
-        """Sensor size along the long image side, derived from EXIF only.
+        """Long side of the (uncropped) sensor, derived from EXIF only: the same
+        figure as a camera's specifications, whatever crop the image is.
 
         Uses the crop factor (real vs 35 mm equivalent focal length) when both are
         present, otherwise the focal plane resolution. ``None`` if neither is usable.
         """
         size = (self.pixel_x, self.pixel_y) if self.pixel_x and self.pixel_y else image_size
-        if self.focal_mm and self.focal_35mm and size and all(size):
-            # Sensor diagonal from the crop factor, spread over the native frame.
+        if not size or not all(size):
+            return None
+        native_long, native_short = native_frame(size)
+        if self.focal_mm and self.focal_35mm:
             diagonal = FULL_FRAME_DIAGONAL_MM * self.focal_mm / self.focal_35mm
-            pixel_pitch = diagonal / math.hypot(*native_frame(size))
-            return pixel_pitch * max(size)
+            return diagonal * native_long / math.hypot(native_long, native_short)
         unit = FOCAL_PLANE_UNITS_MM.get(self.focal_plane_unit or 2)
-        if size and all(size) and unit and self.focal_plane_x_res and self.focal_plane_y_res:
-            # Focal plane resolutions refer to the image as stored (x = width).
-            width_mm = size[0] / self.focal_plane_x_res * unit
-            height_mm = size[1] / self.focal_plane_y_res * unit
-            value = max(width_mm, height_mm)
+        if unit and self.focal_plane_x_res:
+            pixel_pitch = unit / self.focal_plane_x_res
+            value = pixel_pitch * native_long
             if 1.0 < value < 100.0:
                 return value
         return None

@@ -61,8 +61,14 @@ def to_blender(
     )
 
 
-def focal_px_from_mm(focal_mm: float, sensor_long_side_mm: float, image_size) -> float:
-    return focal_mm * max(image_size) / sensor_long_side_mm
+def focal_px_from_mm(focal_mm: float, sensor_long_side_mm: float, image_size, native_frame=None) -> float:
+    """Focal length in pixels from the real focal length and the sensor's long side.
+
+    The sensor spans the long side of ``native_frame`` (long, short side in image
+    pixels) when the image is a crop of it, else the image's long side.
+    """
+    long_side = native_frame[0] if native_frame else max(image_size)
+    return focal_mm * long_side / sensor_long_side_mm
 
 
 def focal_px_from_35mm(focal_35mm: float, image_size, native_frame=None) -> float:

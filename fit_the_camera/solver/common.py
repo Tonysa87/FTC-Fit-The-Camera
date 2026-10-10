@@ -36,6 +36,9 @@ class CameraSolution:
     warnings: list[str] = field(default_factory=list)
     # Roll (degrees) taken out by "straighten horizon"; 0 when the option is off.
     removed_roll: float = 0.0
+    # Largest angle (degrees) between a guide and the line to its solved vanishing
+    # point, before straightening: how well the camera follows the guides.
+    guide_misfit: float = 0.0
 
     @property
     def forward(self) -> np.ndarray:

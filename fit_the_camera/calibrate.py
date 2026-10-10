@@ -153,10 +153,20 @@ def active_handle_keys(settings) -> list[str]:
 
 
 def known_sensor_mm(settings) -> float | None:
+    """Long side of the uncropped sensor, as in the camera's specifications."""
     data = settings.camera_data
     if data.sensor_mm_state != "MISSING" and data.sensor_mm > 0.0:
         return data.sensor_mm
     return None
+
+
+def image_sensor_mm(settings) -> float | None:
+    """Sensor size covered by the image's long side (smaller for a cropped image)."""
+    sensor = known_sensor_mm(settings)
+    if sensor is None:
+        return None
+    size = image_size(settings)
+    return sensor * max(size) / native_frame(size)[0]
 
 
 def known_focal_px(settings) -> float | None:
@@ -165,7 +175,7 @@ def known_focal_px(settings) -> float | None:
     size = image_size(settings)
     sensor = known_sensor_mm(settings)
     if data.focal_mm_state != "MISSING" and data.focal_mm > 0.0 and sensor:
-        return focal_px_from_mm(data.focal_mm, sensor, size)
+        return focal_px_from_mm(data.focal_mm, sensor, size, native_frame(size))
     if data.focal_35mm_state != "MISSING" and data.focal_35mm > 0.0:
         return focal_px_from_35mm(data.focal_35mm, size, native_frame(size))
     return None
@@ -278,6 +288,9 @@ _POSE_ONLY_KEYS = {"origin", "ref_a", "ref_b", "pp"}
 # Assumed placement error of a handle, as a fraction of the long image side.
 PLACEMENT_ERROR = 1e-3
 UNSTABLE_FOCAL = 0.05
+# Guide misfit (degrees) above which the guides and the camera disagree.
+MISFIT_KNOWN_FOCAL_DEG = 1.0
+MISFIT_DEG = 2.0
 UNSTABLE_ANGLE_DEG = 1.0
 
 
@@ -302,12 +315,44 @@ def uncertainty(settings, solution: CameraSolution) -> tuple[float, float]:
             moved[axis] += step / size
             try:
                 nudged = solve(settings, {key: tuple(moved)})
-            except SolverError:
+            except (SolverError, ArithmeticError, ValueError, np.linalg.LinAlgError):
                 return math.inf, math.inf
             focal_var += ((nudged.focal_px - solution.focal_px) / solution.focal_px) ** 2
             cos = (np.trace(solution.rotation.T @ nudged.rotation) - 1.0) / 2.0
             angle_var += math.degrees(math.acos(min(1.0, max(-1.0, cos)))) ** 2
     return math.sqrt(focal_var), math.sqrt(angle_var)
+
+
+def seed_third_axis(cam_data) -> None:
+    """Place the untouched third-axis guides along the third axis of the current
+    camera, so that switching to three vanishing points (or adding the third axis
+    line) starts from consistent guides."""
+    settings = cam_data.ftc
+    solution = cached_solution(cam_data)
+    keys = vp_keys(3)
+    if settings.mode != "VP" or solution is None:
+        return
+    if any(math.dist(handle(settings, k), HANDLE_DEFAULTS[k]) > 1e-6 for k in keys):
+        return  # the user already placed them
+    w, h = image_size(settings)
+    axis = 3 - "XYZ".index(settings.vp1_axis[1]) - "XYZ".index(settings.vp2_axis[1])
+    d = solution.rotation[axis, :]  # third axis in camera space
+    p, f = solution.principal_point, solution.focal_px
+    co = []
+    for u in (0.3, 0.7):
+        q = np.array([u * w, 0.5 * h])
+        start = np.array([q[0] - p[0], q[1] - p[1], -f]) / f  # point at depth 1 on the ray
+        end = start + 0.05 * d
+        if end[2] >= -1e-6:
+            end = start - 0.05 * d
+        q2 = p + f * end[:2] / -end[2]
+        direction = (q2 - q) / max(np.linalg.norm(q2 - q), 1e-9)
+        half = 0.3 * h
+        for point in (q - direction * half, q + direction * half):
+            co.append((float(point[0] / w), float(point[1] / h)))
+    with suspended():
+        for key, c in zip(keys, co):
+            set_handle(settings, key, c)
 
 
 def cached_solution(cam_data) -> CameraSolution | None:
@@ -321,8 +366,7 @@ def _store_results(settings, solution: CameraSolution | None, error: str) -> Non
     if solution is None:
         res.warnings = ""
         return
-    sensor = known_sensor_mm(settings)
-    bc = to_blender(solution, sensor)
+    bc = to_blender(solution, image_sensor_mm(settings))
     fov_h, fov_v = solution.fov
     warnings = list(solution.warnings)
     if defer_uncertainty:
@@ -342,6 +386,20 @@ def _store_results(settings, solution: CameraSolution | None, error: str) -> Non
             "use longer guides further apart, add a third axis line or a third vanishing point, "
             "or use the known focal length",
         )
+    focal_fixed = mode_needs_focal(settings) or settings.use_known_focal
+    res.guide_misfit = math.radians(solution.guide_misfit)
+    if focal_fixed and solution.guide_misfit > MISFIT_KNOWN_FOCAL_DEG:
+        warnings.insert(
+            0,
+            f"the guides disagree with the known focal length by up to {solution.guide_misfit:.1f}°: "
+            "the photo may be cropped or zoomed, try solving the focal length",
+        )
+    elif solution.guide_misfit > MISFIT_DEG:
+        warnings.insert(
+            0,
+            f"the guides do not meet consistently (up to {solution.guide_misfit:.1f}° off): "
+            "some lines may not be parallel to their axis",
+        )
     res.warnings = "\n".join(warnings)
     res.removed_roll = math.radians(solution.removed_roll)
     res.focal_px = solution.focal_px
@@ -356,6 +414,11 @@ def _store_results(settings, solution: CameraSolution | None, error: str) -> Non
     res.distance = float((solution.position @ solution.position) ** 0.5)
 
 
+def _finite(solution: CameraSolution) -> bool:
+    values = [solution.focal_px, *solution.rotation.ravel(), *solution.position, *solution.principal_point]
+    return all(math.isfinite(float(v)) for v in values) and solution.focal_px > 0.0
+
+
 def refresh(cam_data) -> CameraSolution | None:
     """Solve ``cam_data``'s settings, cache the solution and store the results."""
     settings = cam_data.ftc
@@ -364,6 +427,11 @@ def refresh(cam_data) -> CameraSolution | None:
         error = ""
     except SolverError as exc:
         solution, error = None, str(exc)
+    except (ArithmeticError, ValueError, np.linalg.LinAlgError):
+        # Nearly degenerate guides, typically mid-drag: report, never raise.
+        solution, error = None, "the guides do not define a camera: move them apart"
+    if solution is not None and not _finite(solution):
+        solution, error = None, "the guides do not define a camera: move them apart"
     if solution is None:
         _solutions.pop(cam_data.session_uid, None)
     else:
@@ -398,7 +466,7 @@ def alignment_matrix(settings) -> Matrix:
 def apply_solution(cam_obj, solution: CameraSolution) -> None:
     """Write ``solution`` into the camera object and its data."""
     settings = cam_obj.data.ftc
-    bc = to_blender(solution, known_sensor_mm(settings))
+    bc = to_blender(solution, image_sensor_mm(settings))
     cam = cam_obj.data
     cam.type = "PERSP"
     cam.lens_unit = "MILLIMETERS"

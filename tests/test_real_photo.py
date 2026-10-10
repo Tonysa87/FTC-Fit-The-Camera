@@ -113,3 +113,32 @@ def test_far_horizontal_vanishing_point_cannot_give_the_focal_length():
     solve the focal length; a clear error explains why."""
     with pytest.raises(SolverError, match="perpendicular"):
         solve_vanishing_points([G_ACROSS, G_DEPTH], ["+X", "+Y"], G_SIZE)
+
+
+DECK = json.loads((Path(__file__).parent / "data" / "deck_lines.json").read_text())
+DL = DECK["lines"]
+D_SIZE = tuple(DECK["image_size"])
+D_DEPTH = [v for k, v in DL.items() if k.startswith("depth")]
+D_ACROSS = [v for k, v in DL.items() if k.startswith("across")]
+D_VERTICALS = [v for k, v in DL.items() if k.startswith("vertical")]
+# Spec-sheet focal: 4.745 mm on a 6.4 mm 4:3 sensor, square crop -> 4000 px native width.
+D_SPEC_FOCAL_PX = 4.745 * 4000 / 6.4
+
+
+def test_zoomed_photo_solves_its_own_focal_length():
+    """Three vanishing points find a long focal length (zoomed photo) on which
+    every guide agrees."""
+    sol = solve_vanishing_points([D_ACROSS, D_DEPTH, D_VERTICALS], ["+X", "-Y", "-Z"], D_SIZE)
+    assert 7800 < sol.focal_px < 9800
+    assert sol.guide_misfit < 1.5
+    assert sol.position[2] > 0
+    assert sol.pitch == pytest.approx(-9.9, abs=1.0)
+
+
+def test_wrong_known_focal_shows_up_as_guide_misfit():
+    """Forcing the main-camera focal on a zoomed photo leaves guides degrees off:
+    the misfit is what lets the add-on warn about it."""
+    sol = solve_vanishing_points([D_ACROSS, D_DEPTH, D_VERTICALS], ["+X", "-Y", "-Z"], D_SIZE, focal_px=D_SPEC_FOCAL_PX)
+    assert sol.guide_misfit > 3.0
+    exact = solve_vanishing_points([D_ACROSS, D_DEPTH, D_VERTICALS], ["+X", "-Y", "-Z"], D_SIZE)
+    assert exact.guide_misfit < sol.guide_misfit

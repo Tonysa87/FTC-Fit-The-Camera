@@ -265,6 +265,9 @@ class FTC_PT_main(Panel):
             focal += f"  ±{100 * res.focal_error:.1f}%"
         info_row(col, iface_("Focal Length"), focal, alert=res.focal_solved and res.focal_error > 0.05)
         info_row(col, iface_("Orientation"), f"±{res.angle_error:.2f}°", alert=res.angle_error > 1.0)
+        if settings.mode == "VP":
+            misfit = math.degrees(res.guide_misfit)
+            info_row(col, iface_("Guide Fit"), iface_("max {:.2f}°").format(misfit), alert=misfit > 1.0)
         info_row(col, iface_("Sensor"), f"{res.sensor:.2f} mm")
         info_row(col, iface_("Field of View"), f"{math.degrees(res.fov_h):.2f}° × {math.degrees(res.fov_v):.2f}°")
         unit = context.scene.unit_settings.system
