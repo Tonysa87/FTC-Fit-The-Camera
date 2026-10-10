@@ -1,11 +1,13 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Calibration from a rectangle of known size lying on the world plane Z = 0.
+"""Calibration from a rectangle of known size lying on a reference plane.
 
 The four image corners are given in order. The first edge (corner 0 -> 1) runs
-along +X and measures ``width``; the second edge (corner 1 -> 2) measures
-``height``. The rectangle is centred on the world origin. If the corners are
-ordered so that the camera would end up below the plane, the Y axis is flipped
-so the camera always looks at the rectangle from above.
+along the plane's x axis and measures ``width``; the second edge (corner 1 -> 2)
+measures ``height``. The rectangle is centred on the world origin. The plane is
+XY (floor, the default), XZ or YZ (walls, with the second edge vertical). If the
+corners are ordered so that the camera would end up behind the plane, the first
+(horizontal) axis is flipped, so the camera looks at the rectangle's front while
+the vertical stays up on walls.
 """
 
 from __future__ import annotations
@@ -18,9 +20,10 @@ from .common import (
     CameraSolution,
     SolverError,
     as_points,
-    finish_rotation,
     image_center,
     orthonormalize,
+    plane_frame,
+    reframe,
 )
 
 # Below this angle between the plane normal and the view axis the focal length
@@ -108,10 +111,11 @@ def solve_rectangle(
     *,
     principal_point=None,
     focal_px: float | None = None,
+    plane: str = "XY",
     straighten_horizon: bool = False,
     pitch_offset: float = 0.0,
 ) -> CameraSolution:
-    """Solve a camera from the four image corners of a known rectangle."""
+    """Solve a camera from the four image corners of a known rectangle on ``plane``."""
     if width <= 0.0 or height <= 0.0:
         raise SolverError("the rectangle size must be positive")
     img = as_points(corners)
@@ -125,9 +129,9 @@ def solve_rectangle(
     centred = img - p
     warnings: list[str] = []
 
-    def solve_for(y_sign: float):
+    def solve_for(x_sign: float):
         hw, hh = width / 2.0, height / 2.0
-        plane = np.array([[-hw, -hh], [hw, -hh], [hw, hh], [-hw, hh]]) * [1.0, y_sign]
+        plane = np.array([[-hw, -hh], [hw, -hh], [hw, hh], [-hw, hh]]) * [x_sign, 1.0]
         hmat = homography(plane, centred)
         f = focal_px
         if not f:
@@ -148,14 +152,14 @@ def solve_rectangle(
         if tilt < FRONTAL_LIMIT_DEG:
             warnings.append("the rectangle is almost facing the camera: the focal length estimate is unstable")
 
-    rotation, removed_roll = finish_rotation(world_to_cam.T, straighten_horizon, pitch_offset, warnings)
-    position = -rotation @ origin_cam
-    return CameraSolution(
+    local = CameraSolution(
         image_size=(int(w), int(h)),
         focal_px=float(f),
         principal_point=np.asarray(p, float),
-        rotation=rotation,
-        position=position,
+        rotation=world_to_cam.T,
+        position=-world_to_cam.T @ origin_cam,
         warnings=warnings,
-        removed_roll=removed_roll,
     )
+    # Straightening and pitch refer to world Z, so they are applied after the
+    # rectangle's plane is placed in the world.
+    return reframe(local, plane_frame(plane), straighten_horizon=straighten_horizon, pitch_offset=pitch_offset)

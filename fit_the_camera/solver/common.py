@@ -232,6 +232,45 @@ def finish_rotation(
     return adjust_pitch(rotation, pitch_offset), removed
 
 
+# Columns: world axes of the plane's local x, y and normal. The local frame of a
+# plane solver (plane = local z = 0) maps onto the world through these matrices.
+_PLANE_FRAMES = {
+    "XY": ((1, 0, 0), (0, 1, 0), (0, 0, 1)),
+    "XZ": ((1, 0, 0), (0, 0, 1), (0, -1, 0)),
+    "YZ": ((0, 1, 0), (0, 0, 1), (1, 0, 0)),
+}
+
+
+def plane_frame(plane: str) -> np.ndarray:
+    """Rotation whose columns are the world directions of a reference plane's
+    local x, y and normal: XY is the floor, XZ and YZ are walls with y up."""
+    return np.array(_PLANE_FRAMES[plane], dtype=float).T
+
+
+def reframe(
+    solution: CameraSolution,
+    frame: np.ndarray,
+    *,
+    straighten_horizon: bool = False,
+    pitch_offset: float = 0.0,
+) -> CameraSolution:
+    """Express ``solution`` in a world rotated by ``frame`` (new = frame @ old),
+    then apply the straighten / pitch adjustments there, keeping the world origin
+    at the same image point."""
+    origin_cam = -solution.rotation.T @ solution.position
+    warnings = list(solution.warnings)
+    rotation, removed = finish_rotation(frame @ solution.rotation, straighten_horizon, pitch_offset, warnings)
+    return CameraSolution(
+        image_size=solution.image_size,
+        focal_px=solution.focal_px,
+        principal_point=solution.principal_point,
+        rotation=rotation,
+        position=-rotation @ origin_cam,
+        warnings=warnings,
+        removed_roll=removed,
+    )
+
+
 def closest_param_on_line(origin, direction, ray_dir) -> float:
     """Parameter ``t`` of the point of ``origin + t*direction`` closest to the ray
     through the camera centre with direction ``ray_dir``."""

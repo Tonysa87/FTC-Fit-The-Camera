@@ -38,11 +38,12 @@ def test_unknown_focal_steep_view():
 
 def test_reversed_corner_order_keeps_camera_above(camera):
     # Corners listed clockwise would put the camera below the plane: the solver
-    # flips Y, which here gives back the true world frame.
+    # flips X instead, a half turn of the world about Z.
     sol = solve_rectangle(corners(camera, flip_y=True), WIDTH, HEIGHT, camera.image_size, focal_px=camera.focal_px)
     assert sol.position[2] > 0
-    assert angle_between(sol.rotation, camera.rotation) < 0.2
-    assert np.allclose(sol.position, camera.position, atol=1e-6)
+    half_turn = np.diag([-1.0, -1.0, 1.0])
+    assert angle_between(sol.rotation, half_turn @ camera.rotation) < 0.2
+    assert np.allclose(sol.position, half_turn @ camera.position, atol=1e-6)
 
 
 def test_frontal_rectangle_warns():
@@ -66,3 +67,38 @@ def test_noisy_corners():
     sol = solve_rectangle(corners(cam, 8.0, 6.0) + rng.normal(0, 0.3, (4, 2)), 8.0, 6.0, cam.image_size)
     assert sol.focal_px == pytest.approx(cam.focal_px, rel=0.02)
     assert angle_between(sol.rotation, cam.rotation) < 0.3
+
+
+@pytest.mark.parametrize("plane", ["XZ", "YZ"])
+def test_rectangle_on_a_wall(plane):
+    """A rectangle on a wall: first edge horizontal, second edge vertical."""
+    from solver.common import plane_frame
+
+    # Look at the wall's front: XZ faces -Y, YZ faces +X.
+    cam = make_camera(pitch=-5.0, yaw=20.0 if plane == "XZ" else -110.0, roll=2.0, position=(0.0, 0.0, 0.0))
+    frame = plane_frame(plane)
+    hw, hh = WIDTH / 2, HEIGHT / 2
+    centre = cam.rotation @ np.array([0.3, 0.2, -6.0])  # 6 m in front of the camera
+    world = [centre + frame @ np.array([x, y, 0.0]) for x, y in ((-hw, -hh), (hw, -hh), (hw, hh), (-hw, hh))]
+    sol = solve_rectangle(cam.project(world), WIDTH, HEIGHT, cam.image_size, plane=plane)
+    assert sol.focal_px == pytest.approx(cam.focal_px, rel=0.01)
+    # World axes are only defined up to the rectangle's centre: compare rotations.
+    assert angle_between(sol.rotation, cam.rotation) < 0.2
+    assert sol.pitch == pytest.approx(-5.0, abs=0.2)
+    straight = solve_rectangle(cam.project(world), WIDTH, HEIGHT, cam.image_size, plane=plane, straighten_horizon=True)
+    assert abs(straight.roll) < 1e-6
+    assert straight.pitch == pytest.approx(-5.0, abs=0.2)
+
+
+def test_wall_seen_from_behind_keeps_z_up():
+    """Corners ordered as seen from the back of an XZ wall: Z must stay up."""
+    from solver.common import plane_frame
+
+    cam = make_camera(pitch=-5.0, yaw=200.0, roll=2.0, position=(0.0, 0.0, 0.0))
+    frame = plane_frame("XZ")
+    centre = cam.rotation @ np.array([0.3, 0.2, -6.0])
+    hw, hh = WIDTH / 2, HEIGHT / 2
+    world = [centre + frame @ np.array([x, y, 0.0]) for x, y in ((-hw, -hh), (hw, -hh), (hw, hh), (-hw, hh))]
+    sol = solve_rectangle(cam.project(world), WIDTH, HEIGHT, cam.image_size, plane="XZ")
+    assert sol.rotation[2, 1] > 0.9  # camera up vector still points up
+    assert sol.pitch == pytest.approx(-5.0, abs=0.2)

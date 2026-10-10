@@ -419,6 +419,92 @@ def overlay_draws_in_every_mode():
 
 
 @test
+def rectangle_on_a_wall_aligns_to_a_face():
+    """A 4-sided wall face seen by a synthetic camera: after "Align to Selection"
+    Blender's projection of the face's corners lands on the rectangle handles."""
+    import bmesh
+
+    scene = fresh_scene()
+    size = (1600, 1200)
+    cam = load(write_photo("wall.jpg", size))
+    s = cam.data.ftc
+
+    centre = Vector((1.0, 2.0, 1.2))
+    x = Vector((math.cos(math.radians(20.0)), math.sin(math.radians(20.0)), 0.0))
+    up = Vector((0.0, 0.0, 1.0))
+    normal = x.cross(up)
+    w, h = 1.8, 1.1
+    corners = [centre + a * w / 2 * x + b * h / 2 * up for a, b in ((-1, -1), (1, -1), (1, 1), (-1, 1))]
+    syn = make_camera(pitch=-4.0, yaw=-20.0, roll=1.5, position=tuple(centre + 6.0 * normal + Vector((0.4, 0, 0.3))),
+                      image_size=size)  # fmt: skip
+
+    mesh = bpy.data.meshes.new("wall")
+    mesh.from_pydata([tuple(c) for c in corners], [], [(0, 1, 2, 3)])
+    obj = bpy.data.objects.new("wall", mesh)
+    scene.collection.objects.link(obj)
+    for i, c in enumerate(corners):
+        p = syn.project(np.array(c))[0]
+        calibrate.set_handle(s, f"rect_{i}", (p[0] / size[0], p[1] / size[1]))
+    with calibrate.suspended():
+        s.mode, s.ref_plane, s.rect_width, s.rect_height = "RECT", "XZ", 1.0, 1.0
+
+    bpy.context.view_layer.objects.active = obj
+    obj.select_set(True)
+    bpy.ops.object.mode_set(mode="EDIT")
+    bm = bmesh.from_edit_mesh(mesh)
+    bm.faces.ensure_lookup_table()
+    bm.faces[0].select = True
+    bm.faces.active = bm.faces[0]
+    bmesh.update_edit_mesh(mesh)
+    assert bpy.ops.ftc.align_selection() == {"FINISHED"}
+    bpy.ops.object.mode_set(mode="OBJECT")
+
+    assert abs(s.rect_width - w) < 1e-5 and abs(s.rect_height - h) < 1e-5
+    assert abs(s.results.focal_px - syn.focal_px) / syn.focal_px < 0.01
+    bpy.context.view_layer.update()
+    worst = 0.0
+    for i, c in enumerate(corners):
+        got = world_to_camera_view(scene, cam, c)
+        want = calibrate.handle(s, f"rect_{i}")
+        worst = max(worst, abs(got.x - want[0]) * size[0], abs(got.y - want[1]) * size[1])
+    assert worst < 0.5, f"corners off by {worst:.2f} px"
+    # The camera stays in front of the face, at the synthetic camera's place.
+    assert (cam.matrix_world.translation - Vector(syn.position)).length < 1e-3
+
+
+@test
+def every_button_has_a_tooltip():
+    """Operators and the settings drawn as buttons all carry a description."""
+    internal = {"loading", "active_vp", "handles", "anchor_matrix", "camera_data", "results", "image", "rna_type"}
+    internal |= {"name", "make", "model", "lens", "image_width", "image_height", "has_gps", "direction_ref"}
+    internal |= {p for p in ("gps_latitude", "gps_longitude", "gps_altitude")}
+    missing = []
+    for op in (
+        "load_image",
+        "upright_image",
+        "calibrate",
+        "apply",
+        "reset",
+        "align_cursor",
+        "align_selection",
+        "align_clear",
+        "align_rotate",
+        "align_flip",
+        "move_along_view",
+    ):
+        if not getattr(bpy.ops.ftc, op).get_rna_type().description.strip():
+            missing.append("ftc." + op)
+    settings = bpy.data.cameras.new("tooltips").ftc
+    for rna in (settings.bl_rna, settings.camera_data.bl_rna):
+        for prop in rna.properties:
+            if prop.identifier in internal or prop.identifier.endswith("_state"):
+                continue
+            if not prop.description.strip():
+                missing.append(f"{rna.identifier}.{prop.identifier}")
+    assert not missing, missing
+
+
+@test
 def disable_and_enable():
     bpy.ops.preferences.addon_disable(module=PKG)
     assert not hasattr(bpy.types.Camera, "ftc")

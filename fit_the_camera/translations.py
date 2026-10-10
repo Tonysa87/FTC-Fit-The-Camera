@@ -14,7 +14,6 @@ _IT = {
     "Calibrate": "Calibra",
     "Stop Calibrating": "Termina calibrazione",
     "Reset Guides": "Reset guide",
-    "Anchor to 3D Cursor": "Aggancia al 3D cursor",
     # Camera data
     "35 mm Equivalent": "Equivalente 35 mm",
     "Sensor Width": "Larghezza sensore",
@@ -57,6 +56,14 @@ _IT = {
         "LMB trascina: sposta  Shift: fine  Ctrl: snap  1/2/3: asse  F: inverti  H: raddrizza  "
         "Ctrl+Z / Ctrl+Shift+Z: annulla/ripeti  Invio: applica  Esc/RMB: esci"
     ),
+    "Align to Scene": "Allinea alla scena",
+    "Reference Plane": "Piano di riferimento",
+    "3D Cursor": "3D cursor",
+    "Selection": "Selezione",
+    "Scene Origin": "Origine scena",
+    "Rotate 90°": "Ruota 90°",
+    "Aligned To": "Allineato a",
+    "Use Stored Target": "Usa bersaglio salvato",
     # Results
     "Not solved": "Non risolto",
     "Field of View": "Campo visivo",

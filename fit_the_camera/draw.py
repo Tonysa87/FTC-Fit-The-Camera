@@ -17,17 +17,15 @@ from bpy_extras.view3d_utils import location_3d_to_region_2d
 from gpu_extras.batch import batch_for_shader
 
 from . import calibrate
-from .solver.common import vanishing_point
+from .solver.common import plane_frame, vanishing_point
 
-HANDLE_RADIUS = 7.0
-HANDLE_GAP = 2.5
-HANDLE_TICK = 5.0
+HANDLE_RADIUS = 8.0
+HANDLE_TICK = 3.5
 PICK_RADIUS = 12.0
-GUIDE_WIDTH = 2.0
+GUIDE_WIDTH = 1.0
 GRID_LINES = 10
 
 WHITE = (1.0, 1.0, 1.0, 1.0)
-SHADOW = (0.0, 0.0, 0.0, 0.7)
 HORIZON_COLOR = (1.0, 0.85, 0.25, 0.9)
 NEUTRAL = (0.9, 0.9, 0.9, 1.0)
 ERROR_COLOR = (1.0, 0.35, 0.3, 1.0)
@@ -246,8 +244,7 @@ def diamond_outline(center, radius, color):
     coords = []
     for i in range(4):
         coords += [pts[i], pts[(i + 1) % 4]]
-    lines(coords, SHADOW, 3.5)
-    lines(coords, color, 1.5)
+    lines(coords, color, 1.0)
 
 
 def text(position, string, color=WHITE, size=11.0):
@@ -266,28 +263,23 @@ def handle_radius(hovered=False) -> float:
 
 
 def handle_marker(pos, color, *, hovered=False, active=False, frozen=False, first=False):
-    """Hollow ring with a crosshair whose centre is left clear, so the exact
-    image point under the handle stays visible."""
+    """Target symbol: thin ring crossed by four short ticks, centre left clear so
+    the exact image point under the handle stays visible."""
     s = ui_scale()
     r = handle_radius(hovered or active)
-    gap, reach = HANDLE_GAP * s, r + HANDLE_TICK * s
+    inner, outer = r - HANDLE_TICK * s, r + HANDLE_TICK * s
     x, y = pos
-    cross = [
-        (x - reach, y), (x - gap, y), (x + gap, y), (x + reach, y),
-        (x, y - reach), (x, y - gap), (x, y + gap), (x, y + reach),
+    ticks = [
+        (x - outer, y), (x - inner, y), (x + inner, y), (x + outer, y),
+        (x, y - outer), (x, y - inner), (x, y + inner), (x, y + outer),
     ]  # fmt: skip
-    if active:
-        color = WHITE
-    elif frozen:
+    if frozen:
         color = with_alpha(color, 0.45)
-    # A dark outline under the colour keeps the marker readable on bright images.
-    lines(cross, SHADOW, 3.0)
-    circle(pos, r, SHADOW, 3.5)
+    width = 1.6 if hovered or active else 1.0
+    lines(ticks, color, width)
+    circle(pos, r, color, width, segments=32)
     if first:
-        circle(pos, r + 4.0 * s, SHADOW, 3.5)
-        circle(pos, r + 4.0 * s, color, 1.5)
-    lines(cross, color, 1.0)
-    circle(pos, r, color, 1.5)
+        circle(pos, r + 2.0 * HANDLE_TICK * s, color, 1.0, segments=32)
 
 
 def segment(a, b, color, width=1.0, trim_a=True, trim_b=True):
@@ -328,7 +320,8 @@ class clipped_to:
         gpu.state.scissor_test_set(False)
 
 
-def _grid(view, solution, opacity):
+def _grid(view, solution, opacity, plane="XY"):
+    """Verification grid on the reference plane through the origin."""
     dist = float(np.linalg.norm(solution.position))
     if dist <= 0.0:
         return
@@ -336,18 +329,25 @@ def _grid(view, solution, opacity):
     extent = GRID_LINES * spacing
     near = 1e-3 * dist
     colors = axis_colors()
+    frame = plane_frame(plane)
+    u, v = frame[:, 0], frame[:, 1]
+    # Colour each centre line with the world axis it runs along.
+    u_axis, v_axis = "XYZ"[int(np.argmax(np.abs(u)))], "XYZ"[int(np.argmax(np.abs(v)))]
     neutral = (0.85, 0.85, 0.85, 0.45 * opacity)
-    groups = {"X": [], "Y": [], "N": []}
+    groups = {u_axis: [], v_axis: [], "N": []}
     for i in range(-GRID_LINES, GRID_LINES + 1):
         c = i * spacing
-        for axis, a, b in (("X", (-extent, c, 0.0), (extent, c, 0.0)), ("Y", (c, -extent, 0.0), (c, extent, 0.0))):
+        for axis, a, b in (
+            (u_axis, -extent * u + c * v, extent * u + c * v),
+            (v_axis, c * u - extent * v, c * u + extent * v),
+        ):
             seg = project_segment(solution, a, b, near)
             if seg is None:
                 continue
             groups[axis if i == 0 else "N"] += [view.px_to_region(seg[0]), view.px_to_region(seg[1])]
     lines(groups["N"], neutral, 1.0)
-    lines(groups["X"], with_alpha(colors["X"], opacity), 1.5)
-    lines(groups["Y"], with_alpha(colors["Y"], opacity), 1.5)
+    lines(groups[u_axis], with_alpha(colors[u_axis], opacity), 1.0)
+    lines(groups[v_axis], with_alpha(colors[v_axis], opacity), 1.0)
 
 
 def _horizon(view, solution):
@@ -357,7 +357,7 @@ def _horizon(view, solution):
     w, h = solution.image_size
     seg = clip_line_to_rect(line[0], line[1], w, h)
     if seg is not None:
-        lines([view.px_to_region(seg[0]), view.px_to_region(seg[1])], HORIZON_COLOR, 1.5)
+        lines([view.px_to_region(seg[0]), view.px_to_region(seg[1])], HORIZON_COLOR, 1.0)
 
 
 def _origin_gizmo(view, solution, settings):
@@ -371,7 +371,7 @@ def _origin_gizmo(view, solution, settings):
     for axis, vec in (("X", (length, 0, 0)), ("Y", (0, length, 0)), ("Z", (0, 0, length))):
         tip = project(solution, [vec])[0]
         if not np.isnan(tip).any():
-            segment(o, view.px_to_region(tip), colors[axis], 2.5, trim_b=False)
+            segment(o, view.px_to_region(tip), colors[axis], 1.0, trim_b=False)
 
 
 def axis_letter(label: str) -> str:
@@ -406,7 +406,7 @@ def draw_guides(view, settings, solution, session, unit_system):
         if solution is not None:
             if settings.show_grid and settings.grid_opacity > 0.0:
                 with clipped_to(view):
-                    _grid(view, solution, settings.grid_opacity)
+                    _grid(view, solution, settings.grid_opacity, calibrate.reference_plane(settings))
             _horizon(view, solution)
 
         frozen = settings.freeze
@@ -423,7 +423,7 @@ def draw_guides(view, settings, solution, session, unit_system):
             for i in range(1, count + 1):
                 color = colors[axis_letter(labels[i - 1])]
                 k = calibrate.vp_keys(i)
-                width = GUIDE_WIDTH * (1.5 if session.active_vp == i - 1 else 1.0)
+                width = GUIDE_WIDTH * (1.6 if session.active_vp == i - 1 else 1.0)
                 segs = [hpos(k[0]), hpos(k[1]), hpos(k[2]), hpos(k[3])]
                 segment(segs[0], segs[1], color, width)
                 segment(segs[2], segs[3], color, width)
@@ -446,7 +446,7 @@ def draw_guides(view, settings, solution, session, unit_system):
             if settings.scale_mode == "REFERENCE":
                 color = colors[settings.ref_axis]
                 a, b = hpos("ref_a"), hpos("ref_b")
-                dashed(a, b, color, 2.0, 5.0)
+                dashed(a, b, color, 1.0, 5.0)
                 length = bpy.utils.units.to_string(unit_system, "LENGTH", settings.ref_length, precision=3)
                 text((b[0] + 8 * s, b[1] - 16 * s), length, color)
         elif settings.mode == "RECT":
@@ -465,7 +465,7 @@ def draw_guides(view, settings, solution, session, unit_system):
             lines(
                 [(pp[0] - 8 * s, pp[1]), (pp[0] + 8 * s, pp[1]), (pp[0], pp[1] - 8 * s), (pp[0], pp[1] + 8 * s)],
                 NEUTRAL,
-                1.5,
+                1.0,
             )
 
         for key in keys:
