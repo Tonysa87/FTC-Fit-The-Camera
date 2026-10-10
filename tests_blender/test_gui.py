@@ -194,7 +194,8 @@ def steps():
     win.event_simulate(type="RET", value="PRESS", x=kx, y=ky)
     yield 0.3
     check(ops_modal.FTC_OT_calibrate._session is None, "Enter ends the session")
-    yield from ray_gizmo_steps(win, area, region, cam)
+    orientation = importlib.import_module(PKG + ".ops_orientation")
+    check(orientation.find(bpy.context.scene) is not None, "Enter (apply) created the FTC orientation")
 
     # Loading another file ends a running session cleanly.
     with bpy.context.temp_override(window=win, area=area, region=region):
@@ -204,54 +205,6 @@ def steps():
     bpy.ops.wm.read_homefile()
     yield 0.5
     check(ops_modal.FTC_OT_calibrate._session is None, "loading a file ends the session")
-
-
-def ray_gizmo_steps(win, area, region, cam):
-    """The Ray Gizmo is drawn on the selection and dragging it moves along the rays."""
-    from bpy_extras.view3d_utils import location_3d_to_region_2d
-
-    orientation = importlib.import_module(PKG + ".ops_orientation")
-    scene = bpy.context.scene
-    check(orientation.find(scene) is not None, "Enter (apply) created the FTC orientation")
-    rv3d = area.spaces.active.region_3d
-    with bpy.context.temp_override(window=win, area=area, region=region):
-        bpy.ops.mesh.primitive_cube_add(size=0.2, location=(0.0, 0.0, 0.1))
-    obj = bpy.context.active_object
-    name = obj.name
-    scene.ftc_ray_gizmo = True
-    yield 0.5
-    c = cam.matrix_world.translation.copy()
-    start = obj.location.copy()
-    px = location_3d_to_region_2d(region, rv3d, start)
-    x, y = int(region.x + px.x), int(region.y + px.y)
-    rect = ((area.x, area.y), (area.x + area.width, area.y + area.height))
-    win.event_simulate(type="MOUSEMOVE", value="NOTHING", x=x, y=y)
-    yield 0.5
-    shot = np.asarray(win.screenshot(region=rect))
-    save_png(os.path.join(SCRATCH, "gui_ray_gizmo.png"), shot)
-    # Light ring ~15 px around the selection (ui scale 1, default gizmo size).
-    lx, ly = x - area.x, y - area.y
-    ring = [shot[ly + int(15 * np.sin(a)), lx + int(15 * np.cos(a)), :3].mean() for a in np.linspace(0, 6.28, 16)]
-    check(np.median(ring) > 200, f"ray gizmo drawn on the selection (ring brightness {np.median(ring):.0f})")
-
-    win.event_simulate(type="LEFTMOUSE", value="PRESS", x=x, y=y)
-    for i in range(1, 6):
-        win.event_simulate(type="MOUSEMOVE", value="NOTHING", x=x + 20 * i, y=y)
-        yield 0.05
-    win.event_simulate(type="LEFTMOUSE", value="RELEASE", x=x + 100, y=y)
-    yield 0.3
-    ratio = (obj.location - c).length / (start - c).length
-    check(ratio > 1.1, f"dragging the gizmo right moves the selection away (factor {ratio:.3f})")
-    moved_px = location_3d_to_region_2d(region, rv3d, obj.location)
-    check((moved_px - px).length < 0.5, "the selection stays fixed in the camera view")
-    ops = bpy.context.window_manager.operators
-    check(len(ops) and ops[-1].bl_idname == "FTC_OT_move_along_view", "release ends the move (undo step)")
-    win.event_simulate(type="Z", value="PRESS", ctrl=True, x=x, y=y)
-    yield 0.5
-    scene = bpy.context.scene  # undo reloads the data-blocks
-    obj = scene.objects.get(name)
-    check(obj is not None and (obj.location - start).length < 1e-5, "Ctrl+Z undoes the gizmo move")
-    scene.ftc_ray_gizmo = False
 
 
 def run():

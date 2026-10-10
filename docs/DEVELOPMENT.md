@@ -26,7 +26,6 @@ fit_the_camera/          # l'estensione (questa cartella diventa lo zip)
   ops_modal.py           # operatore modale, undo interno, Applica/Reset
   ops_align.py           # allineamento alla scena
   ops_orientation.py     # orientamento di trasformazione "FTC" (assi calibrati)
-  ops_move_view.py       # Move Along View + Ray Gizmo (GizmoGroup nella vista camera)
   ops_render.py          # Prepara render, ruoli Shadow Catcher / Holdout
   draw.py                # overlay gpu (guide, maniglie, griglia, orizzonte, cubo)
   ui.py                  # pannello

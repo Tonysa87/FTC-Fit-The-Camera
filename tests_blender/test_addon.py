@@ -450,49 +450,6 @@ def flip_axis_buttons_keep_a_right_handed_world():
 
 
 @test
-def move_along_view_keeps_image_position():
-    scene, cam, syn = _calibrated_camera((1920, 1080))
-    mesh = bpy.data.meshes.new("cube")
-    obj = bpy.data.objects.new("cube", mesh)
-    scene.collection.objects.link(obj)
-    obj.location = (1.0, 2.0, 0.5)
-    bpy.context.view_layer.update()
-    for o in scene.objects:
-        o.select_set(o == obj)
-    bpy.context.view_layer.objects.active = obj
-    before = world_to_camera_view(scene, cam, obj.matrix_world.translation)
-    c = cam.matrix_world.translation
-    expected = c + (obj.matrix_world.translation - c) * 2.0
-    assert bpy.ops.ftc.move_along_view(factor=2.0, scale_objects=True) == {"FINISHED"}
-    bpy.context.view_layer.update()
-    assert (obj.matrix_world.translation - expected).length < 1e-5
-    assert abs(obj.scale.x - 2.0) < 1e-6
-    after = world_to_camera_view(scene, cam, obj.matrix_world.translation)
-    assert (after.to_2d() - before.to_2d()).length < 1e-6
-
-
-@test
-def move_along_view_edit_mode_vertices():
-    scene, cam, syn = _calibrated_camera((1920, 1080))
-    mesh = bpy.data.meshes.new("plane")
-    mesh.from_pydata([(0, 0, 0), (1, 0, 0), (1, 1, 0)], [], [(0, 1, 2)])
-    obj = bpy.data.objects.new("plane", mesh)
-    scene.collection.objects.link(obj)
-    obj.location = (-1.0, 1.0, 0.0)
-    bpy.context.view_layer.objects.active = obj
-    obj.select_set(True)
-    bpy.ops.object.mode_set(mode="EDIT")
-    bpy.ops.mesh.select_all(action="SELECT")
-    assert bpy.ops.ftc.move_along_view(factor=0.5) == {"FINISHED"}
-    bpy.ops.object.mode_set(mode="OBJECT")
-    c = cam.matrix_world.translation
-    for v, orig in zip(mesh.vertices, [(0, 0, 0), (1, 0, 0), (1, 1, 0)]):
-        world = obj.matrix_world @ v.co
-        expected = c + (obj.matrix_world @ Vector(orig) - c) * 0.5
-        assert (world - expected).length < 1e-5
-
-
-@test
 def ftc_orientation_follows_the_alignment():
     orient = importlib.import_module(PKG + ".ops_orientation")
     scene, cam, syn = _calibrated_camera((1920, 1080))
@@ -547,62 +504,6 @@ def ftc_orientation_follows_the_alignment():
     with bpy.context.temp_override(**orient._view3d_override(bpy.context)):
         bpy.ops.transform.create_orientation(name="Mine", use_view=True, use=True)
     assert slot.type == "Mine" and orient.find(scene) is not None and slot.type == "Mine"
-
-
-@test
-def ray_gizmo_moves_along_the_camera_rays():
-    mv = importlib.import_module(PKG + ".ops_move_view")
-    scene, cam, syn = _calibrated_camera((1920, 1080))
-    assert all("bl_rna" in cls.__dict__ for cls in (mv.FTC_GGT_move_along_rays, mv.FTC_GT_ray_handle))
-    c = cam.matrix_world.translation
-    centre = Vector((0.7, 1.3, 0.4))
-    right = cam.matrix_world.to_3x3() @ Vector((1.0, 0.0, 0.0))
-    frame = mv.ray_frame(centre, c, right)
-    r = frame.to_3x3()
-    assert abs(r.determinant() - 1.0) < 1e-6 and (frame.translation - centre).length < 1e-9
-    assert (r.col[2] - (c - centre).normalized()).length < 1e-9, "z towards the camera"
-    assert r.col[0].dot(right) > 0.99
-    # The arrow is seen end-on: any point on it stays on the selection's pixel.
-    p0 = world_to_camera_view(scene, cam, centre).to_2d()
-    for t in (-3.0, 0.5, 1.5):
-        assert (world_to_camera_view(scene, cam, centre + r.col[2] * t).to_2d() - p0).length < 1e-6
-    assert mv.ray_frame(c, c, right) is None
-    assert len(mv.gizmo_shape()) % 3 == 0 and len(mv.gizmo_shape(1.0)) == len(mv.gizmo_shape())
-
-    # The handle sits on what the operator moves: the median of the selection.
-    objs = []
-    for i, loc in enumerate([(1, 0, 0), (0, 2, 0), (0, 0, 3)]):
-        obj = bpy.data.objects.new(f"o{i}", None)
-        scene.collection.objects.link(obj)
-        obj.location = loc
-        objs.append(obj)
-    objs[2].parent = objs[0]  # moves with its parent: not counted twice
-    bpy.context.view_layer.update()
-    for o in scene.objects:
-        o.select_set(o in objs)
-    cam.select_set(True)
-    got = mv.selection_centre(bpy.context, cam)
-    assert (got - Vector((0.5, 1.0, 0.0))).length < 1e-6, got
-
-    mesh = bpy.data.meshes.new("tri")
-    mesh.from_pydata([(0, 0, 0), (2, 0, 0), (0, 2, 0)], [], [(0, 1, 2)])
-    obj = bpy.data.objects.new("tri", mesh)
-    scene.collection.objects.link(obj)
-    obj.location = (1.0, 1.0, 1.0)
-    for o in scene.objects:
-        o.select_set(o == obj)
-    bpy.context.view_layer.objects.active = obj
-    bpy.ops.object.mode_set(mode="EDIT")
-    bpy.ops.mesh.select_all(action="DESELECT")
-    assert mv.selection_centre(bpy.context, cam) is None
-    bpy.ops.mesh.select_all(action="SELECT")
-    got = mv.selection_centre(bpy.context, cam)
-    assert (got - Vector((1.0 + 2 / 3, 1.0 + 2 / 3, 1.0))).length < 1e-6, got
-    bpy.ops.object.mode_set(mode="OBJECT")
-    # Gizmo hidden outside the camera view, with the toggle off, during a session.
-    assert not mv.gizmo_wanted(bpy.context)
-    rna = bpy.ops.ftc.move_along_view.get_rna_type()
-    assert rna.properties["release_confirm"].is_skip_save and rna.properties["scale_objects"].is_skip_save
 
 
 @test
@@ -1082,7 +983,6 @@ def every_button_has_a_tooltip():
         "align_rotate",
         "align_flip",
         "flip_axis",
-        "move_along_view",
         "use_orientation",
         "prepare_render",
         "set_role",
@@ -1099,9 +999,6 @@ def every_button_has_a_tooltip():
     for prop in ("ftc_catcher", "ftc_holdout"):
         if not bpy.types.Object.bl_rna.properties[prop].description.strip():
             missing.append("Object." + prop)
-    for prop in ("ftc_ray_gizmo", "ftc_ray_scale"):
-        if not bpy.types.Scene.bl_rna.properties[prop].description.strip():
-            missing.append("Scene." + prop)
     assert not missing, missing
 
 
