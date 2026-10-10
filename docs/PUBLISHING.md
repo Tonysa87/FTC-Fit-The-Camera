@@ -28,7 +28,7 @@ Riassunto delle regole di [extensions.blender.org](https://extensions.blender.or
 | Elemento | Requisito | Stato |
 | --- | --- | --- |
 | Zip | `pixi run build` (manifest validato) | pronto: `dist/fit_the_camera-<ver>.zip` |
-| Icona | PNG, al massimo 256 × 256 (obbligatoria) | **da fare** |
+| Icona | PNG, al massimo 256 × 256 (obbligatoria) | pronta: `logo/ftc_icona_256.png` (da `logo/ftc_icona.svg`) |
 | Immagine in evidenza (*featured image*) | JPEG, PNG o WebP (obbligatoria; mostrata in home) | **da fare** |
 | Anteprime | almeno 1: JPEG, PNG, WebP o video MP4, con didascalia | **da fare** |
 | Descrizione | deve elencare tutto ciò che fa l'estensione | bozza sotto |
