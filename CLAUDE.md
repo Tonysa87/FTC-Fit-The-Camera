@@ -6,13 +6,30 @@ Extensions audience) and `README.it.md` (Italian); developer docs
 `docs/PUBLISHING.md`. History: `docs/CHANGELOG.md`. Original spec: `FTC – Specifica addon Blender 5.2+.md` (says
 "Camera Match": the final name is **FTC**, package `fit_the_camera`, tab "FTC").
 
-## Status / next session
-- **v1.0.0** (0.6.1 + Render section: Prepare Render, Object Roles; no Shadow Catcher
-  Plane) is committed and built but **not yet tested in the GUI**. Next session:
-  the user tests it on Windows following `docs/TEST_GUI.md`; fix what he reports.
-- GitHub: https://github.com/Tonysa87/FTC---Fit-The-Camera (public, `origin`),
-  release v1.0.0 with the zip. Not yet submitted to extensions.blender.org: needs
-  the GUI test, icon (PNG ≤256 px), featured image, ≥1 preview (`docs/PUBLISHING.md`).
+## Status / next session (bookmark 2026-10-10, resume 2026-10-11)
+- **v1.0.0** = 0.6.1 + Render section (Prepare Render, Object Roles with only
+  Shadow Catcher / Holdout) + two audit rounds of fixes; Apply ends a session.
+  The user is testing it on Windows (`docs/TEST_GUI.md`); fix what he reports.
+- **Next, still inside v1.0 (the user's decision, do NOT postpone to 1.1):**
+  1. Transform Orientation "FTC" with the calibrated axes
+     (`alignment_matrix @ reference_frame`), created/updated on Apply and on the
+     Align to Scene operators, plus a panel button that makes it the viewport's
+     orientation: Blender's own gizmo, G/R/S, snapping then work on the photo's
+     axes (also on faces/edges/verts). Without Align to Scene it equals Global.
+  2. A gizmo to move the selection along the camera rays (the Move Along View
+     motion, which Blender cannot do: G Z Z is along the view axis, not the ray):
+     toggled by a panel button, shown in the camera view on the selection
+     (objects, or the selected verts/edges/faces' centre), one arrow towards the
+     camera, drag = move along the rays, Shift fine, undo step on release,
+     optional "Scale with Distance". Use bpy.types.GizmoGroup (e.g.
+     GIZMO_GT_arrow_3d + target_set_handler or a modal on drag). Do NOT reimplement
+     rotate/scale gizmos: the native ones + the FTC orientation cover them.
+  3. Tests (headless where possible: the orientation matrix, the motion maths),
+     GUI test by the user, then: move tag v1.0.0 to the final commit (user
+     authorized it), push, GitHub release with the zip, submission to
+     extensions.blender.org with `extensions_listing/`.
+- GitHub: https://github.com/Tonysa87/FTC---Fit-The-Camera (public, `origin`).
+  Tag v1.0.0 is still on the old a67c8f0 and no GitHub release exists yet.
 - `extensions_listing/` (git-ignored, asked by the user): everything to upload to
   extensions.blender.org (icon, featured 1920×1080, previews, description.md) and
   the scripts that regenerate the images (previews use `samples/elevator.jpg`).
@@ -190,6 +207,7 @@ dragging (reported by the user). `uncertainty()` solves with the scale fixed. Th
   their untouched hand-made default guides (~22 mm equivalent) may then warn.
 
 ## Open work
-- Pending: the user's GUI test of 1.0.0 (`docs/TEST_GUI.md`).
+- Pending: the user's GUI test of 1.0.0 (`docs/TEST_GUI.md`); then the FTC
+  orientation + camera-ray gizmo (see *Status / next session*), release, Extensions.
 - Possible: magnifier near the cursor while dragging; more than two lines per VP;
   turn the `paneltest` / `drawall` probes into regular Blender tests.
