@@ -493,6 +493,119 @@ def move_along_view_edit_mode_vertices():
 
 
 @test
+def ftc_orientation_follows_the_alignment():
+    orient = importlib.import_module(PKG + ".ops_orientation")
+    scene, cam, syn = _calibrated_camera((1920, 1080))
+    assert bpy.context.window is not None, "no window: create_orientation cannot run"
+    s = cam.data.ftc
+    slot = scene.transform_orientation_slots[0]
+    assert orient.find(scene) is None and slot.type == "GLOBAL"
+    assert bpy.ops.ftc.apply() == {"FINISHED"}
+    o = orient.find(scene)
+    assert o is not None and slot.type == "GLOBAL", "Apply creates it without switching to it"
+    assert all(abs(o.matrix[i][j] - (i == j)) < 1e-6 for i in range(3) for j in range(3)), "no alignment: Global"
+
+    cursor = scene.cursor
+    cursor.location = (2.0, -1.0, 0.5)
+    cursor.rotation_mode = "XYZ"
+    cursor.rotation_euler = (0.3, -0.2, 0.9)
+    for plane in ("XY", "XZ", "YZ"):
+        s.ref_plane = plane
+        assert bpy.ops.ftc.align_cursor() == {"FINISHED"}
+        bpy.ops.ftc.align_rotate()
+        bpy.ops.ftc.align_flip()
+        m = Matrix(orient.find(scene).matrix)
+        align = calibrate.alignment_matrix(s)
+        assert abs(m.determinant() - 1.0) < 1e-5
+        for k in range(3):
+            # Column k: the calibrated axis k in the scene, also seen from the
+            # camera: a step along it in the scene is a step along it in the
+            # calibrated world.
+            axis = Vector([0.0, 0.0, 0.0])
+            axis[k] = 1.0
+            expected = (align.to_3x3() @ axis).normalized()
+            assert (m.col[k] - expected).length < 1e-5, (plane, k)
+        # The calibrated axes as seen in the photo: the vanishing direction of the
+        # scene axis matches the synthetic camera's world axis.
+        rot_cam = cam.matrix_world.to_3x3().normalized()
+        for k in range(3):
+            in_cam = rot_cam.transposed() @ m.col[k]
+            axis = np.zeros(3)
+            axis[k] = 1.0
+            ref = syn.rotation.T @ axis
+            assert np.allclose(np.array(in_cam), ref, atol=1e-4), (plane, k, in_cam, ref)
+
+    # The panel button switches to it and back.
+    assert bpy.ops.ftc.use_orientation() == {"FINISHED"} and slot.type == "FTC"
+    assert orient.in_use(scene)
+    assert bpy.ops.ftc.align_clear() == {"FINISHED"}
+    assert slot.type == "FTC", "updating it keeps the slot"
+    m = orient.find(scene).matrix
+    assert all(abs(m[i][j] - (i == j)) < 1e-6 for i in range(3) for j in range(3))
+    assert bpy.ops.ftc.use_orientation() == {"FINISHED"} and slot.type == "GLOBAL"
+    # find() leaves a slot on another custom orientation as it was.
+    with bpy.context.temp_override(**orient._view3d_override(bpy.context)):
+        bpy.ops.transform.create_orientation(name="Mine", use_view=True, use=True)
+    assert slot.type == "Mine" and orient.find(scene) is not None and slot.type == "Mine"
+
+
+@test
+def ray_gizmo_moves_along_the_camera_rays():
+    mv = importlib.import_module(PKG + ".ops_move_view")
+    scene, cam, syn = _calibrated_camera((1920, 1080))
+    assert all("bl_rna" in cls.__dict__ for cls in (mv.FTC_GGT_move_along_rays, mv.FTC_GT_ray_handle))
+    c = cam.matrix_world.translation
+    centre = Vector((0.7, 1.3, 0.4))
+    right = cam.matrix_world.to_3x3() @ Vector((1.0, 0.0, 0.0))
+    frame = mv.ray_frame(centre, c, right)
+    r = frame.to_3x3()
+    assert abs(r.determinant() - 1.0) < 1e-6 and (frame.translation - centre).length < 1e-9
+    assert (r.col[2] - (c - centre).normalized()).length < 1e-9, "z towards the camera"
+    assert r.col[0].dot(right) > 0.99
+    # The arrow is seen end-on: any point on it stays on the selection's pixel.
+    p0 = world_to_camera_view(scene, cam, centre).to_2d()
+    for t in (-3.0, 0.5, 1.5):
+        assert (world_to_camera_view(scene, cam, centre + r.col[2] * t).to_2d() - p0).length < 1e-6
+    assert mv.ray_frame(c, c, right) is None
+    assert len(mv.gizmo_shape()) % 3 == 0 and len(mv.gizmo_shape(1.0)) == len(mv.gizmo_shape())
+
+    # The handle sits on what the operator moves: the median of the selection.
+    objs = []
+    for i, loc in enumerate([(1, 0, 0), (0, 2, 0), (0, 0, 3)]):
+        obj = bpy.data.objects.new(f"o{i}", None)
+        scene.collection.objects.link(obj)
+        obj.location = loc
+        objs.append(obj)
+    objs[2].parent = objs[0]  # moves with its parent: not counted twice
+    bpy.context.view_layer.update()
+    for o in scene.objects:
+        o.select_set(o in objs)
+    cam.select_set(True)
+    got = mv.selection_centre(bpy.context, cam)
+    assert (got - Vector((0.5, 1.0, 0.0))).length < 1e-6, got
+
+    mesh = bpy.data.meshes.new("tri")
+    mesh.from_pydata([(0, 0, 0), (2, 0, 0), (0, 2, 0)], [], [(0, 1, 2)])
+    obj = bpy.data.objects.new("tri", mesh)
+    scene.collection.objects.link(obj)
+    obj.location = (1.0, 1.0, 1.0)
+    for o in scene.objects:
+        o.select_set(o == obj)
+    bpy.context.view_layer.objects.active = obj
+    bpy.ops.object.mode_set(mode="EDIT")
+    bpy.ops.mesh.select_all(action="DESELECT")
+    assert mv.selection_centre(bpy.context, cam) is None
+    bpy.ops.mesh.select_all(action="SELECT")
+    got = mv.selection_centre(bpy.context, cam)
+    assert (got - Vector((1.0 + 2 / 3, 1.0 + 2 / 3, 1.0))).length < 1e-6, got
+    bpy.ops.object.mode_set(mode="OBJECT")
+    # Gizmo hidden outside the camera view, with the toggle off, during a session.
+    assert not mv.gizmo_wanted(bpy.context)
+    rna = bpy.ops.ftc.move_along_view.get_rna_type()
+    assert rna.properties["release_confirm"].is_skip_save and rna.properties["scale_objects"].is_skip_save
+
+
+@test
 def upright_copy_swaps_dimensions():
     scene = fresh_scene()
     cam = load(write_photo("rotated.jpg", (40, 20), camera_tiff(orientation=6)))
@@ -970,6 +1083,7 @@ def every_button_has_a_tooltip():
         "align_flip",
         "flip_axis",
         "move_along_view",
+        "use_orientation",
         "prepare_render",
         "set_role",
     ):
@@ -985,6 +1099,9 @@ def every_button_has_a_tooltip():
     for prop in ("ftc_catcher", "ftc_holdout"):
         if not bpy.types.Object.bl_rna.properties[prop].description.strip():
             missing.append("Object." + prop)
+    for prop in ("ftc_ray_gizmo", "ftc_ray_scale"):
+        if not bpy.types.Scene.bl_rna.properties[prop].description.strip():
+            missing.append("Scene." + prop)
     assert not missing, missing
 
 

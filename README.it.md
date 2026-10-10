@@ -52,8 +52,17 @@ Sidebar del viewport (N) › tab **FTC**.
    si attiva *Shadow Catcher* o *Holdout*, oppure si assegnano ai selezionati con
    *Set Role of Selected*. Cambiano solo le impostazioni degli oggetti, non viene
    creato nulla.
-7. **Tools › Move Along View** – sposta oggetti/vertici lungo il raggio dalla camera
-   (anche da *Object/Mesh › Transform*).
+7. **Tools**:
+   - **FTC Orientation** – rende l'orientamento "FTC" quello del viewport: gli
+     assi calibrati della foto nella scena (creato da *Apply* e da *Align to
+     Scene*). Gizmo di Blender, G/R/S con X/Y/Z e snapping seguono la foto anche
+     dopo averla allineata a una faccia o al cursore. Ricliccato torna a Global.
+   - **Move Along View** – sposta oggetti/vertici lungo il raggio dalla camera:
+     restano fermi nell'immagine (anche da *Object/Mesh › Transform*).
+   - **Ray Gizmo** – nella vista camera una maniglia sulla selezione (una freccia
+     verso la camera, vista di punta): trascinala a destra/sinistra per
+     allontanare/avvicinare la selezione lungo i raggi, Shift per passi fini.
+     L'icona accanto scala gli oggetti con la distanza.
 
 ### Modalità
 

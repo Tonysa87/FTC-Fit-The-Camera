@@ -8,7 +8,7 @@ import bpy
 from bpy.app.translations import pgettext_iface as iface_
 from bpy.types import Panel
 
-from . import calibrate, ops_render
+from . import calibrate, ops_orientation, ops_render
 from .draw import remaining_axis, third_axis
 from .exif import is_native_aspect
 from .ops_load import background_for
@@ -352,11 +352,18 @@ class FTC_PT_main(Panel):
         body.operator_menu_enum("ftc.set_role", "role", icon="RESTRICT_SELECT_OFF")
 
     def draw_tools(self, context, layout):
-        header, body = layout.panel("ftc_tools", default_closed=True)
+        header, body = layout.panel("ftc_tools", default_closed=False)
         header.label(text="Tools")
         if body is None:
             return
-        body.operator("ftc.move_along_view", icon="EMPTY_SINGLE_ARROW")
+        scene = context.scene
+        body.operator("ftc.use_orientation", icon="ORIENTATION_GLOBAL", depress=ops_orientation.in_use(scene))
+        col = body.column(align=True)
+        col.use_property_split = False
+        col.operator("ftc.move_along_view", icon="EMPTY_SINGLE_ARROW")
+        row = col.row(align=True)
+        row.prop(scene, "ftc_ray_gizmo", toggle=True, icon="GIZMO")
+        row.prop(scene, "ftc_ray_scale", toggle=True, icon="FULLSCREEN_ENTER", text="")
 
 
 classes = (FTC_PT_main,)

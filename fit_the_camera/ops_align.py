@@ -11,7 +11,7 @@ import bpy
 from bpy.types import Operator
 from mathutils import Matrix, Vector
 
-from . import calibrate
+from . import calibrate, ops_orientation
 from .ops_modal import FTC_OT_calibrate
 
 
@@ -50,7 +50,7 @@ def store_target(context, settings, matrix: Matrix, source: str) -> None:
 
 def apply_now(context) -> None:
     """Write the camera at once; in a session, re-solve as the session does
-    (it writes the camera with Live Update)."""
+    (it writes the camera with Live Update). The "FTC" orientation follows."""
     cam = calibrated_camera(context)
     if cam is None:
         return
@@ -58,6 +58,7 @@ def apply_now(context) -> None:
         calibrate.settings_changed(cam.data, context, reset_pitch=False)
     else:
         calibrate.update(context, cam, apply=True)
+    ops_orientation.sync(context, cam)
     calibrate.tag_redraw(context)
 
 

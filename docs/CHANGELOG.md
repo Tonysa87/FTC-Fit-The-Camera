@@ -1,6 +1,19 @@
 # Changelog
 
 ## 1.0.0 – 2026-10-10
+- **Orientamento "FTC"** (Transform Orientation): gli assi calibrati della foto
+  nella scena, creato/aggiornato da *Apply*, da Invio a fine sessione e dagli
+  operatori di *Align to Scene*. Il pulsante *FTC Orientation* in *Tools* lo rende
+  l'orientamento del viewport (gizmo di Blender, G/R/S con vincoli d'asse,
+  snapping lungo gli assi della foto); ricliccato torna a Global. Senza
+  allineamento coincide con Global.
+- **Ray Gizmo** (*Tools*): nella vista camera una maniglia sulla selezione
+  (oggetti, o il centro di vertici/spigoli/facce in Edit Mode), una freccia verso
+  la camera vista di punta (cerchio con punto); trascinarla a destra/sinistra
+  allontana/avvicina la selezione lungo i raggi della camera, ferma nella foto.
+  Shift fine, numeri per la distanza, S per scalare, Esc annulla, un passo di undo
+  al rilascio. *Scale with Distance* (icona accanto) scala gli oggetti con la
+  distanza, così restano grandi uguali nella foto.
 - Nuova sezione **Render** nel pannello:
   - **Prepare Render**: view transform Standard (la foto esce identica), look
     None, display sRGB, esposizione/gamma neutre, film trasparente, risoluzione
