@@ -1,0 +1,188 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+import numpy as np
+import pytest
+from synthetic import angle_between, make_camera, rotation_from_angles
+
+from solver import ReferenceDistance, SolverError, solve_vanishing_points
+from solver.common import CameraSolution
+
+AXIS_VECTORS = {"X": np.array([1.0, 0, 0]), "Y": np.array([0, 1.0, 0]), "Z": np.array([0, 0, 1.0])}
+
+# Two parallel edges per axis, on a 4 m box sitting on the origin.
+EDGES = {
+    "X": [((-2, -2, 0), (2, -2, 0)), ((-2, 2, 3), (2, 2, 3))],
+    "Y": [((-2, -2, 0), (-2, 2, 0)), ((2, -2, 3), (2, 2, 3))],
+    "Z": [((-2, -2, 0), (-2, -2, 3)), ((2, 2, 0), (2, 2, 3))],
+}
+
+
+def guides(cam, axis):
+    return [cam.segment(a, b) for a, b in EDGES[axis]]
+
+
+def axis_label(cam, axis):
+    """Signed label of the world axis whose direction runs away from the camera."""
+    d = cam.rotation.T @ AXIS_VECTORS[axis]
+    return ("+" if d[2] < 0 else "-") + axis
+
+
+def assert_matches(sol: CameraSolution, cam, position=True, f_tol=0.01, deg_tol=0.2, pos_tol=0.01):
+    assert sol.focal_px == pytest.approx(cam.focal_px, rel=f_tol)
+    assert angle_between(sol.rotation, cam.rotation) < deg_tol
+    if position:
+        assert np.allclose(sol.position, cam.position, atol=pos_tol * np.linalg.norm(cam.position))
+
+
+def reference(cam, axis="X", length=2.0):
+    end = AXIS_VECTORS[axis] * length
+    return ReferenceDistance(axis, tuple(cam.project([0, 0, 0])[0]), tuple(cam.project(end)[0]), length)
+
+
+def test_two_vanishing_points(camera):
+    sol = solve_vanishing_points(
+        [guides(camera, "X"), guides(camera, "Y")],
+        [axis_label(camera, "X"), axis_label(camera, "Y")],
+        camera.image_size,
+        origin=camera.project([0, 0, 0]),
+        reference=reference(camera),
+    )
+    assert_matches(sol, camera)
+
+
+def test_two_vanishing_points_x_and_z():
+    cam = make_camera(pitch=-25.0, yaw=-60.0, roll=-4.0, position=(9.0, -5.0, 4.0))
+    sol = solve_vanishing_points(
+        [guides(cam, "Z"), guides(cam, "X")],
+        [axis_label(cam, "Z"), axis_label(cam, "X")],
+        cam.image_size,
+        origin=cam.project([0, 0, 0]),
+        reference=reference(cam, "Z", 3.0),
+    )
+    assert_matches(sol, cam)
+
+
+def test_camera_distance_scale(camera):
+    sol = solve_vanishing_points(
+        [guides(camera, "X"), guides(camera, "Y")],
+        [axis_label(camera, "X"), axis_label(camera, "Y")],
+        camera.image_size,
+        origin=camera.project([0, 0, 0]),
+        camera_distance=float(np.linalg.norm(camera.position)),
+    )
+    assert_matches(sol, camera)
+
+
+def test_three_vanishing_points_recover_principal_point():
+    cam = make_camera(pitch=-30.0, yaw=40.0, roll=2.0, position=(-8.0, -9.0, 9.0), principal_point=(1010.0, 515.0))
+    sol = solve_vanishing_points(
+        [guides(cam, "X"), guides(cam, "Y"), guides(cam, "Z")],
+        [axis_label(cam, "X"), axis_label(cam, "Y"), axis_label(cam, "Z")],
+        cam.image_size,
+        origin=cam.project([0, 0, 0]),
+        reference=reference(cam),
+    )
+    assert np.allclose(sol.principal_point, cam.principal_point, atol=0.5)
+    assert_matches(sol, cam)
+
+
+def test_one_vanishing_point_with_known_focal():
+    cam = make_camera(pitch=-8.0, yaw=5.0, roll=1.5, position=(0.5, -10.0, 1.6))
+    v_x = cam.project(cam.position + 1e7 * np.array([1.0, 0, 0]))[0]
+    v_y = cam.project(cam.position + 1e7 * np.array([0, 1.0, 0]))[0]
+    sol = solve_vanishing_points(
+        [guides(cam, "Y")],
+        [axis_label(cam, "Y"), "+X"],
+        cam.image_size,
+        focal_px=cam.focal_px,
+        horizon_dir=v_x - v_y,
+        origin=cam.project([0, 0, 0]),
+        reference=reference(cam),
+    )
+    assert_matches(sol, cam)
+
+
+def test_one_vanishing_point_requires_focal(camera):
+    with pytest.raises(SolverError):
+        solve_vanishing_points([guides(camera, "Y")], ["+Y", "+X"], camera.image_size, horizon_dir=(1, 0))
+
+
+def test_noisy_guides_stay_within_tolerance():
+    cam = make_camera()
+    rng = np.random.default_rng(7)
+    # Long edges spanning the scene, with half a pixel of noise on every endpoint.
+    long_edges = {
+        "X": [((-6, -2, 0), (6, -2, 0)), ((-6, 3, 4), (6, 3, 4)), ((-6, 6, 0), (6, 6, 0))],
+        "Y": [((-3, -4, 0), (-3, 8, 0)), ((3, -4, 4), (3, 8, 4)), ((5, -4, 0), (5, 8, 0))],
+    }
+    lines = [[cam.segment(a, b) + rng.normal(0, 0.5, (2, 2)) for a, b in long_edges[k]] for k in ("X", "Y")]
+    sol = solve_vanishing_points(
+        lines,
+        [axis_label(cam, "X"), axis_label(cam, "Y")],
+        cam.image_size,
+        origin=cam.project([0, 0, 0]),
+        reference=reference(cam),
+    )
+    assert_matches(sol, cam, pos_tol=0.02)
+
+
+def test_negative_axis_labels_flip_the_world(camera):
+    labels = [axis_label(camera, "X"), axis_label(camera, "Y")]
+    flipped = [("-" if lab[0] == "+" else "+") + lab[1] for lab in labels]
+    sol = solve_vanishing_points(
+        [guides(camera, "X"), guides(camera, "Y")], flipped, camera.image_size, origin=camera.project([0, 0, 0])
+    )
+    # Negating X and Y is a 180 degree turn about Z.
+    turned = np.diag([-1.0, -1.0, 1.0]) @ camera.rotation
+    assert angle_between(sol.rotation, turned) < 0.2
+
+
+def test_impossible_configuration_is_reported(camera):
+    # Two vanishing points on the same side of the principal point: f^2 < 0.
+    lines_a = [((100, 500), (300, 520)), ((100, 300), (300, 330))]
+    lines_b = [((100, 700), (300, 690)), ((100, 200), (300, 230))]
+    with pytest.raises(SolverError):
+        solve_vanishing_points([lines_a, lines_b], ["+X", "+Y"], camera.image_size)
+
+
+def test_parallel_guides_are_reported(camera):
+    lines_a = [((100, 500), (300, 500)), ((100, 300), (300, 300))]
+    with pytest.raises(SolverError):
+        solve_vanishing_points([lines_a, guides(camera, "Y")], ["+X", "+Y"], camera.image_size)
+
+
+def test_straighten_removes_roll_and_keeps_origin(camera):
+    origin_px = camera.project([0, 0, 0])
+    sol = solve_vanishing_points(
+        [guides(camera, "X"), guides(camera, "Y")],
+        [axis_label(camera, "X"), axis_label(camera, "Y")],
+        camera.image_size,
+        origin=origin_px,
+        straighten_horizon=True,
+    )
+    assert abs(sol.roll) < 1e-6
+    assert sol.pitch == pytest.approx(-12.0, abs=0.2)
+    origin_cam = sol.rotation.T @ (np.zeros(3) - sol.position)
+    projected = sol.principal_point + sol.focal_px * origin_cam[:2] / -origin_cam[2]
+    assert np.allclose(projected, origin_px, atol=1e-6)
+
+
+def test_pitch_offset(camera):
+    args = (
+        [guides(camera, "X"), guides(camera, "Y")],
+        [axis_label(camera, "X"), axis_label(camera, "Y")],
+        camera.image_size,
+    )
+    base = solve_vanishing_points(*args)
+    tilted = solve_vanishing_points(*args, pitch_offset=np.radians(5.0))
+    assert tilted.pitch == pytest.approx(base.pitch + 5.0, abs=1e-6)
+
+
+def test_reported_angles():
+    cam = make_camera(pitch=-12.0, yaw=35.0, roll=3.0)
+    sol = CameraSolution(cam.image_size, cam.focal_px, cam.principal_point, cam.rotation, cam.position)
+    assert sol.pitch == pytest.approx(-12.0, abs=1e-9)
+    assert sol.yaw == pytest.approx(35.0, abs=1e-9)
+    assert sol.roll == pytest.approx(3.0, abs=1e-9)
+    assert sol.camera_height == pytest.approx(2.5)
+    level = CameraSolution((100, 100), 50.0, np.array([50.0, 50.0]), rotation_from_angles(0, 0, 0), np.zeros(3))
+    assert level.fov[0] == pytest.approx(90.0)

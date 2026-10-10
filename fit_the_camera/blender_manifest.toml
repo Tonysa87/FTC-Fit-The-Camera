@@ -1,0 +1,25 @@
+schema_version = "1.0.0"
+
+id = "fit_the_camera"
+version = "0.1.0"
+name = "FTC – Fit The Camera"
+tagline = "Match a camera to a photo with vanishing points or known shapes"
+maintainer = "Antonio Sartini"
+type = "add-on"
+
+tags = ["Camera", "3D View"]
+
+blender_version_min = "5.2.0"
+
+license = ["SPDX:GPL-3.0-or-later"]
+copyright = ["2026 Antonio Sartini"]
+
+[permissions]
+files = "Read the reference image and its EXIF metadata"
+
+[build]
+paths_exclude_pattern = [
+  "__pycache__/",
+  "/.git/",
+  "/*.zip",
+]
