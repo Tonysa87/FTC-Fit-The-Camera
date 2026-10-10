@@ -25,6 +25,10 @@ Riassunto delle regole di [extensions.blender.org](https://extensions.blender.or
 
 ## Da preparare per la bozza
 
+Il materiale pronto (icona, immagine in evidenza, anteprime, testi) sta in
+`extensions_listing/`, cartella locale esclusa da git (vedi il suo README).
+
+
 | Elemento | Requisito | Stato |
 | --- | --- | --- |
 | Zip | `pixi run build` (manifest validato) | pronto: `dist/fit_the_camera-<ver>.zip` |
