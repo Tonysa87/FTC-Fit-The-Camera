@@ -212,7 +212,11 @@ class FTC_Settings(PropertyGroup):
                 "A cube of known size standing on the reference plane: drag its top handle until it matches "
                 "something of that height in the photo",
             ),
-            ("REFERENCE", "Reference Distance", "A known length along an axis, starting from the origin line"),
+            (
+                "REFERENCE",
+                "Reference Distance",
+                "A known length between two points of a plane (Measured On), or a height above it",
+            ),
         ],
         default="CUBE",
         update=_cube_seeded(reset_pitch=False),
@@ -253,7 +257,10 @@ class FTC_Settings(PropertyGroup):
     )
     ref_axis: EnumProperty(
         name="Reference Axis",
-        description="Axis along which the reference distance is measured",
+        description=(
+            "Direction of the reference distance: along the reference plane both ends lie on the plane, "
+            "anywhere on it; along its normal it is a height above the first end"
+        ),
         items=[("X", "X", ""), ("Y", "Y", ""), ("Z", "Z", "")],
         default="X",
         update=_changed,
@@ -265,6 +272,20 @@ class FTC_Settings(PropertyGroup):
         min=1e-4,
         subtype="DISTANCE",
         unit="LENGTH",
+        update=_changed,
+    )
+    ref_measure_plane: EnumProperty(
+        name="Measured On",
+        description=(
+            "Plane through the origin that holds the reference distance: both ends along an axis of it, "
+            "or a height along its normal from the first end"
+        ),
+        items=[
+            ("XY", "XY", "Floor or any horizontal plane"),
+            ("XZ", "XZ", "Wall facing -Y, with Z up"),
+            ("YZ", "YZ", "Wall facing +X, with Z up"),
+        ],
+        default="XY",
         update=_changed,
     )
 
@@ -409,6 +430,11 @@ class FTC_Settings(PropertyGroup):
 
     camera_data: PointerProperty(type=FTC_CameraData)
     results: PointerProperty(type=FTC_Results)
+    shadow_catcher: PointerProperty(
+        name="Shadow Catcher Plane",
+        description="Shadow catcher plane made for this camera on its reference plane",
+        type=bpy.types.Object,
+    )
 
 
 classes = (FTC_Handle, FTC_CameraData, FTC_Results, FTC_Settings)

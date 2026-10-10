@@ -14,7 +14,8 @@ _IT = {
     "Calibrate": "Calibra",
     "Stop Calibrating": "Termina calibrazione",
     "Reset Guides": "Reset guide",
-    "Flip Axis": "Inverti asse",
+    "Flip Axis Direction": "Inverti verso dell'asse",
+    "Camera not updated: {}": "Camera non aggiornata: {}",
     # Camera data
     "35 mm Equivalent": "Equivalente 35 mm",
     "Sensor Width": "Larghezza sensore",
@@ -75,8 +76,11 @@ _IT = {
     "Aligned To": "Allineato a",
     "Use Stored Target": "Usa bersaglio salvato",
     "Third Axis Line": "Linea terzo asse",
+    "Measured On": "Misurata su",
     "Solve needs three vanishing points: using the centre": "Risolvi richiede tre punti di fuga: uso il centro",
     # Results
+    "Results": "Risultati",
+    "Yaw": "Imbardata",
     "Not solved": "Non risolto",
     "Field of View": "Campo visivo",
     "Orientation": "Orientamento",
@@ -96,7 +100,17 @@ _IT = {
     "CG Object": "Oggetto CG",
     "Set Role of Selected": "Ruolo dei selezionati",
     "Shadow Catcher Plane": "Piano shadow catcher",
+    "Render size has another aspect than the image: Apply or Calibrate fixes it": (
+        "Il render ha proporzioni diverse dall'immagine: Applica o Calibra le correggono"
+    ),
+    "The camera has location/rotation keyframes: they override the calibration": (
+        "La camera ha keyframe di posizione/rotazione: sovrascrivono la calibrazione"
+    ),
+    "Only the active view layer is composited over the photo": (
+        "Solo il view layer attivo viene composto sulla foto"
+    ),
     # Move Along View
+    "Move Along View": "Sposta lungo la vista",
     "Distance Factor": "Fattore distanza",
     "Scale with Distance": "Scala con la distanza",
 }

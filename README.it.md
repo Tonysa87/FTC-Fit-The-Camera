@@ -69,6 +69,17 @@ scorre lungo lo spigolo verticale: portala all'altezza dell'oggetto e la scala
 della scena si adegua. Cubo e *Misura di riferimento* si escludono: sullo schermo
 c'è solo quello scelto nel menu *Scala*. Nel rettangolo noto e nell'orizzonte la
 scala è già nota e il cubo è solo un controllo visivo (si nasconde in *Opacity*).
+Spostando la base o l'origine il cubo non si ribalta: si estende nel verso in cui
+guarda la camera (su una parete: verso l'alto).
+
+### Misura di riferimento
+
+Due maniglie agli estremi di una lunghezza nota (larghezza di una porta, una
+piastrella, un tavolo), sul piano scelto in *Measured On* (passa per l'origine;
+XY = pavimento di default, indipendente dal piano usato per allineare la scena).
+Lungo un asse di quel piano entrambi gli estremi stanno sul piano, in qualunque
+punto (non serve che siano sull'asse che passa per l'origine). Lungo la normale
+è un'altezza: la prima maniglia al piede sul piano, la seconda in cima.
 
 ### Render sopra la foto
 
@@ -92,6 +103,9 @@ scala è già nota e il cubo è solo un controllo visivo (si nasconde in *Opacit
 - **Trasparente**: niente compositor, pass Shadow Catcher spento (le ombre restano
   nell'alpha), formato PNG RGBA se quello impostato non ha l'alpha: per comporre
   in un altro programma.
+- Solo il view layer attivo viene composto sulla foto. Con una configurazione
+  colore personalizzata (OCIO) senza display sRGB / vista Standard, la vista va
+  impostata a mano (lo dice un avviso).
 - **Cycles** consigliato: EEVEE non ha shadow catcher (gli holdout funzionano).
 
 **Ruoli** (*Object Roles*, proprietà native dell'oggetto):

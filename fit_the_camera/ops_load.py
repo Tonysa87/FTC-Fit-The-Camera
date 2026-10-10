@@ -119,6 +119,7 @@ class FTC_OT_load_image(Operator, ImportHelper):
 
     def execute(self, context):
         path = self.filepath
+        existing = {i.as_pointer() for i in bpy.data.images}
         try:
             image = bpy.data.images.load(path, check_existing=True)
         except RuntimeError as exc:
@@ -126,6 +127,8 @@ class FTC_OT_load_image(Operator, ImportHelper):
             return {"CANCELLED"}
         size = tuple(image.size)
         if not size[0] or not size[1]:
+            if image.as_pointer() not in existing:
+                bpy.data.images.remove(image)
             self.report({"ERROR"}, "Cannot read the image")
             return {"CANCELLED"}
 
@@ -198,6 +201,9 @@ class FTC_OT_upright_image(Operator):
             rgba = np.ones((nh, nw, 4), dtype=np.float32)
             rgba[..., : src.channels] = upright
             image.pixels.foreach_set(rgba.ravel())
+        if src.file_format == "JPEG":
+            # Packed as JPEG like the source: a PNG of a photo is several times larger.
+            image.file_format = "JPEG"
         image.pack()
 
         set_background(cam_obj.data, image, previous=src)

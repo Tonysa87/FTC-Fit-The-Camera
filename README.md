@@ -76,7 +76,18 @@ reference plane. Put the base handle at the foot of something of known height an
 drag the top handle up to its top: the scale of the scene follows. The cube and
 the *Reference Distance* exclude each other: only the one chosen in the *Scale*
 menu is shown. With a known rectangle or the horizon the scale is already known
-and the cube is an optional visual check (*Opacity* panel).
+and the cube is an optional visual check (*Opacity* panel). Dragging the base
+or the origin never flips the cube: it extends the way the camera looks (on a
+wall: upwards).
+
+### Reference distance
+
+Two handles at the ends of a known length (a door width, a tile, a table), on
+the plane chosen in *Measured On* (through the origin; XY = the floor by default,
+independent of the plane used to align the scene). Along an axis of that plane
+both ends lie on it, anywhere (not necessarily on the axis through the origin).
+Along its normal the length is a height: the first handle at the foot on the
+plane, the second at the top.
 
 ### Render over the photo
 
@@ -95,10 +106,16 @@ and the cube is an optional visual check (*Opacity* panel).
   (shadows and light bounced by the objects onto the real surfaces) and puts the
   render over it with Alpha Over. A compositor of your own is kept in the file
   and replaced.
-- **Transparent**: no compositor, the shadows stay in the alpha channel, PNG RGBA
-  output: for compositing in another program.
+- **Transparent**: no compositor, the shadows stay in the alpha channel (Cycles);
+  the output format is kept if it stores alpha (PNG, EXR, TIFF…), otherwise it
+  becomes PNG RGBA: for compositing in another program.
+- Only the active view layer is composited over the photo. With a custom colour
+  configuration (OCIO) without an sRGB display / Standard view, set an identity
+  view by hand (a warning says so).
 
-**Object Roles** lists the objects of the scene with their role:
+**Object Roles** lists the renderable objects of the scene with their role (a
+click selects the object; *Set Role of Selected* sets it for all the selected
+ones):
 
 | Role | What it does | For |
 | --- | --- | --- |

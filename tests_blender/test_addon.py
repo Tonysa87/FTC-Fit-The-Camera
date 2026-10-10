@@ -4,6 +4,7 @@
 Usage: blender --background --python tests_blender/test_addon.py -- <project root> <scratch dir>
 """
 
+import contextlib
 import importlib
 import math
 import os
@@ -716,7 +717,8 @@ def object_roles_map_to_render_flags():
     # The list shows only renderable objects.
     bpy.ops.object.camera_add()
     ul = importlib.import_module(PKG + ".ops_render").FTC_UL_roles
-    flags, _order = ul.filter_items(SimpleNamespace(filter_name="", bitflag_filter_item=1), None, scene, "objects")
+    mock = SimpleNamespace(filter_name="", bitflag_filter_item=1, use_filter_invert=False, use_filter_sort_alpha=True)
+    flags, _order = ul.filter_items(mock, None, scene, "objects")
     assert sum(flags) == 2
 
 
@@ -724,9 +726,8 @@ def object_roles_map_to_render_flags():
 def shadow_catcher_plane_lies_on_the_reference_plane():
     scene, cam, syn = _calibrated_camera((1600, 1200))
     assert bpy.ops.ftc.add_catcher() == {"FINISHED"}
-    catchers = [o for o in scene.objects if o.get("ftc_shadow_catcher")]
-    assert len(catchers) == 1
-    plane = catchers[0]
+    plane = cam.data.ftc.shadow_catcher
+    assert plane is not None and plane.name in scene.objects
     assert plane.is_shadow_catcher and plane.display_type == "WIRE"
     corners = [plane.matrix_world @ v.co for v in plane.data.vertices]
     assert all(abs(c.z) < 1e-6 for c in corners)
@@ -737,9 +738,158 @@ def shadow_catcher_plane_lies_on_the_reference_plane():
     s.anchor_matrix = anchor
     s.use_anchor = True
     calibrate.update(bpy.context, cam, apply=True)
+    count = len(scene.objects)
     bpy.ops.ftc.add_catcher()
-    assert [o for o in scene.objects if o.get("ftc_shadow_catcher")] == [plane]
+    assert cam.data.ftc.shadow_catcher == plane and len(scene.objects) == count
     assert all(abs(a - b) < 1e-5 for ra, rb in zip(plane.matrix_world, anchor) for a, b in zip(ra, rb))
+    # A linked duplicate (Alt+D) is neither picked nor reshaped.
+    dup = plane.copy()
+    scene.collection.objects.link(dup)
+    dup.matrix_world = Matrix.Translation((0.0, 0.0, 5.0))
+    bpy.ops.ftc.add_catcher()
+    assert cam.data.ftc.shadow_catcher == plane and plane.data != dup.data
+    assert dup.matrix_world.translation.z == 5.0
+    # Size from the camera distance only (the cube is not the scale here).
+    s.scale_mode = "REFERENCE"
+    bpy.context.scene.unit_settings.scale_length = 0.001
+    bpy.ops.ftc.add_catcher()
+    side = max((v.co - plane.data.vertices[0].co).length for v in plane.data.vertices)
+    assert side < 20 * s.results.distance, (side, s.results.distance)
+    bpy.context.scene.unit_settings.scale_length = 1.0
+
+
+@test
+def render_setup_edge_cases():
+    """Video output, several view layers, Edit Mode, missing Cycles do not break."""
+    scene = fresh_scene()
+    load(write_photo("render_edge.jpg", (64, 48)))
+    image = scene.render.image_settings
+    image.media_type = "VIDEO"
+    assert bpy.ops.ftc.prepare_render(output="ALPHA", use_cycles=True) == {"FINISHED"}
+    assert image.color_mode == "RGBA"
+    # Several view layers: the compositor reads the active one.
+    second = scene.view_layers.new("Second")
+    bpy.context.window.view_layer = second
+    bpy.ops.ftc.prepare_render(output="PHOTO", use_cycles=True)
+    layers = [n.layer for n in scene.compositing_node_group.nodes if n.bl_idname == "CompositorNodeRLayers"]
+    assert layers == ["Second"], layers
+    bpy.context.window.view_layer = scene.view_layers[0]
+    # A click in the roles list while a mesh is in Edit Mode leaves it alone.
+    bpy.ops.mesh.primitive_cube_add()
+    cube = bpy.context.active_object
+    bpy.ops.mesh.primitive_plane_add()
+    other = bpy.context.active_object
+    bpy.context.view_layer.objects.active = cube
+    bpy.ops.object.mode_set(mode="EDIT")
+    scene.ftc_role_index = list(scene.objects).index(other)
+    assert bpy.context.view_layer.objects.active == cube
+    bpy.ops.object.mode_set(mode="OBJECT")
+    assert cube.mode == "OBJECT"
+
+
+@test
+def reference_distance_ignores_the_alignment_plane():
+    """The reference distance has its own plane: aligning a wall keeps the scale."""
+    scene, cam, syn = _calibrated_camera((1600, 1200))
+    s = cam.data.ftc
+    w, h = syn.image_size
+    a, b = (np.array(syn.project(p)[0]) / (w, h) for p in ([-1.0, -1.3, 0.0], [1.5, -1.3, 0.0]))
+    calibrate.set_handle(s, "ref_a", tuple(a))
+    calibrate.set_handle(s, "ref_b", tuple(b))
+    with calibrate.suspended():
+        s.scale_mode, s.ref_axis, s.ref_length, s.ref_measure_plane = "REFERENCE", "X", 2.5, "XY"
+    calibrate.update(bpy.context, cam, apply=True)
+    check_projection(scene, cam, syn)
+    distance = s.results.distance
+    for plane in ("XZ", "YZ", "XY"):
+        s.ref_plane = plane
+        assert abs(s.results.distance - distance) < 1e-6 * distance, (plane, s.results.distance, distance)
+    # A reference end close to the horizon keeps a finite uncertainty.
+    far = np.array(syn.project([0.0, 3000.0, 0.0])[0]) / (w, h)
+    calibrate.set_handle(s, "ref_b", tuple(far))
+    solution = calibrate.refresh(cam.data)
+    assert solution is not None, s.results.error
+    focal, angle = calibrate.uncertainty(s, solution)
+    assert math.isfinite(focal) and math.isfinite(angle), (focal, angle)
+
+
+@test
+def audit_edge_cases():
+    """Session, camera, aspect, keyframes, faces and loading edge cases."""
+    ops_modal = importlib.import_module(PKG + ".ops_modal")
+    scene, cam, syn = _calibrated_camera((1600, 1200))
+    s = cam.data.ftc
+
+    # A local camera that is not a camera is no camera for FTC.
+    empty = bpy.data.objects.new("empty", None)
+    scene.collection.objects.link(empty)
+    space = SimpleNamespace(type="VIEW_3D", use_local_camera=True, camera=empty)
+    assert calibrate.space_camera(space, scene) is None
+    assert calibrate.space_camera(None, scene) == cam
+
+    # Apply gives the render the image's aspect again.
+    scene.render.resolution_x, scene.render.resolution_y = 1000, 1000
+    assert not calibrate.aspect_matches(scene, s)
+    assert bpy.ops.ftc.apply() == {"FINISHED"}
+    assert calibrate.aspect_matches(scene, s)
+    scene.render.resolution_x, scene.render.resolution_y = 800, 600  # same aspect: kept
+    bpy.ops.ftc.apply()
+    assert (scene.render.resolution_x, scene.render.resolution_y) == (800, 600)
+
+    # Keyframes on the camera are detected (they would override the calibration).
+    assert not calibrate.transform_animated(cam)
+    cam.keyframe_insert("location")
+    assert calibrate.transform_animated(cam)
+    cam.animation_data_clear()
+
+    # Rotate 90° / Flip act at once during a session (simulated), and Blender's
+    # undo re-solves the session camera.
+    s.anchor_matrix = Matrix.Translation((1.0, 2.0, 0.0))
+    s.use_anchor = True
+    calibrate.update(bpy.context, cam, apply=True)
+    session = ops_modal.Session(cam, SimpleNamespace(as_pointer=lambda: 0), SimpleNamespace(as_pointer=lambda: 0))
+    ops_modal.FTC_OT_calibrate._session = session
+    calibrate.session_camera = cam.name
+    try:
+        before = cam.matrix_world.copy()
+        assert bpy.ops.ftc.align_rotate() == {"FINISHED"}
+        assert (cam.matrix_world.translation - before.translation).length > 1e-3
+        cam.name = "Renamed"
+        assert ops_modal.session_camera(session) == cam and calibrate.session_camera == "Renamed"
+        ops_modal._on_undo()
+        assert not session.stop_requested
+    finally:
+        ops_modal.end_session()
+    assert not ops_modal.FTC_OT_calibrate.running()
+
+    # A face without area is refused.
+    mesh = bpy.data.meshes.new("flat")
+    mesh.from_pydata([(0, 0, 0)] * 4, [], [(0, 1, 2, 3)])
+    flat = bpy.data.objects.new("flat", mesh)
+    scene.collection.objects.link(flat)
+    bpy.context.view_layer.objects.active = flat
+    bpy.ops.object.mode_set(mode="EDIT")
+    bpy.ops.mesh.select_all(action="SELECT")
+    try:
+        before = [tuple(row) for row in s.anchor_matrix]
+        try:
+            bpy.ops.ftc.align_selection()
+            raise AssertionError("a face without area was accepted")
+        except RuntimeError as exc:
+            assert "no area" in str(exc), exc
+        assert [tuple(row) for row in s.anchor_matrix] == before
+    finally:
+        bpy.ops.object.mode_set(mode="OBJECT")
+
+    # A file that is not an image leaves no empty image behind.
+    bad = os.path.join(SCRATCH, "not_an_image.jpg")
+    with open(bad, "w") as f:
+        f.write("hello")
+    count = len(bpy.data.images)
+    bpy.context.view_layer.objects.active = cam
+    with contextlib.suppress(RuntimeError):  # the operator reports the error
+        bpy.ops.ftc.load_image(filepath=bad)
+    assert len(bpy.data.images) == count
 
 
 @test

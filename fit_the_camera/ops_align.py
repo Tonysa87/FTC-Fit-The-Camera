@@ -49,24 +49,30 @@ def store_target(context, settings, matrix: Matrix, source: str) -> None:
 
 
 def apply_now(context) -> None:
-    """Write the camera at once, unless a live session already does it."""
+    """Write the camera at once; in a session, re-solve as the session does
+    (it writes the camera with Live Update)."""
     cam = calibrated_camera(context)
-    if cam is not None and not FTC_OT_calibrate.running():
+    if cam is None:
+        return
+    if FTC_OT_calibrate.running():
+        calibrate.settings_changed(cam.data, context, reset_pitch=False)
+    else:
         calibrate.update(context, cam, apply=True)
     calibrate.tag_redraw(context)
 
 
 def active_face(context):
-    """(object, BMFace) of the active or only selected face in Edit Mode, or (None, None)."""
+    """(object, BMesh, BMFace) of the active or only selected face in Edit Mode,
+    or Nones. The BMesh is returned to keep the face valid while it is used."""
     obj = context.edit_object
     if obj is None or obj.type != "MESH":
-        return None, None
+        return None, None, None
     bm = bmesh.from_edit_mesh(obj.data)
     face = bm.faces.active
     if face is None or not face.select:
         selected = [f for f in bm.faces if f.select]
         face = selected[0] if len(selected) == 1 else None
-    return obj, face
+    return obj, bm, face
 
 
 class FTC_OT_align_cursor(Operator):
@@ -108,15 +114,27 @@ class FTC_OT_align_selection(Operator):
     def execute(self, context):
         settings = calibrated_camera(context).data.ftc
         if context.mode == "EDIT_MESH":
-            obj, face = active_face(context)
+            obj, _bm, face = active_face(context)
             if face is None:
                 self.report({"ERROR"}, "Select one face (or make one face active)")
                 return {"CANCELLED"}
             mw = obj.matrix_world
             verts = [mw @ v.co for v in face.verts]
-            normal = (mw.to_3x3().inverted_safe().transposed() @ face.normal).normalized()
+            normal = mw.to_3x3().inverted_safe().transposed() @ face.normal
+            # First edge as X, or the next one long enough (and not along the normal).
+            edge = next(
+                (
+                    verts[(i + 1) % len(verts)] - verts[i]
+                    for i in range(len(verts))
+                    if (verts[(i + 1) % len(verts)] - verts[i]).cross(normal).length > 1e-9
+                ),
+                None,
+            )
+            if normal.length < 1e-9 or edge is None:
+                self.report({"ERROR"}, "The face has no area: select another face")
+                return {"CANCELLED"}
             centre = sum(verts, Vector()) / len(verts)
-            store_target(context, settings, frame_matrix(centre, verts[1] - verts[0], normal), f"{obj.name} (face)")
+            store_target(context, settings, frame_matrix(centre, edge, normal.normalized()), f"{obj.name} (face)")
             if settings.mode == "RECT" and len(verts) == 4:
                 # The face is the rectangle: corner 0 -> 1 is the width, 1 -> 2 the height.
                 with calibrate.suspended():

@@ -75,6 +75,27 @@ Zip: `\\wsl.localhost\Ubuntu-24.04\home\tony\Projects\FTC\dist\fit_the_camera-1.
 24. Allinea al 3D cursor e ripremi **Shadow Catcher Plane**: il piano segue,
     senza duplicarsi.
 
+## Misura di riferimento e cubo (correzioni dopo la prima prova)
+25. Foto dell'ascensore, 2 punti di fuga (X soglia, Z stipiti), *Misura di
+    riferimento* 0.8 m tra i piedi degli stipiti (*Measured On* XY), origine più
+    indietro sulla soglia: un piano 0.8 × 0.8 m (Shift+A › Plane, Size 0.8) spostato con il lato
+    anteriore sulla misura combacia con i due estremi.
+26. *Cubo di scala*: trascina la base da sinistra a destra davanti alla camera e
+    avanti/indietro, poi l'origine: il cubo non si ribalta mai dall'altra parte.
+27. Con la misura di riferimento, cambia *Reference Plane* in *Align to Scene*
+    (XY › XZ › YZ): la scala (*Distanza*) non cambia.
+
+## Robustezza della sessione (audit 1.0.0)
+28. *Calibrate*, poi chiudi la finestra (o apri una nuova finestra, calibra lì e
+    chiudila): *Calibrate* riparte normalmente.
+29. Durante la sessione cambia la camera di scena (o Ctrl+Numpad0 su un'altra
+    camera): la sessione si chiude, i clic nel viewport tornano a funzionare.
+30. Durante la sessione: *Ruota 90°* / *Inverti* in *Align to Scene* muovono subito
+    la camera; Ctrl+Spazio chiude la sessione senza lasciare testo nell'header.
+31. Metti un keyframe di posizione alla camera: compare l'avviso rosso.
+32. Cambia la risoluzione di render in 1000×1000: compare l'avviso; *Apply* la
+    riporta alle proporzioni della foto.
+
 ## Da riportare
 Comportamenti strani, errori in console (Window › Toggle System Console),
 screenshot dell'overlay se qualcosa non torna.

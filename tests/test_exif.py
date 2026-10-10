@@ -125,3 +125,22 @@ def test_garbage_does_not_raise(blob):
 
 def test_missing_file(tmp_path):
     assert exif.read_exif(tmp_path / "missing.jpg").is_empty()
+
+
+def test_implausible_values_are_dropped():
+    tiff = build_tiff(
+        ifd0=[(exif.TAG_MAKE, ASCII, "Acme"), (exif.TAG_ORIENTATION, SHORT, 300)],
+        exif_ifd=[(exif.TAG_FOCAL_LENGTH, RATIONAL, [(10**9, 1)]), (exif.TAG_FOCAL_35MM, SHORT, 24)],
+    )
+    data = exif.read_exif(jpeg(tiff))
+    assert data.make == "Acme"
+    assert data.orientation is None  # only 1..8 exist: 300 would rotate the photo
+    assert data.focal_mm is None and data.focal_35mm == 24
+    assert data.sensor_long_side_mm((4000, 3000)) is None
+
+
+def test_broken_exif_pointer_keeps_ifd0():
+    ifd0 = [(exif.TAG_MAKE, ASCII, "Acme"), (exif.TAG_ORIENTATION, SHORT, 6), (exif.TAG_EXIF_IFD, LONG, 999999)]
+    tiff = build_tiff(ifd0=ifd0)
+    data = exif.read_exif(jpeg(tiff))
+    assert data.make == "Acme" and data.orientation == 6 and data.focal_mm is None

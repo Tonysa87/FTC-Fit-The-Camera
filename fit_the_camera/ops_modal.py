@@ -12,6 +12,7 @@ from bpy.props import IntProperty
 from bpy.types import Operator
 
 from . import calibrate, draw
+from .ops_load import fit_scene_to_image
 from .solver import cube_top_px
 
 FINE_FACTOR = 0.2
@@ -50,8 +51,9 @@ STATUS_KEYS = (
 class Session:
     """State of the running calibration, shared with the draw callback."""
 
-    def __init__(self, camera_name, area, region):
-        self.camera_name = camera_name
+    def __init__(self, camera, area, region):
+        self.camera_name = camera.name
+        self.camera_ptr = camera.as_pointer()
         self.area_ptr = area.as_pointer()
         self.region_ptr = region.as_pointer()
         self.view: draw.View | None = None
@@ -84,6 +86,29 @@ def restore(settings, snap: dict) -> None:
         settings.pitch_offset = snap["pitch_offset"]
         settings.vp1_axis, settings.vp2_axis, settings.vp3_axis = snap["axes"]
         settings.straighten = snap["straighten"]
+
+
+def session_camera(session):
+    """The session's camera object, followed through a rename; ``None`` if gone."""
+    obj = bpy.data.objects.get(session.camera_name)
+    if obj is None or obj.as_pointer() != session.camera_ptr:
+        obj = next((o for o in bpy.data.objects if o.as_pointer() == session.camera_ptr), None)
+        if obj is not None:
+            session.camera_name = calibrate.session_camera = obj.name
+    return obj if obj is not None and obj.type == "CAMERA" else None
+
+
+def clear_header(session) -> None:
+    """Remove the session's header text, wherever its area is now."""
+    for screen in bpy.data.screens:
+        for area in screen.areas:
+            if area.as_pointer() == session.area_ptr:
+                area.header_text_set(None)
+                return
+
+
+def area_exists(session) -> bool:
+    return any(a.as_pointer() == session.area_ptr for s in bpy.data.screens for a in s.areas)
 
 
 def find_region(window, area_ptr, region_ptr):
@@ -186,9 +211,13 @@ class FTC_OT_calibrate(Operator):
         )
 
     def invoke(self, context, event):
-        if FTC_OT_calibrate._session is not None:
+        session = FTC_OT_calibrate._session
+        if session is not None and not area_exists(session):
+            # Left over by a modal handler Blender dropped (window closed).
+            end_session()
+        elif session is not None:
             # A second click on Calibrate ends the running session.
-            FTC_OT_calibrate._session.stop_requested = True
+            session.stop_requested = True
             return {"CANCELLED"}
         cam_obj = calibrate.view_camera(context)
         area = context.area
@@ -201,7 +230,8 @@ class FTC_OT_calibrate(Operator):
 
         settings = cam_obj.data.ftc
         calibrate.ensure_handles(settings)
-        session = Session(cam_obj.name, area, region)
+        match_image_aspect(context.scene, settings)
+        session = Session(cam_obj, area, region)
         session.handler = bpy.types.SpaceView3D.draw_handler_add(draw.draw_overlay, (session,), "WINDOW", "POST_PIXEL")
         FTC_OT_calibrate._session = session
         calibrate.session_camera = cam_obj.name
@@ -216,8 +246,7 @@ class FTC_OT_calibrate(Operator):
 
     def update_status(self, context, area) -> None:
         session = FTC_OT_calibrate._session
-        cam_obj = bpy.data.objects.get(session.camera_name)
-        settings = cam_obj.data.ftc
+        settings = session_camera(session).data.ftc
         mode = iface_(MODE_NAMES[settings.mode])
         if settings.mode == "VP":
             mode += f" ({settings.vp_count})"
@@ -232,15 +261,17 @@ class FTC_OT_calibrate(Operator):
 
     def finish(self, context, *, apply: bool):
         session = FTC_OT_calibrate._session
-        cam_obj = bpy.data.objects.get(session.camera_name) if session else None
-        if apply and cam_obj is not None:
-            calibrate.update(context, cam_obj, apply=True)
+        cam_obj = session_camera(session) if session else None
+        if apply and cam_obj is not None and calibrate.update(context, cam_obj, apply=True) is None:
+            error = cam_obj.data.ftc.results.error or "the calibration cannot be solved"
+            self.report({"WARNING"}, iface_("Camera not updated: {}").format(error))
         end_session()
-        area, _ = find_region(context.window, session.area_ptr, session.region_ptr) if session else (None, None)
-        if area is not None:
-            area.header_text_set(None)
         calibrate.tag_redraw(context)
         return {"FINISHED"}
+
+    def cancel(self, context):
+        # Blender dropped the modal handler (window closed, file loaded...).
+        end_session()
 
     def pick(self, settings, view, mouse) -> str | None:
         radius = draw.PICK_RADIUS * draw.ui_scale()
@@ -282,9 +313,12 @@ class FTC_OT_calibrate(Operator):
         session = FTC_OT_calibrate._session
         if session is None:
             return {"CANCELLED"}
-        cam_obj = bpy.data.objects.get(session.camera_name)
+        cam_obj = session_camera(session)
         area, region = find_region(context.window, session.area_ptr, session.region_ptr)
-        if session.stop_requested or cam_obj is None or cam_obj.type != "CAMERA" or area is None:
+        if session.stop_requested or cam_obj is None or area is None:
+            return self.finish(context, apply=False)
+        if calibrate.space_camera(area.spaces.active, context.scene) != cam_obj or cam_obj.data.ftc.image is None:
+            # The view now looks through another camera (or the image is gone).
             return self.finish(context, apply=False)
         settings = cam_obj.data.ftc
         self.update_status(context, area)
@@ -321,8 +355,9 @@ class FTC_OT_calibrate(Operator):
                 return {"RUNNING_MODAL"}
             return {"RUNNING_MODAL"}
 
-        if event.type == "Z" and (event.ctrl or event.oskey):
-            # Always handled here: Blender's global undo must not run mid-session.
+        in_area = area.x <= event.mouse_x < area.x + area.width and area.y <= event.mouse_y < area.y + area.height
+        if event.type == "Z" and (event.ctrl or event.oskey) and in_area:
+            # The session's own undo over its area (elsewhere Blender's undo runs).
             if event.value == "PRESS":
                 self.undo_redo(context, session, settings, cam_obj, redo=event.shift)
             return {"RUNNING_MODAL"}
@@ -333,7 +368,6 @@ class FTC_OT_calibrate(Operator):
             if session.hover is not None:
                 session.hover = None
                 area.tag_redraw()
-            in_area = area.x <= event.mouse_x < area.x + area.width and area.y <= event.mouse_y < area.y + area.height
             if not (in_area and event.value == "PRESS" and event.type in SHORTCUT_KEYS):
                 return {"PASS_THROUGH"}
 
@@ -492,6 +526,7 @@ class FTC_OT_apply(Operator):
 
     def execute(self, context):
         cam_obj = _panel_camera(context)
+        match_image_aspect(context.scene, cam_obj.data.ftc)
         solution = calibrate.update(context, cam_obj, apply=True)
         if solution is None:
             self.report({"ERROR"}, cam_obj.data.ftc.results.error or "The calibration cannot be solved")
@@ -515,7 +550,7 @@ class FTC_OT_reset(Operator):
         settings = cam_obj.data.ftc
         session = FTC_OT_calibrate._session
         if session is not None and session.camera_name == cam_obj.name:
-            session.undo.append(snapshot(settings))
+            push_undo(session, snapshot(settings))
         with calibrate.suspended():
             calibrate.reset_handles(settings)
             settings.pitch_offset = 0.0
@@ -527,7 +562,7 @@ class FTC_OT_flip_axis(Operator):
     """Flip the direction of this axis"""
 
     bl_idname = "ftc.flip_axis"
-    bl_label = "Flip Axis"
+    bl_label = "Flip Axis Direction"
     bl_options = {"REGISTER", "UNDO"}
 
     index: IntProperty(name="Axis", min=1, max=3, default=1, options={"SKIP_SAVE"})
@@ -559,12 +594,21 @@ class FTC_OT_flip_axis(Operator):
 classes = (FTC_OT_calibrate, FTC_OT_apply, FTC_OT_reset, FTC_OT_flip_axis)
 
 
+def match_image_aspect(scene, settings) -> None:
+    """Give the render the image's aspect ratio (the size is kept if it already
+    has it): the camera frame only matches the image with the same aspect."""
+    if not calibrate.aspect_matches(scene, settings):
+        fit_scene_to_image(scene, calibrate.image_size(settings))
+
+
 def end_session() -> None:
     """Drop the running session without touching the scene (its data may be gone)."""
     calibrate.defer_uncertainty = False
     session = FTC_OT_calibrate._session
-    if session is not None and session.handler is not None:
-        bpy.types.SpaceView3D.draw_handler_remove(session.handler, "WINDOW")
+    if session is not None:
+        if session.handler is not None:
+            bpy.types.SpaceView3D.draw_handler_remove(session.handler, "WINDOW")
+        clear_header(session)
     FTC_OT_calibrate._session = None
     calibrate.session_camera = None
 
@@ -575,15 +619,38 @@ def _on_load_pre(*_args):
     end_session()
 
 
+@persistent
+def _on_undo(*_args):
+    """Blender's undo (Edit menu, Undo History) during a session restores old
+    settings: re-solve them, or end the session if the image is gone."""
+    session = FTC_OT_calibrate._session
+    if session is None:
+        return
+    cam_obj = session_camera(session)
+    if cam_obj is None or cam_obj.data.ftc.image is None:
+        session.stop_requested = True
+    else:
+        calibrate.refresh(cam_obj.data)
+
+
+HANDLERS = (
+    (bpy.app.handlers.load_pre, _on_load_pre),
+    (bpy.app.handlers.undo_post, _on_undo),
+    (bpy.app.handlers.redo_post, _on_undo),
+)
+
+
 def register():
     for cls in classes:
         bpy.utils.register_class(cls)
-    bpy.app.handlers.load_pre.append(_on_load_pre)
+    for handlers, fn in HANDLERS:
+        handlers.append(fn)
 
 
 def unregister():
-    if _on_load_pre in bpy.app.handlers.load_pre:
-        bpy.app.handlers.load_pre.remove(_on_load_pre)
+    for handlers, fn in HANDLERS:
+        if fn in handlers:
+            handlers.remove(fn)
     end_session()
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)

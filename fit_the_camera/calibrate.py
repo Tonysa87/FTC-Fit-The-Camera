@@ -69,13 +69,40 @@ _updating = False
 # Settings access
 
 
+TRANSFORM_PATHS = {"location", "rotation_euler", "rotation_quaternion", "rotation_axis_angle", "delta_location"}
+
+
+def transform_animated(obj) -> bool:
+    """``obj`` has location / rotation keyframes, which override the calibration
+    at the next frame change or render."""
+    anim = obj.animation_data
+    if anim is None or anim.action is None:
+        return False
+    from bpy_extras import anim_utils
+
+    bag = anim_utils.action_get_channelbag_for_slot(anim.action, anim.action_slot)
+    return bag is not None and any(fc.data_path in TRANSFORM_PATHS for fc in bag.fcurves)
+
+
+def aspect_matches(scene, settings) -> bool:
+    """The render has the image's aspect ratio (to the pixel)."""
+    w, h = image_size(settings)
+    rx, ry = scene.render.resolution_x, scene.render.resolution_y
+    return not (w and h) or abs(ry - rx * h / w) <= 1.0
+
+
+def space_camera(space, scene):
+    """Camera object a 3D view looks through (its local camera, or the scene's);
+    ``None`` when that is not a camera."""
+    cam = scene.camera
+    if space is not None and space.type == "VIEW_3D" and space.use_local_camera and space.camera:
+        cam = space.camera
+    return cam if cam is not None and cam.type == "CAMERA" else None
+
+
 def view_camera(context):
     """Camera object shown by the 3D view in ``context`` (or the scene camera)."""
-    space = getattr(context, "space_data", None)
-    if space is not None and space.type == "VIEW_3D" and space.use_local_camera and space.camera:
-        return space.camera
-    cam = context.scene.camera
-    return cam if cam is not None and cam.type == "CAMERA" else None
+    return space_camera(getattr(context, "space_data", None), context.scene)
 
 
 def default_handles(settings) -> dict:
@@ -334,7 +361,7 @@ def solve(settings, overrides: dict | None = None, distance: float | None = None
             pass
         elif settings.scale_mode == "REFERENCE":
             ra, rb = _points(settings, ["ref_a", "ref_b"])
-            reference = ReferenceDistance(settings.ref_axis, ra, rb, settings.ref_length)
+            reference = ReferenceDistance(settings.ref_axis, ra, rb, settings.ref_length, settings.ref_measure_plane)
         else:
             base, top = _points(settings, ["cube_base", "cube_top"])
             cube = ScaleCube(base, top, cube_size(settings), reference_plane(settings))
@@ -418,7 +445,9 @@ def uncertainty(settings, solution: CameraSolution) -> tuple[float, float]:
             moved = list(co)
             moved[axis] += step / size
             try:
-                nudged = solve(settings, {key: tuple(moved)})
+                # The scale does not change focal or angles: keep it, so a reference
+                # or cube near the horizon does not fail the nudged solves.
+                nudged = solve(settings, {key: tuple(moved)}, distance=float(np.linalg.norm(solution.position)))
             except (SolverError, ArithmeticError, ValueError, np.linalg.LinAlgError):
                 return math.inf, math.inf
             focal_var += ((nudged.focal_px - solution.focal_px) / solution.focal_px) ** 2
