@@ -221,6 +221,7 @@ class FTC_Settings(PropertyGroup):
         name="Live Update",
         description="Write the camera on every change while calibrating",
         default=True,
+        update=_changed,
     )
     freeze: BoolProperty(name="Freeze Guides", description="Lock the guides against accidental edits")
     show_grid: BoolProperty(name="Grid", description="Show the verification grid on Z = 0", default=True)

@@ -6,6 +6,8 @@ from __future__ import annotations
 import math
 
 import bpy
+from bpy.app.handlers import persistent
+from bpy.app.translations import pgettext_iface as iface_
 from bpy.types import Operator
 
 from . import calibrate, draw
@@ -35,6 +37,10 @@ AXIS_KEYS = {"ONE": "X", "TWO": "Y", "THREE": "Z", "NUMPAD_1": "X", "NUMPAD_2": 
 SHORTCUT_KEYS = {"F", "H", *AXIS_KEYS}
 
 MODE_NAMES = {"VP": "Vanishing Points", "RECT": "Known Rectangle", "HORIZON": "Horizon"}
+STATUS_KEYS = (
+    "LMB drag: move  Shift: fine  Ctrl: snap  1/2/3: axis  F: flip  H: straighten  "
+    "Ctrl+Z / Ctrl+Shift+Z: undo/redo  Enter: apply  Esc/RMB: exit"
+)
 
 
 class Session:
@@ -54,6 +60,7 @@ class Session:
         self.last_mouse = (0.0, 0.0)
         self.pitch_drag: tuple[float, float] | None = None
         self.stop_requested = False
+        self.status = ""
         self.handler = None
 
 
@@ -164,25 +171,22 @@ class FTC_OT_calibrate(Operator):
         session = FTC_OT_calibrate._session
         cam_obj = bpy.data.objects.get(session.camera_name)
         settings = cam_obj.data.ftc
-        mode = MODE_NAMES[settings.mode]
+        mode = iface_(MODE_NAMES[settings.mode])
         if settings.mode == "VP":
             mode += f" ({settings.vp_count})"
         if settings.freeze:
-            mode += " [frozen]"
-        area.header_text_set(
-            f"FTC  {mode}  |  LMB drag: move  Shift: fine  Ctrl: snap  1/2/3: axis  F: flip  "
-            "H: straighten  Ctrl+Z / Ctrl+Shift+Z: undo/redo  Enter: apply  Esc/RMB: exit"
-        )
+            mode += "  [" + iface_("Freeze Guides") + "]"
+        text = f"FTC  {mode}  |  " + iface_(STATUS_KEYS)
+        if text != session.status:
+            session.status = text
+            area.header_text_set(text)
 
     def finish(self, context, *, apply: bool):
         session = FTC_OT_calibrate._session
         cam_obj = bpy.data.objects.get(session.camera_name) if session else None
         if apply and cam_obj is not None:
             calibrate.update(context, cam_obj, apply=True)
-        if session is not None and session.handler is not None:
-            bpy.types.SpaceView3D.draw_handler_remove(session.handler, "WINDOW")
-        FTC_OT_calibrate._session = None
-        calibrate.session_camera = None
+        end_session()
         area, _ = find_region(context.window, session.area_ptr, session.region_ptr) if session else (None, None)
         if area is not None:
             area.header_text_set(None)
@@ -198,7 +202,7 @@ class FTC_OT_calibrate(Operator):
                 if d < best_d:
                     best, best_d = key, d
         solution = calibrate.cached_solution(bpy.data.objects[FTC_OT_calibrate._session.camera_name].data)
-        if solution is not None and best is None:
+        if solution is not None and best is None and not settings.freeze:
             ph = draw.pitch_handle_px(solution)
             if ph is not None and math.dist(view.px_to_region(ph), mouse) < radius * 1.2:
                 best = "pitch"
@@ -236,6 +240,7 @@ class FTC_OT_calibrate(Operator):
         if session.stop_requested or cam_obj is None or cam_obj.type != "CAMERA" or area is None:
             return self.finish(context, apply=False)
         settings = cam_obj.data.ftc
+        self.update_status(context, area)
         rv3d = area.spaces.active.region_3d
         view = session.view
         if view is None or rv3d.view_perspective != "CAMERA":
@@ -325,7 +330,8 @@ class FTC_OT_calibrate(Operator):
         if event.type == "F" and not event.ctrl:
             self.push_undo(session, snapshot(settings))
             if settings.mode == "VP":
-                attr = f"vp{session.active_vp + 1}_axis"
+                # The third axis is derived: flipping applies to the first two only.
+                attr = f"vp{min(session.active_vp, 1) + 1}_axis"
                 with calibrate.suspended():
                     setattr(settings, attr, flip(getattr(settings, attr)))
             elif settings.mode == "RECT":
@@ -350,18 +356,23 @@ class FTC_OT_calibrate(Operator):
             self.changed(context, cam_obj, reset_pitch=False)
 
     def set_axis(self, session, settings, letter):
-        """Assign ``letter`` to the active vanishing point, swapping with the one that had it."""
+        """Assign ``letter`` to the active vanishing point, swapping with the one that had it.
+
+        With three vanishing points the third axis follows from the first two, so
+        its letter is derived and only the first two are stored.
+        """
         self.push_undo(session, snapshot(settings))
-        count = 2 if settings.vp_count != "3" else 3
-        attrs = [f"vp{i}_axis" for i in range(1, count + 1)]
-        active = attrs[min(session.active_vp, count - 1)]
-        old = getattr(settings, active)
+        axes = [settings.vp1_axis, settings.vp2_axis]
+        if settings.vp_count == "3":
+            axes.append("+" + draw.remaining_axis(*axes))
+        active = min(session.active_vp, len(axes) - 1)
+        old = axes[active]
+        for i, other in enumerate(axes):
+            if i != active and other[1] == letter:
+                axes[i] = other[0] + old[1]
+        axes[active] = old[0] + letter
         with calibrate.suspended():
-            for attr in attrs:
-                other = getattr(settings, attr)
-                if attr != active and other[1] == letter:
-                    setattr(settings, attr, other[0] + old[1])
-            setattr(settings, active, old[0] + letter)
+            settings.vp1_axis, settings.vp2_axis = axes[:2]
 
     def drag(self, context, session, settings, cam_obj, view, event, mouse):
         if session.drag_key == "pitch":
@@ -470,16 +481,30 @@ class FTC_OT_anchor_cursor(Operator):
 classes = (FTC_OT_calibrate, FTC_OT_apply, FTC_OT_reset, FTC_OT_anchor_cursor)
 
 
-def register():
-    for cls in classes:
-        bpy.utils.register_class(cls)
-
-
-def unregister():
+def end_session() -> None:
+    """Drop the running session without touching the scene (its data may be gone)."""
     session = FTC_OT_calibrate._session
     if session is not None and session.handler is not None:
         bpy.types.SpaceView3D.draw_handler_remove(session.handler, "WINDOW")
     FTC_OT_calibrate._session = None
     calibrate.session_camera = None
+
+
+@persistent
+def _on_load_pre(*_args):
+    # Loading a file removes the modal handler: clean up the session with it.
+    end_session()
+
+
+def register():
+    for cls in classes:
+        bpy.utils.register_class(cls)
+    bpy.app.handlers.load_pre.append(_on_load_pre)
+
+
+def unregister():
+    if _on_load_pre in bpy.app.handlers.load_pre:
+        bpy.app.handlers.load_pre.remove(_on_load_pre)
+    end_session()
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)
