@@ -7,7 +7,7 @@ Extensions audience) and `README.it.md` (Italian); developer docs
 "Camera Match": the final name is **FTC**, package `fit_the_camera`, tab "FTC").
 
 ## Status / next session
-- **v1.0.0** (0.6.1 + Render section: Prepare Render, Object Roles, Shadow Catcher
+- **v1.0.0** (0.6.1 + Render section: Prepare Render, Object Roles; no Shadow Catcher
   Plane) is committed and built but **not yet tested in the GUI**. Next session:
   the user tests it on Windows following `docs/TEST_GUI.md`; fix what he reports.
 - GitHub: https://github.com/Tonysa87/FTC---Fit-The-Camera (public, `origin`),
@@ -150,10 +150,11 @@ dragging (reported by the user). `uncertainty()` solves with the scale fixed. Th
 - Cycles: with `use_pass_shadow_catcher` on, the shadows leave the Combined alpha
   (alpha 0 under the shadow) -> photo × pass, then Alpha Over. Transparent output
   needs the pass off (shadows in alpha). EEVEE: no shadow catcher.
-- `Object.ftc_role` is a get/set enum over native `hide_render` / `is_shadow_catcher`
-  / `is_holdout` (nothing stored). Catcher plane = `settings.shadow_catcher`
-  (pointer, not an ID tag: duplicates copy tags), placed at
-  `alignment_matrix @ reference_frame`, display WIRE (else it hides the photo).
+- Roles: `Object.ftc_catcher` / `ftc_holdout`, get/set bools over the native
+  `is_shadow_catcher` / `is_holdout`, mutually exclusive; `ftc.set_role` (CATCHER,
+  HOLDOUT, NONE) for the selection. The user's rule: FTC never creates objects
+  for roles and there is no "CG object" / "hidden" role (the default is the CG).
+  A "New Shadow Catcher Plane" operator existed briefly and was removed on request.
 - Engine / display / view / look enums are dynamic (static `enum_items` lists only
   NONE / EEVEE): set them with `_try_set` (TypeError when missing: custom OCIO,
   Cycles disabled). Alpha output: try `color_mode = "RGBA"`, else IMAGE + PNG.

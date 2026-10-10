@@ -692,30 +692,37 @@ def prepare_render_transparent_keeps_shadows_in_alpha():
 
 @test
 def object_roles_map_to_render_flags():
+    """Two roles, shadow catcher and holdout, that exclude each other; they only
+    change the objects' own flags."""
     scene = fresh_scene()
     mesh = bpy.data.meshes.new("m")
     objs = [bpy.data.objects.new(f"o{i}", mesh) for i in range(2)]
     for obj in objs:
         scene.collection.objects.link(obj)
     obj = objs[0]
-    assert obj.ftc_role == "OBJECT"
-    obj.ftc_role = "CATCHER"
-    assert obj.is_shadow_catcher and not obj.is_holdout and not obj.hide_render
-    obj.ftc_role = "HOLDOUT"
-    assert obj.is_holdout and not obj.is_shadow_catcher
-    obj.ftc_role = "HIDDEN"
-    assert obj.hide_render and not obj.is_holdout
-    obj.ftc_role = "OBJECT"
-    assert not (obj.hide_render or obj.is_holdout or obj.is_shadow_catcher)
+    assert not obj.ftc_catcher and not obj.ftc_holdout
+    obj.ftc_catcher = True
+    assert obj.is_shadow_catcher and not obj.is_holdout
+    obj.ftc_holdout = True
+    assert obj.is_holdout and not obj.is_shadow_catcher and not obj.ftc_catcher
+    obj.ftc_holdout = False
+    assert not (obj.is_holdout or obj.is_shadow_catcher)
+    obj.hide_render = True
+    obj.ftc_catcher = True
+    assert obj.hide_render  # left alone
+    obj.hide_render = False
     for o in objs:
         o.select_set(True)
     counts = (len(bpy.data.objects), len(bpy.data.meshes))
     assert bpy.ops.ftc.set_role(role="HOLDOUT") == {"FINISHED"}
-    assert all(o.ftc_role == "HOLDOUT" for o in objs)
+    assert all(o.is_holdout and not o.is_shadow_catcher for o in objs)
     assert bpy.ops.ftc.set_role(role="CATCHER") == {"FINISHED"}
-    assert all(o.is_shadow_catcher and o.ftc_role == "CATCHER" for o in objs)
-    # Roles only change the objects' own flags: nothing is created or copied.
+    assert all(o.is_shadow_catcher and not o.is_holdout for o in objs)
+    assert bpy.ops.ftc.set_role(role="NONE") == {"FINISHED"}
+    assert not any(o.is_shadow_catcher or o.is_holdout for o in objs)
+    # Nothing is created or copied.
     assert (len(bpy.data.objects), len(bpy.data.meshes)) == counts
+    assert "add_catcher" not in dir(bpy.ops.ftc)
     # Clicking in the list selects the object.
     scene.ftc_role_index = list(scene.objects).index(objs[1])
     assert bpy.context.view_layer.objects.active == objs[1] and not objs[0].select_get()
@@ -725,42 +732,6 @@ def object_roles_map_to_render_flags():
     mock = SimpleNamespace(filter_name="", bitflag_filter_item=1, use_filter_invert=False, use_filter_sort_alpha=True)
     flags, _order = ul.filter_items(mock, None, scene, "objects")
     assert sum(flags) == 2
-
-
-@test
-def shadow_catcher_plane_lies_on_the_reference_plane():
-    scene, cam, syn = _calibrated_camera((1600, 1200))
-    assert bpy.ops.ftc.add_catcher() == {"FINISHED"}
-    plane = cam.data.ftc.shadow_catcher
-    assert plane is not None and plane.name in scene.objects
-    assert plane.is_shadow_catcher and plane.display_type == "WIRE"
-    corners = [plane.matrix_world @ v.co for v in plane.data.vertices]
-    assert all(abs(c.z) < 1e-6 for c in corners)
-    # Big enough to reach well past the camera.
-    assert max(c.length for c in corners) > 2 * cam.matrix_world.translation.length
-    s = cam.data.ftc
-    anchor = Matrix.Translation((4.0, -1.0, 0.5)) @ Matrix.Rotation(math.radians(30.0), 4, "Z")
-    s.anchor_matrix = anchor
-    s.use_anchor = True
-    calibrate.update(bpy.context, cam, apply=True)
-    count = len(scene.objects)
-    bpy.ops.ftc.add_catcher()
-    assert cam.data.ftc.shadow_catcher == plane and len(scene.objects) == count
-    assert all(abs(a - b) < 1e-5 for ra, rb in zip(plane.matrix_world, anchor) for a, b in zip(ra, rb))
-    # A linked duplicate (Alt+D) is neither picked nor reshaped.
-    dup = plane.copy()
-    scene.collection.objects.link(dup)
-    dup.matrix_world = Matrix.Translation((0.0, 0.0, 5.0))
-    bpy.ops.ftc.add_catcher()
-    assert cam.data.ftc.shadow_catcher == plane and plane.data != dup.data
-    assert dup.matrix_world.translation.z == 5.0
-    # Size from the camera distance only (the cube is not the scale here).
-    s.scale_mode = "REFERENCE"
-    bpy.context.scene.unit_settings.scale_length = 0.001
-    bpy.ops.ftc.add_catcher()
-    side = max((v.co - plane.data.vertices[0].co).length for v in plane.data.vertices)
-    assert side < 20 * s.results.distance, (side, s.results.distance)
-    bpy.context.scene.unit_settings.scale_length = 1.0
 
 
 @test
@@ -919,7 +890,6 @@ def every_button_has_a_tooltip():
         "move_along_view",
         "prepare_render",
         "set_role",
-        "add_catcher",
     ):
         if not getattr(bpy.ops.ftc, op).get_rna_type().description.strip():
             missing.append("ftc." + op)
@@ -930,8 +900,9 @@ def every_button_has_a_tooltip():
                 continue
             if not prop.description.strip():
                 missing.append(f"{rna.identifier}.{prop.identifier}")
-    if not bpy.types.Object.bl_rna.properties["ftc_role"].description.strip():
-        missing.append("Object.ftc_role")
+    for prop in ("ftc_catcher", "ftc_holdout"):
+        if not bpy.types.Object.bl_rna.properties[prop].description.strip():
+            missing.append("Object." + prop)
     assert not missing, missing
 
 

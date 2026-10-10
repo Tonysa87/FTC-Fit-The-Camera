@@ -23,8 +23,8 @@ the real ground.
 - **Align to the scene**: put the calibrated floor or wall on the 3D cursor, a
   face or an object.
 - **Render over the photo**: one button sets colour management, transparent film
-  and the compositor; object roles (CG object, shadow catcher, holdout, hidden);
-  a shadow catcher plane on the calibrated ground.
+  and the compositor; shadow catcher and holdout roles for the objects that
+  stand in for real surfaces and objects of the photo.
 - Interface in English and Italian.
 
 ## Install
@@ -113,21 +113,18 @@ plane, the second at the top.
   configuration (OCIO) without an sRGB display / Standard view, set an identity
   view by hand (a warning says so).
 
-**Object Roles** lists the renderable objects of the scene with their role (a
-click selects the object; *Set Role of Selected* sets it for all the selected
-ones):
+**Object Roles** lists the renderable objects of the scene with two toggles,
+*Shadow Catcher* and *Holdout*, which exclude each other. They only change the
+objects' own settings: nothing is created. Objects without a role are the CG,
+rendered normally.
 
 | Role | What it does | For |
 | --- | --- | --- |
-| CG Object | rendered normally | the objects added to the photo |
-| Shadow Catcher | shows the photo, receives shadows and light, hides what is behind it (Cycles) | real floors, tables, walls |
+| Shadow Catcher | shows the photo, receives shadows and light, hides what is behind it (Cycles) | real floors, tables, walls you modelled |
 | Holdout | shows the photo and hides the objects behind it, no shadows | real objects in front of the CG |
-| Hidden | not rendered | reference geometry |
 
-**New Shadow Catcher Plane** creates a plane on the calibrated reference plane as
-shadow catcher (drawn as a wireframe grid so it does not cover the photo; pressed
-again it moves the same plane). To turn your own objects into shadow catchers,
-select them and use *Set Role of Selected*.
+A click on a row selects the object; *Set Role of Selected* gives *Shadow
+Catcher*, *Holdout* or *No Role* to all the selected objects.
 
 ## Tips
 

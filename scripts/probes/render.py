@@ -24,7 +24,8 @@ size = cam.data.ftc.results.distance / 6
 bpy.ops.mesh.primitive_cube_add(size=size, location=(0, 0, size / 2))
 bpy.ops.object.light_add(type="SUN", rotation=(0.6, 0.4, 0.0))
 bpy.context.active_object.data.energy = 4.0
-bpy.ops.ftc.add_catcher()
+bpy.ops.mesh.primitive_plane_add(size=cam.data.ftc.results.distance * 10)
+bpy.context.active_object.ftc_catcher = True
 bpy.ops.ftc.prepare_render(output="PHOTO", use_cycles=True)
 scene.cycles.samples = 32
 scene.cycles.use_denoising = False

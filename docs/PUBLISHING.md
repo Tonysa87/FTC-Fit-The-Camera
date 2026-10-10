@@ -81,8 +81,8 @@ Match a camera to a single image – a photo, a render or a drawing – then ren
 - Prepare Render: Standard view transform (the photo comes out unchanged),
   transparent film, Cycles, and a compositor that puts the render over the photo
   with the Shadow Catcher pass – or a transparent output for other programs
-- Object roles: CG object, shadow catcher, holdout, hidden
-- Shadow catcher plane on the calibrated ground
+- Object roles: shadow catcher and holdout for the objects standing in for real
+  surfaces and objects of the photo
 
 Sidebar › FTC tab. Interface in English and Italian.
 Documentation: https://github.com/Tonysa87/FTC---Fit-The-Camera

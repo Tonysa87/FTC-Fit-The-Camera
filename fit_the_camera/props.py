@@ -430,11 +430,6 @@ class FTC_Settings(PropertyGroup):
 
     camera_data: PointerProperty(type=FTC_CameraData)
     results: PointerProperty(type=FTC_Results)
-    shadow_catcher: PointerProperty(
-        name="Shadow Catcher Plane",
-        description="Shadow catcher plane made for this camera on its reference plane",
-        type=bpy.types.Object,
-    )
 
 
 classes = (FTC_Handle, FTC_CameraData, FTC_Results, FTC_Settings)
