@@ -13,6 +13,9 @@ Extensions audience) and `README.it.md` (Italian); developer docs
 - GitHub: https://github.com/Tonysa87/FTC---Fit-The-Camera (public, `origin`),
   release v1.0.0 with the zip. Not yet submitted to extensions.blender.org: needs
   the GUI test, icon (PNG ≤256 px), featured image, ≥1 preview (`docs/PUBLISHING.md`).
+- `extensions_listing/` (git-ignored, asked by the user): everything to upload to
+  extensions.blender.org (icon, featured 1920×1080, previews, description.md) and
+  the scripts that regenerate the images (previews use `samples/elevator.jpg`).
 - `dist/` is git-ignored; only the latest zip matters (older ones may have been
   rebuilt by `blender-tests` with newer code before a version bump).
 
