@@ -11,7 +11,7 @@ from bpy.app.translations import pgettext_iface as iface_
 from bpy.props import IntProperty
 from bpy.types import Operator
 
-from . import calibrate, draw
+from . import calibrate, draw, ops_orientation
 from .ops_load import match_image_aspect
 from .solver import cube_top_px
 
@@ -261,9 +261,12 @@ class FTC_OT_calibrate(Operator):
     def finish(self, context, *, apply: bool):
         session = FTC_OT_calibrate._session
         cam_obj = session_camera(session) if session else None
-        if apply and cam_obj is not None and calibrate.update(context, cam_obj, apply=True) is None:
-            error = cam_obj.data.ftc.results.error or "the calibration cannot be solved"
-            self.report({"WARNING"}, iface_("Camera not updated: {}").format(error))
+        if apply and cam_obj is not None:
+            if calibrate.update(context, cam_obj, apply=True) is None:
+                error = cam_obj.data.ftc.results.error or "the calibration cannot be solved"
+                self.report({"WARNING"}, iface_("Camera not updated: {}").format(error))
+            else:
+                ops_orientation.sync(context, cam_obj)
         end_session()
         calibrate.tag_redraw(context)
         return {"FINISHED"}
@@ -539,6 +542,7 @@ class FTC_OT_apply(Operator):
         if solution is None:
             self.report({"ERROR"}, cam_obj.data.ftc.results.error or "The calibration cannot be solved")
             return {"CANCELLED"}
+        ops_orientation.sync(context, cam_obj)
         if match_image_aspect(context.scene, calibrate.image_size(cam_obj.data.ftc)):
             self.report({"INFO"}, "Render height changed to the image's aspect ratio")
         if FTC_OT_calibrate.running():

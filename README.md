@@ -62,8 +62,17 @@ Open the sidebar of the 3D viewport (N) and the **FTC** tab.
 5. **Results** – focal length, field of view, camera height, angles, uncertainty
    and guide fit, with warnings.
 6. **Render** – see below.
-7. **Tools › Move Along View** – move objects or vertices along the camera rays:
-   they keep their place in the image.
+7. **Tools**:
+   - **FTC Orientation** – makes the "FTC" transform orientation the viewport's:
+     the photo's calibrated axes in the scene (created on Apply and by Align to
+     Scene). Blender's gizmo, G/R/S with X/Y/Z and snapping then follow the photo
+     also after aligning it to a face or the cursor. Click again for Global.
+   - **Move Along View** – move objects or vertices along the camera rays: they
+     keep their place in the image (also in *Object/Mesh › Transform*).
+   - **Ray Gizmo** – in the camera view, a handle on the selection (an arrow
+     towards the camera, seen end-on): drag it right/left to move the selection
+     away/closer along the rays, Shift for fine steps. The icon next to it scales
+     objects with the distance.
 
 | Mode | Input | Notes |
 | --- | --- | --- |

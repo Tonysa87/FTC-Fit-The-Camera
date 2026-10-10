@@ -104,13 +104,16 @@ _IT = {
     "Keyframes, drivers or constraints on the camera (or its parent) override the calibration": (
         "Keyframe, driver o vincoli sulla camera (o sul suo genitore) sovrascrivono la calibrazione"
     ),
-    "Only the active view layer is composited over the photo": (
-        "Solo il view layer attivo viene composto sulla foto"
-    ),
+    "Only the active view layer is composited over the photo": ("Solo il view layer attivo viene composto sulla foto"),
     # Move Along View
     "Move Along View": "Sposta lungo la vista",
     "Distance Factor": "Fattore distanza",
     "Scale with Distance": "Scala con la distanza",
+    "Ray Gizmo": "Gizmo raggi camera",
+    "Move Along Camera Rays": "Sposta lungo i raggi della camera",
+    # FTC orientation
+    "FTC Orientation": "Orientamento FTC",
+    "No 3D view to create the orientation from": "Nessuna vista 3D da cui creare l'orientamento",
 }
 
 # Generic words, translated only where FTC asks with its own context ("FTC"):
