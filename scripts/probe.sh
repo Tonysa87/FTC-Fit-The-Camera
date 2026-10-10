@@ -7,6 +7,7 @@
 #   planes    default calibration validity per reference plane
 #   timing    refresh time per mode and focal option
 #   snap      renders overlay snapshots (vp.png, rect.png) into the output dir
+#   render    renders a CG cube over a calibrated photo via Prepare Render
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 NAME="${1:?probe name}"

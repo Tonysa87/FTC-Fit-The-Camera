@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.0.0 – 2026-10-10
+- Nuova sezione **Render** nel pannello:
+  - **Prepare Render**: view transform Standard (la foto esce identica), look
+    None, display sRGB, esposizione/gamma neutre, film trasparente, risoluzione
+    della foto, Cycles; compositor `FTC Compositing` (foto scalata › moltiplicata
+    per il pass Shadow Catcher › Alpha Over col render) oppure uscita trasparente
+    con le ombre nell'alpha.
+  - **Object Roles**: lista degli oggetti della scena con il ruolo (Oggetto CG,
+    Shadow Catcher, Holdout, Nascosto) e menu per i selezionati.
+  - **Shadow Catcher Plane**: piano shadow catcher sul piano di riferimento.
+- Sonda `render` (render di prova con cubo CG e ombra) e `paneltest` estesa.
+
 ## 0.6.1 – 2026-10-10 (audit)
 - *Nota + guide*: le guide scavalcano la focale nota solo se non riescono ad
   accordarsi con essa (scarto > 1°) e con la propria vanno molto meglio. Prima

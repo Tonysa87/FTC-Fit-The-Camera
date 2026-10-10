@@ -5,9 +5,9 @@ Single-image camera calibration add-on. User docs: `README.md` (Italian). Histor
 "Camera Match": the final name is **FTC**, package `fit_the_camera`, tab "FTC").
 
 ## Status / next session
-- **v0.6.1** (scale cube, focal "Known + Guides", axis flip buttons, audit fixes) is
-  committed and built but **not yet tested in the GUI**. Next session: the user
-  tests it on Windows following `docs/TEST_GUI.md`; fix what he reports.
+- **v1.0.0** (0.6.1 + Render section: Prepare Render, Object Roles, Shadow Catcher
+  Plane) is committed and built but **not yet tested in the GUI**. Next session:
+  the user tests it on Windows following `docs/TEST_GUI.md`; fix what he reports.
 - `dist/` is git-ignored; only the latest zip matters (older ones may have been
   rebuilt by `blender-tests` with newer code before a version bump).
 
@@ -32,8 +32,9 @@ Single-image camera calibration add-on. User docs: `README.md` (Italian). Histor
   build (`scripts/probes/`, output in `dist/probes/`): `paneltest` (every panel
   section with a mock layout that validates props/operators), `drawall` (overlay in
   864 configs), `dragsim` (modal drag code on the cube handles), `planes`,
-  `timing`, `snap` (overlay PNGs). Panels cannot be drawn headless otherwise; set
-  ui_scale in mocks (it is 0 in background mode).
+  `timing`, `snap` (overlay PNGs), `render` (Cycles render through Prepare
+  Render). Panels cannot be drawn headless otherwise; set ui_scale in mocks (it is
+  0 in background mode).
 
 ## Architecture
 - `solver/` is numpy-only (no bpy), imported by pytest via `tests/conftest.py`
@@ -111,6 +112,24 @@ in the colours of the world axes they run along; the base is the corner nearest
 the camera, the cube extends away from it. The top can't be dragged below
 `ops_modal.MIN_CUBE_PX` above the base (it would flip).
 
+## Render setup (`ops_render.py`)
+- Standard view transform is the only one that gives back the sRGB photo
+  (measured: AgX / PBR Neutral shift it ~9 levels median, >120 max). Exposure 0,
+  look None, no curves / white balance; image output follows the scene.
+- Blender 5 compositor: `scene.compositing_node_group` (a `CompositorNodeTree`
+  data-block), `NodeGroupOutput` with a Color interface socket (no Composite
+  node), menu options are input sockets (`Scale` "Type" = "Render Size",
+  "Frame Type" = "Fit", "Extension X/Y" = "Extend" — Clip makes the 1 px border
+  semi-transparent), Mix is `ShaderNodeMix` (sockets by identifier `A_Color`...).
+  Our tree is tagged `ftc_compositing` and rebuilt; a user's tree gets a fake user.
+- Cycles: with `use_pass_shadow_catcher` on, the shadows leave the Combined alpha
+  (alpha 0 under the shadow) -> photo × pass, then Alpha Over. Transparent output
+  needs the pass off (shadows in alpha). EEVEE: no shadow catcher.
+- `Object.ftc_role` is a get/set enum over native `hide_render` / `is_shadow_catcher`
+  / `is_holdout` (nothing stored). Catcher plane tagged `ftc_shadow_catcher`, placed
+  at `alignment_matrix @ reference_frame`, display WIRE (else it hides the photo).
+- Probe `render` writes `dist/probes/render_photo.png` / `render_alpha.png`.
+
 ## Known limitations
 - A known rectangle cannot detect a zoomed photo (keeps the EXIF focal); two VPs
   with one far away cannot either. Three VPs can.
@@ -120,6 +139,6 @@ the camera, the cube extends away from it. The top can't be dragged below
   their untouched hand-made default guides (~22 mm equivalent) may then warn.
 
 ## Open work
-- Pending: the user's GUI test of 0.6.1 (`docs/TEST_GUI.md`).
+- Pending: the user's GUI test of 1.0.0 (`docs/TEST_GUI.md`).
 - Possible: magnifier near the cursor while dragging; more than two lines per VP;
   turn the `paneltest` / `drawall` probes into regular Blender tests.

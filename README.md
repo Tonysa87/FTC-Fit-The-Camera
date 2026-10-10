@@ -31,7 +31,12 @@ Sidebar del viewport (N) › tab **FTC**.
    faccia attiva (Edit Mode) o sull'oggetto attivo; Ruota 90° / Inverti.
 5. **Results** – focale, FOV, altezza, angoli, **incertezza** (focale ± %,
    orientamento ± °) e **aderenza guide** (scarto massimo); avvisi in giallo/rosso.
-6. **Tools › Move Along View** – sposta oggetti/vertici lungo il raggio dalla camera
+6. **Render** – **Prepare Render** prepara la scena per renderizzare la CG sopra la
+   foto (vedi sotto); **Object Roles** elenca gli oggetti della scena con il loro
+   ruolo (*Oggetto CG*, *Shadow Catcher*, *Holdout*, *Nascosto*), modificabile riga
+   per riga o per tutti i selezionati; **Shadow Catcher Plane** crea (o riporta) un
+   piano shadow catcher sul piano di riferimento calibrato.
+7. **Tools › Move Along View** – sposta oggetti/vertici lungo il raggio dalla camera
    (anche da *Object/Mesh › Transform*).
 
 ### Modalità
@@ -53,6 +58,43 @@ scorre lungo lo spigolo verticale: portala all'altezza dell'oggetto e la scala
 della scena si adegua. Con la *Misura di riferimento*, nel rettangolo noto e
 nell'orizzonte la scala è già nota e il cubo è solo un controllo visivo (si può
 nascondere in *Opacity*).
+
+### Render sopra la foto
+
+**Prepare Render** (dialogo: *Sopra la foto* / *Trasparente*, *Usa Cycles*):
+
+- **Color management**: display *sRGB*, view transform **Standard**, look *None*,
+  esposizione 0, gamma 1, niente curve né bilanciamento del bianco. La foto è
+  sRGB: solo con Standard esce identica (misurato: scarto < 1/255). AgX, Filmic,
+  ACES e Khronos PBR Neutral la ritoccano come fossero luce della scena (scarto
+  medio ~9 livelli su 255, fino a ~130 sulle tinte sature). La luminosità della
+  CG si regola con le luci, non con l'esposizione.
+- **Film trasparente**: il mondo illumina ma non si vede; la risoluzione torna
+  quella della foto (la percentuale resta).
+- **Compositor** (Blender 5: gruppo nodi `FTC Compositing` assegnato alla scena):
+  `Image` (la foto) › `Scale` (*Render Size*, *Fit*, estensione *Extend*) ›
+  `Mix` *Multiply* con il pass **Shadow Catcher** › `Alpha Over` (sfondo) con
+  l'immagine del render (primo piano) › `Group Output` + `Viewer`. Con il pass
+  attivo le ombre e la luce che la CG rimbalza sugli shadow catcher passano dal
+  pass (anche colorate) invece che dall'alpha. Un compositor fatto a mano viene
+  conservato nel file (fake user) e sostituito; quello di FTC viene rigenerato.
+- **Trasparente**: niente compositor, pass Shadow Catcher spento (le ombre restano
+  nell'alpha), formato PNG RGBA se quello impostato non ha l'alpha: per comporre
+  in un altro programma.
+- **Cycles** consigliato: EEVEE non ha shadow catcher (gli holdout funzionano).
+
+**Ruoli** (*Object Roles*, proprietà native dell'oggetto):
+
+| Ruolo | Cosa fa | Uso |
+| --- | --- | --- |
+| Oggetto CG | renderizzato normalmente | gli oggetti aggiunti alla foto |
+| Shadow Catcher | mostra la foto, riceve ombre e luce della CG, nasconde ciò che sta dietro (solo Cycles) | pavimento, tavolo, muri reali |
+| Holdout | mostra la foto e nasconde la CG dietro, senza ombre | oggetti reali davanti alla CG |
+| Nascosto | non renderizzato | geometria di riferimento |
+
+Il **piano shadow catcher** ha lato 10 × la distanza camera-origine, giace sul
+piano di riferimento (anche allineato alla scena) ed è a fil di ferro nel viewport
+per non coprire la foto; ripremendo il pulsante viene riportato sul piano attuale.
 
 ### Consigli (verificati su foto reali, vedi `tests/data`)
 
@@ -98,6 +140,7 @@ fit_the_camera/          # l'estensione (questa cartella diventa lo zip)
   ops_modal.py           # operatore modale, undo interno, Applica/Reset
   ops_align.py           # allineamento alla scena
   ops_move_view.py       # Move Along View
+  ops_render.py          # Prepara render, ruoli oggetti, piano shadow catcher
   draw.py                # overlay gpu (guide, maniglie, griglia, orizzonte, cubo)
   ui.py                  # pannello
   translations.py        # traduzione italiana
@@ -108,7 +151,7 @@ scripts/                 # build, Blender locale, runner dei test
 scripts/probes/          # sonde diagnostiche: bash scripts/probe.sh <nome>
 samples/                 # foto di prova (ignorata da git: contengono GPS)
 docs/CHANGELOG.md
-docs/TEST_GUI.md         # checklist del test a mano in Blender (da fare: 0.6.1)
+docs/TEST_GUI.md         # checklist del test a mano in Blender (da fare: 1.0.0)
 ```
 
 ## Convenzioni
