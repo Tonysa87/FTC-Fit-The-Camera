@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.6.0 – 2026-10-10
+- **Cubo di scala** al posto di *Distanza camera*: cubo wireframe di lato noto
+  (10 cm … 10 m o personalizzato) sul piano di riferimento; maniglia alla base sul
+  piano, maniglia in cima lungo lo spigolo verticale per fissare la scala. Nelle
+  altre modalità è un controllo visivo.
+- **Focale *Nota + guide*** (default): la focale di Camera Data viene raffinata
+  dalle guide ai minimi quadrati, con un vincolo robusto (±5%) che cede quando le
+  guide la contraddicono nettamente (foto zoomate). Anche per il rettangolo noto.
+  Opzioni *Solo guide* e *Solo nota*; avviso e riga *Rispetto alla nota*.
+- Guide e rettangolo di default coerenti con la focale nota della foto.
+- Pulsante di inversione accanto a ogni asse; asse 3 mostrato con segno anche con
+  2 punti di fuga, freccia del terzo asse nel verso reale.
+- Frecce sulle guide più grandi del 50%.
+
 ## 0.5.2 – 2026-10-10
 - Raffinamento ai minimi quadrati con passi limitati: niente più `OverflowError`
   trascinando le guide; gli errori numerici diventano messaggi nel pannello.

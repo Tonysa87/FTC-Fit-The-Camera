@@ -43,6 +43,8 @@ def test_vanishing_points_never_crash(count, degenerate):
         kwargs = {}
         if count == 1 or rng.random() < 0.3:
             kwargs["focal_px"] = float(rng.choice([1.0, 500.0, 2000.0, 1e6]))
+        elif rng.random() < 0.5:
+            kwargs["known_focal_px"] = float(rng.choice([1.0, 500.0, 2000.0, 1e6]))
         if count == 1:
             kwargs["axis2_line"] = random_lines(rng, 1, degenerate)[0][0]
         if count == 2 and rng.random() < 0.3:
@@ -63,6 +65,8 @@ def test_rectangle_and_horizon_never_crash(degenerate):
             corners[1] = corners[0] + rng.normal(0, 1e-3, 2)
         with contextlib.suppress(SolverError):
             check(solve_rectangle(corners, 1.0, 2.0, SIZE, focal_px=float(rng.choice([0.0, 1500.0]))))
+        with contextlib.suppress(SolverError):
+            check(solve_rectangle(corners, 1.0, 2.0, SIZE, known_focal_px=float(rng.choice([1.0, 1500.0, 1e6]))))
         a = rng.uniform(-200, 2100, 2)
         b = a + (rng.normal(0, 1e-6, 2) if degenerate else rng.normal(0, 500, 2))
         with contextlib.suppress(SolverError):

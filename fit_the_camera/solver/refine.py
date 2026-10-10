@@ -27,9 +27,13 @@ MAX_LOG_FOCAL = 4.0
 MAX_LOG_FOCAL_STEP = 1.0
 MAX_ROTATION_STEP = 0.5
 _STEP = 1e-6
+# A known focal length refined by the guides: assumed placement error of a guide
+# end point (fraction of the long image side) and spread of the known focal length.
+GUIDE_NOISE = 1e-3
+FOCAL_PRIOR_SPREAD = 0.05
 
 
-def _small_rotation(w) -> np.ndarray:
+def small_rotation(w) -> np.ndarray:
     angle = float(np.linalg.norm(w))
     return np.eye(3) if angle < 1e-15 else rotation_about(w / angle, angle)
 
@@ -63,40 +67,24 @@ def residuals(groups, p, f, rotation) -> np.ndarray:
     return np.column_stack([ra, rb]).ravel()
 
 
-def refine(groups, p, f: float, rotation: np.ndarray, *, fix_focal: bool) -> tuple[float, np.ndarray, float]:
-    """Levenberg-Marquardt on (log focal, small rotation in camera space).
+def least_squares(fun, n_params: int, bounded) -> tuple[np.ndarray, float]:
+    """Bounded Levenberg-Marquardt from ``x = 0``: minimises ``|fun(x)|^2``.
 
-    Returns the refined focal length, camera -> world rotation and the RMS
-    residual in pixels. Steps are bounded so that nearly degenerate guides (common
-    while a handle is being dragged) cannot throw the solution to infinity.
+    ``bounded`` shortens a step. Returns the parameters and the final cost; an
+    infinite cost if ``fun(0)`` is not finite.
     """
-    n_params = 3 if fix_focal else 4
-    groups = _prepare(groups)
-
-    def unpack(x):
-        focal = f if fix_focal else f * math.exp(min(max(x[3], -MAX_LOG_FOCAL), MAX_LOG_FOCAL))
-        return focal, rotation @ _small_rotation(x[:3])
-
-    def bounded(step):
-        rot = float(np.linalg.norm(step[:3]))
-        if rot > MAX_ROTATION_STEP:
-            step = step * (MAX_ROTATION_STEP / rot)
-        if not fix_focal and abs(step[3]) > MAX_LOG_FOCAL_STEP:
-            step = step * (MAX_LOG_FOCAL_STEP / abs(step[3]))
-        return step
-
     x = np.zeros(n_params)
-    r = residuals(groups, p, *unpack(x))
+    r = fun(x)
     cost = float(r @ r)
     if not math.isfinite(cost):
-        return f, rotation, math.inf
+        return x, math.inf
     damping = 1e-3
     for _ in range(MAX_ITERATIONS):
         jac = np.empty((len(r), n_params))
         for i in range(n_params):
             dx = np.zeros(n_params)
             dx[i] = _STEP
-            jac[:, i] = (residuals(groups, p, *unpack(x + dx)) - r) / _STEP
+            jac[:, i] = (fun(x + dx) - r) / _STEP
         if not np.all(np.isfinite(jac)):
             break
         a = jac.T @ jac
@@ -108,7 +96,7 @@ def refine(groups, p, f: float, rotation: np.ndarray, *, fix_focal: bool) -> tup
             except np.linalg.LinAlgError:
                 damping *= 10.0
                 continue
-            r_new = residuals(groups, p, *unpack(x + step))
+            r_new = fun(x + step)
             cost_new = float(r_new @ r_new)
             if math.isfinite(cost_new) and cost_new < cost:
                 x, r, improved = x + step, r_new, True
@@ -119,7 +107,67 @@ def refine(groups, p, f: float, rotation: np.ndarray, *, fix_focal: bool) -> tup
             damping *= 10.0
         if not improved or done or np.linalg.norm(step) < 1e-12:
             break
+    return x, cost
+
+
+def focal_prior_residual(focal: float, known: float, weight: float) -> float:
+    """Robust (Cauchy) residual of a focal length against a known one: like
+    ``weight * log(focal / known)`` within ``FOCAL_PRIOR_SPREAD``, growing only
+    logarithmically beyond, so that guides clearly contradicting the known value
+    (a cropped or zoomed photo) win over it."""
+    u = math.log(focal / known) / FOCAL_PRIOR_SPREAD
+    return math.copysign(weight * FOCAL_PRIOR_SPREAD * math.sqrt(math.log1p(u * u)), u)
+
+
+def focal_prior_weight(image_size) -> float:
+    """Weight of ``log(f / f_known)`` against pixel residuals: a guide end point
+    off by ``GUIDE_NOISE`` of the long side costs as much as the focal length off
+    by ``FOCAL_PRIOR_SPREAD``."""
+    return GUIDE_NOISE * float(max(image_size)) / FOCAL_PRIOR_SPREAD
+
+
+def refine(
+    groups,
+    p,
+    f: float,
+    rotation: np.ndarray,
+    *,
+    fix_focal: bool,
+    focal_prior: tuple[float, float] | None = None,
+) -> tuple[float, np.ndarray, float]:
+    """Levenberg-Marquardt on (log focal, small rotation in camera space).
+
+    ``focal_prior`` = (known focal, weight) adds ``focal_prior_residual``: the
+    guides refine the known focal length as far as they actually measure it.
+    Returns the refined focal length, camera -> world rotation and the final
+    cost (squared pixels, prior included). Steps are bounded so that
+    nearly degenerate guides (common while a handle is being dragged) cannot throw
+    the solution to infinity.
+    """
+    n_params = 3 if fix_focal else 4
+    groups = _prepare(groups)
+
+    def unpack(x):
+        focal = f if fix_focal else f * math.exp(min(max(x[3], -MAX_LOG_FOCAL), MAX_LOG_FOCAL))
+        return focal, rotation @ small_rotation(x[:3])
+
+    def fun(x):
+        focal, rot = unpack(x)
+        r = residuals(groups, p, focal, rot)
+        if focal_prior is None or fix_focal:
+            return r
+        return np.append(r, focal_prior_residual(focal, *focal_prior))
+
+    def bounded(step):
+        rot = float(np.linalg.norm(step[:3]))
+        if rot > MAX_ROTATION_STEP:
+            step = step * (MAX_ROTATION_STEP / rot)
+        if not fix_focal and abs(step[3]) > MAX_LOG_FOCAL_STEP:
+            step = step * (MAX_LOG_FOCAL_STEP / abs(step[3]))
+        return step
+
+    x, cost = least_squares(fun, n_params, bounded)
     focal, rot = unpack(x)
     # Re-orthonormalise against drift.
     u, _, vt = np.linalg.svd(rot)
-    return focal, u @ vt, math.sqrt(cost / max(len(r), 1))
+    return focal, u @ vt, cost

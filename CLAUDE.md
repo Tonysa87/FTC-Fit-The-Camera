@@ -54,13 +54,18 @@ Single-image camera calibration add-on. User docs: `README.md` (Italian). Histor
 - EXIF focal can be wrong (zoomed/cropped deck photo: guides say ~8800 px, EXIF main
   camera ~2966 px) -> guide-misfit warning.
 - Straighten horizon on a rolled photo breaks the fit (warned with removed roll).
+- Known focal as a robust (Cauchy, ±5%) prior in the LM (`solver/refine.py`), two
+  starts (guides' own focal and the known one): 2 VPs measure f to ~2% with 2 px
+  noise, a rectangle only to ~11% (so EXIF dominates there). The deck photo's 3×
+  wrong EXIF is overruled by 3 VPs but not by 2 (one VP far away).
+- Default guides/rectangle are generated for the known focal (`default_handles`),
+  otherwise "guides overrule the known focal" fires on untouched guides.
+
+## Scale cube
+`solver/scale.py`: base corner = base ray ∩ reference plane through the origin,
+vertical edge along the plane normal on the camera's side, top handle -> closest
+point on that edge (`closest_param_on_line`). Shown top handle = projected top
+corner (`draw.handle_co`), used for pick and drag too.
 
 ## Open work
-- **Scale cube** (agreed with the user, not started): replace the "Camera Distance"
-  scale with a wireframe reference cube of preset size (10 cm, 20 cm, 50 cm, 1 m, 2 m,
-  5 m, 10 m, custom) lying on the reference plane. Two handles: base corner (slides
-  on the plane) and top of the vertical edge (drag to grow/shrink the cube in the
-  image -> sets the scale; same maths as the reference distance, base anywhere on
-  the plane). Scale options become Cube (default) / Reference distance. In RECT and
-  HORIZON modes the cube is a non-scaling visual check. "Camera Distance" goes away.
 - Possible: magnifier near the cursor while dragging; more than two lines per VP.

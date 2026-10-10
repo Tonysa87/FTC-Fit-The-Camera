@@ -14,6 +14,7 @@ _IT = {
     "Calibrate": "Calibra",
     "Stop Calibrating": "Termina calibrazione",
     "Reset Guides": "Reset guide",
+    "Flip Axis": "Inverti asse",
     # Camera data
     "35 mm Equivalent": "Equivalente 35 mm",
     "Sensor Width": "Larghezza sensore",
@@ -38,11 +39,17 @@ _IT = {
     "Cropped image: 35 mm equivalent taken on the uncropped 4:3 sensor": (
         "Immagine ritagliata: equivalente 35 mm riferito al sensore 4:3 intero"
     ),
-    "Camera Distance": "Distanza camera",
+    "Scale Cube": "Cubo di scala",
+    "Cube Size": "Lato del cubo",
+    "Custom Size": "Misura personalizzata",
     "Reference Distance": "Misura di riferimento",
     "Reference Axis": "Asse di riferimento",
     "Reference Length": "Lunghezza di riferimento",
-    "Use Known Focal Length": "Usa focale nota",
+    "Known + Guides": "Nota + guide",
+    "Guides Only": "Solo guide",
+    "Known Only": "Solo nota",
+    "vs Known": "Rispetto alla nota",
+    "Focal length unknown: solved from the guides": "Focale sconosciuta: risolta dalle guide",
     "Camera Height": "Altezza camera",
     "Principal Point": "Punto principale",
     "Live Update": "Aggiornamento live",

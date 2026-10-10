@@ -19,6 +19,7 @@ from gpu_extras.batch import batch_for_shader
 
 from . import calibrate
 from .solver.common import plane_frame, vanishing_point
+from .solver.scale import CUBE_EDGES, cube_corners
 
 HANDLE_RADIUS = 8.0
 HANDLE_TICK = 3.5
@@ -188,6 +189,34 @@ def vanishing_point_px(settings, index):
     return float(v[0]), float(v[1])
 
 
+def scale_cube(settings, solution):
+    """World corners of the scale cube (see ``solver.scale.cube_corners``), or ``None``."""
+    if solution is None or not calibrate.cube_visible(settings):
+        return None
+    base = calibrate.to_pixels(settings, calibrate.handle(settings, "cube_base"))
+    return cube_corners(solution, base, calibrate.cube_size(settings), calibrate.reference_plane(settings))
+
+
+def handle_co(settings, solution, key):
+    """Normalised position where handle ``key`` is shown and picked. The cube's top
+    handle sits on the top of the cube's vertical edge: the solver only uses the
+    height along that edge."""
+    if key == "cube_top" and solution is not None:
+        corners = scale_cube(settings, solution)
+        if corners is not None:
+            top = project(solution, corners[4])[0]
+            if not np.isnan(top).any():
+                w, h = solution.image_size
+                return (float(top[0] / w), float(top[1] / h))
+    return calibrate.handle(settings, key)
+
+
+def plane_axes(plane):
+    """World axis letters of a reference plane's x, y and normal."""
+    frame = plane_frame(plane)
+    return tuple("XYZ"[int(np.argmax(np.abs(frame[:, i])))] for i in range(3))
+
+
 # ----------------------------------------------------------------------------
 # Primitives
 
@@ -283,9 +312,15 @@ def handle_marker(pos, color, *, hovered=False, active=False, frozen=False, firs
         circle(pos, r + 2.0 * HANDLE_TICK * s, color, 1.0, segments=32)
 
 
-def segment(a, b, color, width=1.0, trim_a=True, trim_b=True, arrow=False):
+ARROW_SIZE = 10.5
+
+
+def segment(a, b, color, width=1.0, trim_a=True, trim_b=True, arrow=False, arrow_back=False):
     """Guide line between two handles, stopped at the handle rings. ``arrow``
-    adds a chevron before the second handle: the positive axis direction."""
+    adds a chevron before the second handle (before the first with
+    ``arrow_back``): the positive axis direction."""
+    if arrow and arrow_back:
+        a, b, trim_a, trim_b = b, a, trim_b, trim_a
     length = math.dist(a, b)
     r = handle_radius()
     cut = r * (trim_a + trim_b)
@@ -296,7 +331,7 @@ def segment(a, b, color, width=1.0, trim_a=True, trim_b=True, arrow=False):
     tb = r if trim_b else 0.0
     end = (b[0] - ux * tb, b[1] - uy * tb)
     coords = [(a[0] + ux * ta, a[1] + uy * ta), end]
-    size = 7.0 * ui_scale()
+    size = ARROW_SIZE * ui_scale()
     if arrow and length > cut + 2.0 * size:
         for side in (1.0, -1.0):
             coords += [end, (end[0] - size * (ux - 0.5 * side * uy), end[1] - size * (uy + 0.5 * side * ux))]
@@ -368,6 +403,28 @@ def _horizon(view, solution):
         lines([view.px_to_region(seg[0]), view.px_to_region(seg[1])], HORIZON_COLOR, 1.0)
 
 
+def _cube(view, solution, settings, unit_system):
+    """Wireframe scale cube, each edge in the colour of the world axis it runs along."""
+    corners = scale_cube(settings, solution)
+    if corners is None:
+        return
+    colors = axis_colors()
+    near = 1e-3 * float(np.linalg.norm(solution.position))
+    for axis, edges in zip(plane_axes(calibrate.reference_plane(settings)), CUBE_EDGES):
+        coords = []
+        for i, j in edges:
+            seg = project_segment(solution, corners[i], corners[j], near)
+            if seg is not None:
+                coords += [view.px_to_region(seg[0]), view.px_to_region(seg[1])]
+        lines(coords, with_alpha(colors[axis], 0.9), 1.0)
+    top = project(solution, corners[4])[0]
+    if not np.isnan(top).any():
+        s = ui_scale()
+        pos = view.px_to_region(top)
+        size = bpy.utils.units.to_string(unit_system, "LENGTH", calibrate.cube_size(settings), precision=3)
+        text((pos[0] + 12 * s, pos[1] + 4 * s), size, NEUTRAL)
+
+
 def _origin_gizmo(view, solution, settings):
     colors = axis_colors()
     dist = float(np.linalg.norm(solution.position))
@@ -416,26 +473,30 @@ def draw_guides(view, settings, solution, session, unit_system):
                 with clipped_to(view):
                     _grid(view, solution, settings.grid_opacity, calibrate.reference_plane(settings))
             _horizon(view, solution)
+            with clipped_to(view):
+                _cube(view, solution, settings, unit_system)
 
         frozen = settings.freeze
         keys = calibrate.active_handle_keys(settings)
         labels = [settings.vp1_axis, settings.vp2_axis, settings.vp3_axis]
 
         def hpos(key):
-            return view.to_region(calibrate.handle(settings, key))
+            return view.to_region(handle_co(settings, solution, key))
 
         if settings.mode == "VP":
             count = int(settings.vp_count)
             third_line = count == 2 and settings.use_third_line
             if count == 3 or third_line:
-                labels[2] = remaining_axis(labels[0], labels[1])
+                labels[2] = third_axis(labels[0], labels[1])
             for i in range(1, count + 1):
                 color = colors[axis_letter(labels[i - 1])]
                 k = calibrate.vp_keys(i)
                 width = GUIDE_WIDTH * (1.6 if session.active_vp == i - 1 else 1.0)
                 segs = [hpos(k[0]), hpos(k[1]), hpos(k[2]), hpos(k[3])]
-                # The first guide carries the axis sign: it gets the arrow.
-                segment(segs[0], segs[1], color, width, arrow=True)
+                # The first guide carries the axis sign: it gets the arrow. The
+                # third axis follows from the first two: show where it really runs.
+                back = i == 3 and runs_backwards(settings, solution, labels[2], k[0], k[1])
+                segment(segs[0], segs[1], color, width, arrow=i < 3 or solution is not None, arrow_back=back)
                 segment(segs[2], segs[3], color, width)
                 vp = vanishing_point_px(settings, i)
                 if vp is not None:
@@ -454,9 +515,10 @@ def draw_guides(view, settings, solution, session, unit_system):
                 segment(hpos("hz_a"), hpos("hz_b"), color, GUIDE_WIDTH, arrow=True)
                 text((hpos("hz_b")[0] + 8 * s, hpos("hz_b")[1] + 8 * s), settings.vp2_axis, color)
             if third_line:
-                color = colors[labels[2]]
+                color = colors[axis_letter(labels[2])]
                 a, b = hpos("vp3_1a"), hpos("vp3_1b")
-                segment(a, b, color, GUIDE_WIDTH)
+                back = runs_backwards(settings, solution, labels[2], "vp3_1a", "vp3_1b")
+                segment(a, b, color, GUIDE_WIDTH, arrow=solution is not None, arrow_back=back)
                 text(((a[0] + b[0]) / 2 + 8 * s, (a[1] + b[1]) / 2 + 8 * s), labels[2], color)
             if settings.scale_mode == "REFERENCE":
                 color = colors[settings.ref_axis]
@@ -492,6 +554,8 @@ def draw_guides(view, settings, solution, session, unit_system):
                 color = colors[axis_letter(labels[int(key[2]) - 1])]
             elif key.startswith("ref"):
                 color = colors[settings.ref_axis]
+            elif key.startswith("cube"):
+                color = colors[plane_axes(calibrate.reference_plane(settings))[2]]
             elif key.startswith("hz"):
                 color = colors[axis_letter(settings.vp2_axis)] if settings.mode == "VP" else HORIZON_COLOR
             else:
@@ -522,6 +586,25 @@ def draw_guides(view, settings, solution, session, unit_system):
                 text((view.x0 + 10 * s, view.y1 - (22 + 16 * i) * s), line, HORIZON_COLOR, 12.0)
     finally:
         gpu.state.blend_set("NONE")
+
+
+def third_axis(a: str, b: str) -> str:
+    """Signed third axis of the right-handed frame whose first two axes are ``a``
+    and ``b`` (e.g. "+X", "+Y" -> "+Z")."""
+    i, j = "XYZ".index(axis_letter(a)), "XYZ".index(axis_letter(b))
+    sign = (-1 if a.startswith("-") else 1) * (-1 if b.startswith("-") else 1) * (1 if (j - i) % 3 == 1 else -1)
+    return ("+" if sign > 0 else "-") + remaining_axis(a, b)
+
+
+def runs_backwards(settings, solution, label, key_a, key_b) -> bool:
+    """True when the world axis ``label`` runs from handle ``key_b`` towards
+    ``key_a`` in the image (see ``solver.vp.orient_along``)."""
+    if solution is None:
+        return False
+    a, b = (np.asarray(calibrate.to_pixels(settings, calibrate.handle(settings, k))) for k in (key_a, key_b))
+    d = solution.rotation["XYZ".index(axis_letter(label)), :] * (-1.0 if label.startswith("-") else 1.0)
+    velocity = solution.focal_px * d[:2] + d[2] * ((a + b) / 2.0 - solution.principal_point)
+    return bool(velocity @ (b - a) < 0.0)
 
 
 def remaining_axis(a: str, b: str) -> str:

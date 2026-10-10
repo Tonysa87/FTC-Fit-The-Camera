@@ -30,7 +30,8 @@ from .common import (
     ray,
     vanishing_point,
 )
-from .refine import refine
+from .refine import focal_prior_weight, refine
+from .scale import ScaleCube, cube_distance
 
 
 @dataclass
@@ -163,10 +164,12 @@ def solve_vanishing_points(
     principal_point=None,
     solve_principal_point: bool = False,
     focal_px: float | None = None,
+    known_focal_px: float | None = None,
     axis2_line=None,
     origin=None,
     camera_distance: float = 10.0,
     reference: ReferenceDistance | None = None,
+    cube: ScaleCube | None = None,
     third_axis_line=None,
     straighten_horizon: bool = False,
     pitch_offset: float = 0.0,
@@ -182,12 +185,16 @@ def solve_vanishing_points(
       principal point is ``principal_point`` (image centre by default). When there
       is more data than the two-point formula uses (a third vanishing point, or a
       known focal length) the camera is refined by least squares on all guides.
+    * ``known_focal_px``: with 2 or 3 points and no ``focal_px``, a focal length
+      known from the camera (EXIF): the guides refine it by least squares, as far
+      as they measure it; a weak or inconsistent configuration stays close to it.
     * 3 points with ``solve_principal_point``: the principal point is the
       orthocentre of the vanishing points (closed form, no refinement).
     * ``third_axis_line``: with two vanishing points, an optional segment along the
       third axis (e.g. one vertical edge) that joins the least squares.
     * ``origin``: image point of the world origin (image centre by default).
-    * Scale: ``reference`` if given, otherwise ``camera_distance`` from the origin.
+    * Scale: ``reference`` or ``cube`` if given, otherwise ``camera_distance``
+      from the origin.
     """
     count = len(vp_lines)
     if count not in (1, 2, 3):
@@ -225,26 +232,51 @@ def solve_vanishing_points(
             f = focal_from_two_vps(vps[0][:2], vps[1][:2], p)
         else:
             p = image_center(image_size) if principal_point is None else np.asarray(principal_point, float)
-            f = float(focal_px) if focal_px else best_pair_focal(vps, p, image_size)
-        dirs = [axis_direction(v, lines, p, f) for v, lines in zip(vps, vp_lines)]
-        if count == 2:
-            rotation = complete_frame({i: si * dirs[0], j: sj * dirs[1]}).T
-        else:
+            if focal_px:
+                f = float(focal_px)
+            else:
+                try:
+                    f = best_pair_focal(vps, p, image_size)
+                except SolverError:
+                    # The guides alone fit no camera: the known focal length can.
+                    if not known_focal_px:
+                        raise
+                    f = float(known_focal_px)
+
+        def initial_rotation(f):
+            dirs = [axis_direction(v, lines, p, f) for v, lines in zip(vps, vp_lines)]
+            if count == 2:
+                return complete_frame({i: si * dirs[0], j: sj * dirs[1]}).T
             # The third axis follows the first two: orient its direction to match.
             third = np.cross(si * dirs[0], sj * dirs[1]) * (1.0 if (j - i) % 3 == 1 else -1.0)
             cols = np.zeros((3, 3))
             cols[:, i], cols[:, j] = si * dirs[0], sj * dirs[1]
             cols[:, k] = dirs[2] if dirs[2] @ third >= 0.0 else -dirs[2]
-            rotation = orthonormalize(cols).T
+            return orthonormalize(cols).T
+
+        rotation = initial_rotation(f)
 
         # More data than the closed form uses: least squares on every guide.
         groups = [(axis, lines) for axis, lines in zip((i, j, k), vp_lines)]
         if count == 2 and third_axis_line is not None:
             groups.append((k, [third_axis_line]))
         groups = [(axis, [tuple(map(tuple, seg)) for seg in lines]) for axis, lines in groups]
-        overdetermined = count == 3 or focal_px or third_axis_line is not None
+        prior = None
+        if known_focal_px and not focal_px and not (count == 3 and solve_principal_point):
+            prior = (float(known_focal_px), focal_prior_weight(image_size))
+        overdetermined = count == 3 or focal_px or prior or third_axis_line is not None
         if overdetermined and not (count == 3 and solve_principal_point):
-            f, rotation, _ = refine(groups, p, f, rotation, fix_focal=bool(focal_px))
+            # With a known focal length the cost may have two minima, one near
+            # the guides' own focal length and one near the known one.
+            starts = [f]
+            if prior and abs(math.log(f / prior[0])) > 0.02:
+                starts.append(prior[0])
+            best = None
+            for start in starts:
+                fit = refine(groups, p, start, initial_rotation(start), fix_focal=bool(focal_px), focal_prior=prior)
+                if best is None or fit[2] < best[2]:
+                    best = fit
+            f, rotation, _ = best
 
     misfit = max_misfit(groups, p, f, rotation)
     rotation, removed_roll = finish_rotation(rotation, straighten_horizon, pitch_offset, warnings)
@@ -261,6 +293,8 @@ def solve_vanishing_points(
         if unit_length < 1e-9 or reference.length <= 0.0:
             raise SolverError("the reference distance is zero")
         distance = reference.length / unit_length
+    elif cube is not None:
+        distance = cube_distance(cube, r_o, world_to_cam, p, f)
     else:
         if camera_distance <= 0.0:
             raise SolverError("the camera distance must be positive")
