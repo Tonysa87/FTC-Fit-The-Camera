@@ -49,6 +49,11 @@ _IT = {
     "Pitch Correction": "Correzione beccheggio",
     "Grid Opacity": "Opacità griglia",
     "Needs the focal length (Camera Data)": "Serve la focale (Dati camera)",
+    "LMB drag: move  Shift: fine  Ctrl: snap  1/2/3: axis  F: flip  H: straighten  "
+    "Ctrl+Z / Ctrl+Shift+Z: undo/redo  Enter: apply  Esc/RMB: exit": (
+        "LMB trascina: sposta  Shift: fine  Ctrl: snap  1/2/3: asse  F: inverti  H: raddrizza  "
+        "Ctrl+Z / Ctrl+Shift+Z: annulla/ripeti  Invio: applica  Esc/RMB: esci"
+    ),
     # Results
     "Not solved": "Non risolto",
     "Field of View": "Campo visivo",

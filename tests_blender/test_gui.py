@@ -146,6 +146,45 @@ def steps():
     yield 0.3
     check(settings.results.pitch < pitch_before - 1e-4, "dragging the horizon up tilts the camera down")
 
+    # Ctrl snaps a handle onto another one (here the origin).
+    x, y = to_window("vp1_1a")
+    ox, oy = to_window("origin")
+    win.event_simulate(type="MOUSEMOVE", value="NOTHING", x=x, y=y)
+    win.event_simulate(type="LEFTMOUSE", value="PRESS", x=x, y=y)
+    win.event_simulate(type="MOUSEMOVE", value="NOTHING", x=ox + 5, y=oy + 4, ctrl=True)
+    yield 0.1
+    win.event_simulate(type="LEFTMOUSE", value="RELEASE", x=ox + 5, y=oy + 4, ctrl=True)
+    yield 0.2
+    snapped = np.subtract(calibrate.handle(settings, "vp1_1a"), calibrate.handle(settings, "origin"))
+    check(np.abs(snapped).max() < 1e-6, "Ctrl snaps onto the origin")
+    win.event_simulate(type="Z", value="PRESS", ctrl=True, x=kx, y=ky)
+    yield 0.2
+
+    # Frozen guides do not move.
+    settings.freeze = True
+    frozen_at = calibrate.handle(settings, "vp2_2a")
+    x, y = to_window("vp2_2a")
+    win.event_simulate(type="MOUSEMOVE", value="NOTHING", x=x, y=y)
+    win.event_simulate(type="LEFTMOUSE", value="PRESS", x=x, y=y)
+    win.event_simulate(type="MOUSEMOVE", value="NOTHING", x=x + 30, y=y + 30)
+    yield 0.1
+    win.event_simulate(type="LEFTMOUSE", value="RELEASE", x=x + 30, y=y + 30)
+    yield 0.2
+    check(calibrate.handle(settings, "vp2_2a") == frozen_at, "frozen guides stay put")
+    settings.freeze = False
+
+    # Three vanishing points: axis keys on the third group permute the first two.
+    settings.vp_count = "3"
+    session.active_vp = 2
+    win.event_simulate(type="ONE", value="PRESS", x=kx, y=ky)
+    yield 0.2
+    check(
+        "X" not in (settings.vp1_axis[1], settings.vp2_axis[1]),
+        f"third axis set to X ({settings.vp1_axis}, {settings.vp2_axis})",
+    )
+    settings.vp_count = "2"
+    yield 0.2
+
     # Screenshot for visual inspection.
     win.event_simulate(type="MOUSEMOVE", value="NOTHING", x=to_window("origin")[0], y=to_window("origin")[1])
     yield 0.5
@@ -155,6 +194,15 @@ def steps():
     win.event_simulate(type="RET", value="PRESS", x=kx, y=ky)
     yield 0.3
     check(ops_modal.FTC_OT_calibrate._session is None, "Enter ends the session")
+
+    # Loading another file ends a running session cleanly.
+    with bpy.context.temp_override(window=win, area=area, region=region):
+        bpy.ops.ftc.calibrate("INVOKE_DEFAULT")
+    yield 0.3
+    check(ops_modal.FTC_OT_calibrate._session is not None, "session restarted")
+    bpy.ops.wm.read_homefile()
+    yield 0.5
+    check(ops_modal.FTC_OT_calibrate._session is None, "loading a file ends the session")
 
 
 def run():

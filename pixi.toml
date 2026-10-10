@@ -19,6 +19,8 @@ lint = "ruff check ."
 format = "ruff format ."
 # Headless Blender (downloaded into .tools/ by scripts/get_blender.sh).
 blender-tests = "bash scripts/blender_tests.sh"
+# Optional, needs a display (WSLg): drives the modal operator with simulated input.
+gui-tests = "bash scripts/blender_gui_tests.sh"
 validate = "bash scripts/blender.sh --command extension validate fit_the_camera"
 build = "bash scripts/build.sh"
 check = { depends-on = ["lint", "test", "validate", "blender-tests"] }
