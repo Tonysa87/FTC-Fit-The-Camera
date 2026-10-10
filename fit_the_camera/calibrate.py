@@ -200,7 +200,16 @@ def cube_scales(settings) -> bool:
     return settings.mode == "VP" and settings.scale_mode == "CUBE"
 
 
+def reference_scales(settings) -> bool:
+    """The reference distance sets the scene scale."""
+    return settings.mode == "VP" and settings.scale_mode == "REFERENCE"
+
+
 def cube_visible(settings) -> bool:
+    """Shown when it sets the scale, or as a visual check where no scale option is
+    offered: the reference distance and the cube exclude each other."""
+    if reference_scales(settings):
+        return False
     return settings.show_cube or cube_scales(settings)
 
 

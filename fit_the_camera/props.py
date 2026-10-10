@@ -244,7 +244,10 @@ class FTC_Settings(PropertyGroup):
     )
     show_cube: BoolProperty(
         name="Scale Cube",
-        description="Show the cube of known size on the reference plane, to check the scale by eye",
+        description=(
+            "Show the cube of known size on the reference plane, to check the scale by eye "
+            "(known rectangle and horizon)"
+        ),
         default=True,
         update=_changed,
     )

@@ -1,198 +1,140 @@
 # FTC – Fit The Camera
 
-Estensione per Blender 5.2+ che calibra una camera su una singola immagine
-(foto, render, disegno): focale, sensore, posizione e rotazione, con scala reale.
-Specifica originale: `FTC – Specifica addon Blender 5.2+.md` (il nome definitivo è
-FTC; la specifica parla ancora di "Camera Match"). Storia delle versioni:
-[`docs/CHANGELOG.md`](docs/CHANGELOG.md).
+**English** · [Italiano](README.it.md)
 
-## Uso
+A Blender 5.2+ extension that matches a camera to a single image (a photo, a
+render, a drawing). From a few lines drawn over the image it finds the focal
+length, the position and the rotation of the camera, at real-world scale. It can
+then set up the scene to render 3D objects over the photo, with their shadows on
+the real ground.
 
-Sidebar del viewport (N) › tab **FTC**.
+- **Vanishing points**: 1, 2 or 3, two guide lines per axis, with the axis and
+  direction of each group (X, Y, Z, ±).
+- **Known rectangle**: the four corners of a rectangle of known width and height.
+- **Horizon**: the horizon line, the camera height and the heading.
+- **EXIF**: camera, lens, focal length, 35 mm equivalent, sensor size, GPS and
+  compass direction are read from the image. The known focal length can be refined
+  by the guides, or the guides can solve it on their own.
+- **Real scale** from a *scale cube* of known size placed in the image (or a
+  reference distance).
+- **Uncertainty and guide fit**: how far the result can be trusted, with warnings
+  for lines that are not really parallel, a wrong EXIF focal length, a vanishing
+  point too far away.
+- **Align to the scene**: put the calibrated floor or wall on the 3D cursor, a
+  face or an object.
+- **Render over the photo**: one button sets colour management, transparent film
+  and the compositor; object roles (CG object, shadow catcher, holdout, hidden);
+  a shadow catcher plane on the calibrated ground.
+- Interface in English and Italian.
 
-1. **Load Image** – usa la camera attiva (o la crea), imposta lo sfondo, adatta la
-   risoluzione, legge l'EXIF e inquadra la camera. Foto salvate ruotate
-   (orientamento EXIF): **Make Upright Copy**.
-2. **Camera Data** – marca, modello, focale reale, equivalente 35 mm, sensore,
-   GPS, direzione; ogni campo è *da EXIF*, *mancante* (rosso) o *manuale*.
-   Il sensore va inserito come nelle schede tecniche (lato lungo del sensore
-   intero), anche per foto ritagliate. Immagini non 4:3 / 3:2 sono trattate come
-   ritaglio centrato di un sensore 4:3 (come fanno i telefoni).
-3. **Calibration** – modalità e parametri, poi **Calibrate** (operatore modale nel
-   viewport camera). Scorciatoie nell'header: trascina = sposta maniglia,
-   Shift = fine, Ctrl = snap, 1/2/3 = asse, F = inverti verso, H = raddrizza,
-   Ctrl+Z / Ctrl+Shift+Z = undo/redo interni, Invio = applica, Esc/RMB = esci.
-   Accanto a ogni asse un pulsante ne inverte il verso.
-   **Focale**: *Nota + guide* (default: parte dalla focale di Camera Data e le guide
-   la correggono per quanto la misurano; se è sconosciuta la risolvono), *Solo
-   guide*, *Solo nota*. **Scala**: *Cubo di scala* (default) o *Misura di
-   riferimento*.
-4. **Align to Scene** – porta il piano calibrato (XY, XZ, YZ) sul 3D cursor, sulla
-   faccia attiva (Edit Mode) o sull'oggetto attivo; Ruota 90° / Inverti.
-5. **Results** – focale, FOV, altezza, angoli, **incertezza** (focale ± %,
-   orientamento ± °) e **aderenza guide** (scarto massimo); avvisi in giallo/rosso.
-6. **Render** – **Prepare Render** prepara la scena per renderizzare la CG sopra la
-   foto (vedi sotto); **Object Roles** elenca gli oggetti della scena con il loro
-   ruolo (*Oggetto CG*, *Shadow Catcher*, *Holdout*, *Nascosto*), modificabile riga
-   per riga o per tutti i selezionati; **Shadow Catcher Plane** crea (o riporta) un
-   piano shadow catcher sul piano di riferimento calibrato.
-7. **Tools › Move Along View** – sposta oggetti/vertici lungo il raggio dalla camera
-   (anche da *Object/Mesh › Transform*).
+## Install
 
-### Modalità
+1. Download `fit_the_camera-<version>.zip` from the
+   [Releases](https://github.com/Tonysa87/FTC---Fit-The-Camera/releases).
+2. In Blender 5.2 or later: *Edit › Preferences › Get Extensions › ⌄ ›
+   Install from Disk…* and pick the zip.
 
-| Modalità | Input | Note |
+The extension only reads the image file you load (and its EXIF metadata). It
+does not use the network.
+
+## Quick start
+
+Open the sidebar of the 3D viewport (N) and the **FTC** tab.
+
+1. **Load Image** – uses the active camera (or creates one), sets the image as
+   its background, matches the render resolution, reads the EXIF data and looks
+   through the camera. Photos stored rotated (EXIF orientation) get an upright
+   copy with **Make Upright Copy**.
+2. **Camera Data** – check or enter the focal length and the sensor width (or the
+   35 mm equivalent). Every field shows whether it comes from EXIF, is missing
+   (red) or was typed in.
+3. **Calibration** – pick a mode and press **Calibrate**: drag the handles of the
+   guides onto edges of the image that are parallel in the real world.
+   Shift = fine, Ctrl = snap, 1/2/3 = axis, F = flip the direction, H =
+   straighten the horizon, Ctrl+Z / Ctrl+Shift+Z = undo / redo, Enter = apply,
+   Esc / right click = exit.
+4. **Align to Scene** – place the calibrated plane (XY, XZ or YZ) on the 3D
+   cursor, on the active face (Edit Mode) or on the active object.
+5. **Results** – focal length, field of view, camera height, angles, uncertainty
+   and guide fit, with warnings.
+6. **Render** – see below.
+7. **Tools › Move Along View** – move objects or vertices along the camera rays:
+   they keep their place in the image.
+
+| Mode | Input | Notes |
 | --- | --- | --- |
-| Punti di fuga 1 | 2 guide per l'asse 1 + una linea lungo l'asse 2 | richiede la focale |
-| Punti di fuga 2 | 2 guide per asse | opzioni: focale, *Linea terzo asse* |
-| Punti di fuga 3 | 2 guide per asse | punto principale al centro (default), manuale o *Risolvi* (ortocentro, instabile) |
-| Rettangolo noto | 4 angoli, larghezza/altezza reali | su XY, XZ o YZ; focale come sopra |
-| Orizzonte | linea d'orizzonte, altezza camera, yaw | richiede la focale |
+| 1 vanishing point | 2 guides for axis 1 + a line along axis 2 | needs the focal length |
+| 2 vanishing points | 2 guides per axis | optional *Third Axis Line* |
+| 3 vanishing points | 2 guides per axis | principal point at the centre, by hand or solved |
+| Known rectangle | 4 corners, real width and height | on XY, XZ or YZ |
+| Horizon | horizon line, camera height, heading | needs the focal length |
 
-### Cubo di scala
+### Scale cube
 
-Un cubo wireframe di lato noto (10 cm … 10 m o misura personalizzata) appoggiato sul
-piano di riferimento, con gli spigoli nei colori degli assi. La maniglia alla base
-scorre sul piano (mettila ai piedi di un oggetto di altezza nota); quella in cima
-scorre lungo lo spigolo verticale: portala all'altezza dell'oggetto e la scala
-della scena si adegua. Con la *Misura di riferimento*, nel rettangolo noto e
-nell'orizzonte la scala è già nota e il cubo è solo un controllo visivo (si può
-nascondere in *Opacity*).
+A wireframe cube of known size (10 cm to 10 m, or custom) standing on the
+reference plane. Put the base handle at the foot of something of known height and
+drag the top handle up to its top: the scale of the scene follows. The cube and
+the *Reference Distance* exclude each other: only the one chosen in the *Scale*
+menu is shown. With a known rectangle or the horizon the scale is already known
+and the cube is an optional visual check (*Opacity* panel).
 
-### Render sopra la foto
+### Render over the photo
 
-**Prepare Render** (dialogo: *Sopra la foto* / *Trasparente*, *Usa Cycles*):
+**Prepare Render** (choose *Over the Photo* or *Transparent*, and *Use Cycles*):
 
-- **Color management**: display *sRGB*, view transform **Standard**, look *None*,
-  esposizione 0, gamma 1, niente curve né bilanciamento del bianco. La foto è
-  sRGB: solo con Standard esce identica (misurato: scarto < 1/255). AgX, Filmic,
-  ACES e Khronos PBR Neutral la ritoccano come fossero luce della scena (scarto
-  medio ~9 livelli su 255, fino a ~130 sulle tinte sature). La luminosità della
-  CG si regola con le luci, non con l'esposizione.
-- **Film trasparente**: il mondo illumina ma non si vede; la risoluzione torna
-  quella della foto (la percentuale resta).
-- **Compositor** (Blender 5: gruppo nodi `FTC Compositing` assegnato alla scena):
-  `Image` (la foto) › `Scale` (*Render Size*, *Fit*, estensione *Extend*) ›
-  `Mix` *Multiply* con il pass **Shadow Catcher** › `Alpha Over` (sfondo) con
-  l'immagine del render (primo piano) › `Group Output` + `Viewer`. Con il pass
-  attivo le ombre e la luce che la CG rimbalza sugli shadow catcher passano dal
-  pass (anche colorate) invece che dall'alpha. Un compositor fatto a mano viene
-  conservato nel file (fake user) e sostituito; quello di FTC viene rigenerato.
-- **Trasparente**: niente compositor, pass Shadow Catcher spento (le ombre restano
-  nell'alpha), formato PNG RGBA se quello impostato non ha l'alpha: per comporre
-  in un altro programma.
-- **Cycles** consigliato: EEVEE non ha shadow catcher (gli holdout funzionano).
+- **Colour management**: sRGB display, **Standard** view transform, no look,
+  exposure 0, gamma 1, no curves or white balance. The photo is an sRGB image and
+  goes through the same view transform as the 3D objects: only Standard gives it
+  back unchanged (measured: under 1/255). AgX, Filmic, ACES and Khronos PBR
+  Neutral tone map it (about 9 levels out of 255 on average, over 120 on
+  saturated colours). Light the objects with lights, not with the exposure.
+- **Transparent film**: the world lights the scene but is not rendered. The
+  render resolution goes back to the image size.
+- **Compositor** (*Over the Photo*): a node group `FTC Compositing` scales the
+  photo to the render size, multiplies it by the Cycles **Shadow Catcher** pass
+  (shadows and light bounced by the objects onto the real surfaces) and puts the
+  render over it with Alpha Over. A compositor of your own is kept in the file
+  and replaced.
+- **Transparent**: no compositor, the shadows stay in the alpha channel, PNG RGBA
+  output: for compositing in another program.
 
-**Ruoli** (*Object Roles*, proprietà native dell'oggetto):
+**Object Roles** lists the objects of the scene with their role:
 
-| Ruolo | Cosa fa | Uso |
+| Role | What it does | For |
 | --- | --- | --- |
-| Oggetto CG | renderizzato normalmente | gli oggetti aggiunti alla foto |
-| Shadow Catcher | mostra la foto, riceve ombre e luce della CG, nasconde ciò che sta dietro (solo Cycles) | pavimento, tavolo, muri reali |
-| Holdout | mostra la foto e nasconde la CG dietro, senza ombre | oggetti reali davanti alla CG |
-| Nascosto | non renderizzato | geometria di riferimento |
+| CG Object | rendered normally | the objects added to the photo |
+| Shadow Catcher | shows the photo, receives shadows and light, hides what is behind it (Cycles) | real floors, tables, walls |
+| Holdout | shows the photo and hides the objects behind it, no shadows | real objects in front of the CG |
+| Hidden | not rendered | reference geometry |
 
-Il **piano shadow catcher** ha lato 10 × la distanza camera-origine, giace sul
-piano di riferimento (anche allineato alla scena) ed è a fil di ferro nel viewport
-per non coprire la foto; ripremendo il pulsante viene riportato sul piano attuale.
+**Shadow Catcher Plane** adds a shadow catcher on the calibrated reference plane
+(drawn as wireframe so it does not cover the photo).
 
-### Consigli (verificati su foto reali, vedi `tests/data`)
+## Tips
 
-- Il verso **+** di un asse va lungo la **prima** guida del gruppo, dalla prima alla
-  seconda maniglia (freccia sulla guida). F o il pulsante accanto all'asse lo
-  invertono. Il terzo asse segue dai primi due (riferimento destrorso): invertirlo
-  inverte anche l'asse 2 (o l'1 se il 2 è Z); la sua freccia indica il verso reale.
-- Due punti di fuga **solo sul pavimento** non misurano la verticale: le estrusioni
-  in Z possono deviare di gradi. Aggiungi la **Linea terzo asse** (uno stipite) o
-  usa 3 punti di fuga; con la focale nota (*Nota + guide*) l'incertezza scende
-  sotto 1°.
-- Un punto di fuga lontanissimo (parete quasi frontale) rende la focale
-  indeterminabile: usa la focale nota o linee in un'altra direzione.
-- Le linee "che sembrano parallele" non sempre lo sono (binari luci, facciate di
-  edifici diversi, fughe di piastrelle). Con 3 gruppi o la focale nota l'**aderenza
-  guide** lo rivela.
-- La focale EXIF può essere sbagliata (foto zoomate o ritagliate). Con *Nota +
-  guide*, se le guide non riescono ad accordarsi con essa (scarto > 1°) e con la
-  propria vanno molto meglio, prevalgono loro e un avviso riporta di quanto
-  l'hanno cambiata (riga *Rispetto alla nota* nei risultati). Due punti di fuga
-  di cui uno lontano, o un rettangolo, non bastano a scoprirlo: servono 3 gruppi.
-- **Raddrizza orizzonte** forza il rollio a 0: se la foto è inclinata la camera
-  non segue più le guide (l'avviso indica quanti gradi ha tolto).
+- The **+** direction of an axis runs along the **first** guide of its group,
+  from its first to its second handle (arrow on the guide). F or the ⇄ button
+  flips it. The third axis follows from the first two (the world is always
+  right-handed).
+- Two vanishing points **on the floor only** leave the vertical loosely measured:
+  add the *Third Axis Line* (a door jamb, a corner) or use 3 vanishing points.
+  A known focal length brings the error under 1°.
+- A vanishing point very far away (a wall seen nearly front-on) leaves the focal
+  length undetermined: use the known focal length or lines in another direction.
+- Lines that *look* parallel are not always parallel (light rails, separate
+  buildings, tiles). With 3 groups or a known focal length the *Guide Fit* shows
+  it.
+- The EXIF focal length can be wrong (zoomed or cropped photos). If the guides
+  cannot agree with it and fit much better on their own, they overrule it and a
+  warning says by how much.
 
-## Struttura
+## Documentation
 
-```
-fit_the_camera/          # l'estensione (questa cartella diventa lo zip)
-  blender_manifest.toml
-  __init__.py            # registrazione dei moduli
-  solver/                # numpy puro, senza bpy (testabile con pytest)
-    common.py            # convenzioni, CameraSolution, piani, reframe
-    vp.py                # punti di fuga 1/2/3, segni degli assi, aderenza
-    refine.py            # minimi quadrati (Levenberg-Marquardt), focale nota come vincolo
-    scale.py             # cubo di scala
-    plane.py             # rettangolo noto (omografia, vincoli di Zhang)
-    horizon.py           # orizzonte
-    convert.py           # soluzione -> camera Blender, focale da mm / 35 mm
-  exif.py                # parser EXIF in Python puro (JPEG, TIFF, PNG, WebP)
-  props.py               # PropertyGroup salvato su ogni Camera (camera.ftc)
-  calibrate.py           # impostazioni -> solver -> camera; incertezza; avvisi
-  ops_load.py            # Carica immagine, copia raddrizzata
-  ops_modal.py           # operatore modale, undo interno, Applica/Reset
-  ops_align.py           # allineamento alla scena
-  ops_move_view.py       # Move Along View
-  ops_render.py          # Prepara render, ruoli oggetti, piano shadow catcher
-  draw.py                # overlay gpu (guide, maniglie, griglia, orizzonte, cubo)
-  ui.py                  # pannello
-  translations.py        # traduzione italiana
-tests/                   # pytest: solver, EXIF, dati da foto reali, fuzz
-tests/data/              # linee misurate al sub-pixel su foto reali (senza foto)
-tests_blender/           # test dentro Blender (headless; GUI simulata facoltativa)
-scripts/                 # build, Blender locale, runner dei test
-scripts/probes/          # sonde diagnostiche: bash scripts/probe.sh <nome>
-samples/                 # foto di prova (ignorata da git: contengono GPS)
-docs/CHANGELOG.md
-docs/TEST_GUI.md         # checklist del test a mano in Blender (da fare: 1.0.0)
-```
+- [Changelog](docs/CHANGELOG.md)
+- [Italian user guide](README.it.md)
+- [Development](docs/DEVELOPMENT.md) (Italian): structure, conventions, tests,
+  build
 
-## Convenzioni
+## License
 
-- Coordinate immagine in pixel, origine in basso a sinistra, y verso l'alto.
-  Le maniglie sono salvate normalizzate 0–1 nello stesso sistema.
-- Sistema camera = Blender: x a destra, y in alto, sguardo lungo −Z.
-- Mondo destrorso con Z in alto. `rotation` del solver è camera→mondo e va
-  direttamente in `matrix_world`.
-- Segno degli assi: lungo la prima guida del gruppo (prima → seconda maniglia),
-  calcolato con la velocità d'immagine, stabile anche con punti di fuga all'infinito.
-- Yaw in gradi, orario da +Y (bussola con il nord su +Y).
-- Piano di riferimento: XY (pavimento), XZ (parete rivolta a −Y), YZ (parete
-  rivolta a +X), y locale verso l'alto sulle pareti.
-- Sensore = lato lungo del sensore intero; la parte coperta dall'immagine si
-  ricava dal formato nativo (`exif.native_frame`).
-
-## Ambiente di sviluppo (Ubuntu / WSL)
-
-Serve [pixi](https://pixi.sh). Python e numpy sono gli stessi di Blender 5.2 (3.13, 2.3).
-
-```bash
-pixi install
-pixi run test            # solver, EXIF, foto reali, fuzz (pytest)
-pixi run lint            # ruff
-pixi run validate        # valida il manifest con Blender
-pixi run blender-tests   # build + installazione in profilo isolato + test headless
-pixi run check           # tutto quanto sopra
-pixi run build           # crea dist/fit_the_camera-<versione>.zip
-pixi run gui-tests       # facoltativo: GUI simulata via WSLg (a volte si blocca all'avvio)
-```
-
-Al primo uso gli script scaricano Blender 5.2 per Linux in `.tools/` (sha256
-verificato). I test usano un profilo utente temporaneo: le preferenze reali di
-Blender non vengono toccate.
-
-## Installazione su Windows
-
-1. `pixi run build` crea lo zip in `dist/`.
-2. Blender: *Edit › Preferences › Get Extensions › ⌄ › Install from Disk…* e scegli
-   `\\wsl.localhost\Ubuntu-24.04\home\tony\Projects\FTC\dist\fit_the_camera-<versione>.zip`.
-3. Per aggiornare, reinstalla lo zip nuovo e riavvia Blender.
-
-Interfaccia in italiano: *Preferences › Interface › Translation*, lingua Italiano.
+GPL-3.0-or-later, see [LICENSE](LICENSE). © 2026 Antonio Sartini.

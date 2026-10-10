@@ -6,8 +6,9 @@ name = "FTC – Fit The Camera"
 tagline = "Match a camera to a photo with vanishing points or known shapes"
 maintainer = "Antonio Sartini"
 type = "add-on"
+website = "https://github.com/Tonysa87/FTC---Fit-The-Camera"
 
-tags = ["Camera", "3D View"]
+tags = ["Camera", "3D View", "Render"]
 
 blender_version_min = "5.2.0"
 
@@ -17,9 +18,3 @@ copyright = ["2026 Antonio Sartini"]
 [permissions]
 files = "Read the reference image and its EXIF metadata"
 
-[build]
-paths_exclude_pattern = [
-  "__pycache__/",
-  "/.git/",
-  "/*.zip",
-]

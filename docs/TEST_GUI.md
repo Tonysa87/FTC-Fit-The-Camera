@@ -33,7 +33,9 @@ Zip: `\\wsl.localhost\Ubuntu-24.04\home\tony\Projects\FTC\dist\fit_the_camera-1.
    minimo, non si ribalta.
 8. *Align to Scene* › piano **XZ**, poi **YZ**, poi XY: la calibrazione resta valida,
    il cubo va sulla parete, la scala non cambia.
-9. Passa a *Misura di riferimento* e torna a *Cubo*: la scala resta la stessa.
+9. Passa a *Misura di riferimento* e torna a *Cubo*: la scala resta la stessa; con
+   la misura il cubo sparisce (anche da *Opacity*), col cubo spariscono i due
+   estremi della misura.
 10. Rettangolo noto e Orizzonte: il cubo è solo controllo visivo (solo maniglia alla
     base); si nasconde da *Opacity* › *Cubo di scala*.
 11. Apri un .blend salvato con la 0.5.2 (scala "Distanza camera"): la camera resta
