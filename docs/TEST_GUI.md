@@ -103,6 +103,9 @@ Zip: `\\wsl.localhost\Ubuntu-24.04\home\tony\Projects\FTC\dist\fit_the_camera-1.
     misura: la *Distanza* non cambia.
 36. Con *Align to Scene* attivo, cambia XY › XZ: la camera si sposta subito.
 
+37. Durante *Calibrate* premi *Apply* nel pannello: la camera viene scritta e la
+    sessione si chiude (come Invio).
+
 ## Da riportare
 Comportamenti strani, errori in console (Window › Toggle System Console),
 screenshot dell'overlay se qualcosa non torna.

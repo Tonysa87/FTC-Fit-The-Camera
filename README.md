@@ -52,7 +52,11 @@ Open the sidebar of the 3D viewport (N) and the **FTC** tab.
    guides onto edges of the image that are parallel in the real world.
    Shift = fine, Ctrl = snap, 1/2/3 = axis, F = flip the direction, H =
    straighten the horizon, Ctrl+Z / Ctrl+Shift+Z = undo / redo, Enter = apply,
-   Esc / right click = exit.
+   Esc / right click = exit. With *Live Update* (default) the camera follows the
+   guides while you drag; Enter or **Apply** writes it and ends the session.
+   Outside a session, changes made in the panel move the camera only on
+   **Apply**. In the camera view the photo moves with the camera: to see the
+   result, look at the scene objects or at the camera's location.
 4. **Align to Scene** – place the calibrated plane (XY, XZ or YZ) on the 3D
    cursor, on the active face (Edit Mode) or on the active object.
 5. **Results** – focal length, field of view, camera height, angles, uncertainty

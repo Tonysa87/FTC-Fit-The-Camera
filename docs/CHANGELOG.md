@@ -47,6 +47,7 @@
   sotto-IFD rotto non fa perdere marca/modello/orientamento.
 - Traduzioni: "Flip Axis Direction" (prima mostrava "Scambia assi" di Blender),
   Risultati, Imbardata, Sposta lungo la vista, nuovi avvisi.
+- *Apply* durante *Calibrate* chiude anche la sessione, come Invio.
 - Secondo audit:
   - Ctrl+Z durante la sessione è sempre l'undo della sessione (l'undo di Blender
     tornava a prima della sessione perdendone le modifiche);
