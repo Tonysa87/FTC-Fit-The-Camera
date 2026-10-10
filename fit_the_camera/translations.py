@@ -100,6 +100,7 @@ _IT = {
     "CG Object": "Oggetto CG",
     "Set Role of Selected": "Ruolo dei selezionati",
     "Shadow Catcher Plane": "Piano shadow catcher",
+    "New Shadow Catcher Plane": "Nuovo piano shadow catcher",
     "Render size has another aspect than the image: Apply or Calibrate fixes it": (
         "Il render ha proporzioni diverse dall'immagine: Applica o Calibra le correggono"
     ),

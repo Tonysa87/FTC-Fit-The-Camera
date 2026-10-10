@@ -709,8 +709,13 @@ def object_roles_map_to_render_flags():
     assert not (obj.hide_render or obj.is_holdout or obj.is_shadow_catcher)
     for o in objs:
         o.select_set(True)
+    counts = (len(bpy.data.objects), len(bpy.data.meshes))
     assert bpy.ops.ftc.set_role(role="HOLDOUT") == {"FINISHED"}
     assert all(o.ftc_role == "HOLDOUT" for o in objs)
+    assert bpy.ops.ftc.set_role(role="CATCHER") == {"FINISHED"}
+    assert all(o.is_shadow_catcher and o.ftc_role == "CATCHER" for o in objs)
+    # Roles only change the objects' own flags: nothing is created or copied.
+    assert (len(bpy.data.objects), len(bpy.data.meshes)) == counts
     # Clicking in the list selects the object.
     scene.ftc_role_index = list(scene.objects).index(objs[1])
     assert bpy.context.view_layer.objects.active == objs[1] and not objs[0].select_get()
