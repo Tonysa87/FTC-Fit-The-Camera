@@ -7,24 +7,23 @@ Extensions audience) and `README.it.md` (Italian); developer docs
 "Camera Match": the final name is **FTC**, package `fit_the_camera`, tab "FTC").
 
 ## Status / next session (bookmark 2026-10-10, evening)
-- **v1.0.0** = 0.6.1 + Render section + two audit rounds + (done 2026-10-10):
-  Transform Orientation "FTC" (`ops_orientation.py`: calibrated axes =
-  rotation of `alignment_matrix`, Global without Align; synced on Apply, on Enter
-  and by every Align to Scene op via `ops_align.apply_now`; panel toggle
-  `ftc.use_orientation`) and the Ray Gizmo (`ops_move_view.FTC_GGT_move_along_rays`:
-  ⊙ handle on the selection in the camera view, runs `ftc.move_along_view` with
-  `release_confirm`; `Scene.ftc_ray_gizmo` / `ftc_ray_scale`). Native
-  move/rotate/scale gizmos are NOT reimplemented: the FTC orientation covers them.
+- **v1.0.0** = 0.6.1 + Render section + two audit rounds + Transform Orientation
+  "FTC" (`ops_orientation.py`: calibrated axes = rotation of `alignment_matrix`,
+  Global without Align; synced on Apply, on Enter and by every Align to Scene op
+  via `ops_align.apply_now`; panel toggle `ftc.use_orientation` in Tools).
+  Moving/rotating/scaling = Blender's native tools with that orientation.
+- **Removed on the user's request after his GUI test**: Move Along View and a
+  "Ray Gizmo" (handle to move the selection along the camera rays). He found them
+  broken and wants only native gizmos: do NOT reintroduce custom transform
+  operators or gizmos.
 - Python has no list of custom orientations: `ops_orientation.find` switches slot
   0 to "FTC" for a moment; `create` runs `transform.create_orientation(use_view=True)`
   with the main region of a 3D view (other sources need an active object).
-- Gizmo scale: without the SCALE group flag Blender multiplies `scale_basis` by
-  U.gizmo_size (75) × pixel size, so shape units are pixels at `GIZMO_SCALE`.
-- **Next**: the user's GUI test (`docs/TEST_GUI.md`, steps 38–43 are the new
+- **Next**: the user's GUI test (`docs/TEST_GUI.md`, steps 38–41 are the new
   ones; fix what he reports), then: move tag v1.0.0 to the final commit (user
   authorized it), push, GitHub release with the zip, submission to
-  extensions.blender.org with `extensions_listing/` (refresh its description with
-  the orientation and the Ray Gizmo).
+  extensions.blender.org with `extensions_listing/` (description already updated:
+  FTC orientation instead of Move Along View).
 - GitHub: https://github.com/Tonysa87/FTC-Fit-The-Camera (public, `origin`).
   Tag v1.0.0 is still on the old a67c8f0 and no GitHub release exists yet.
 - `extensions_listing/` (git-ignored, asked by the user): everything to upload to

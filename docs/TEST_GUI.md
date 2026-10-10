@@ -107,27 +107,17 @@ Zip: `\\wsl.localhost\Ubuntu-24.04\home\tony\Projects\FTC\dist\fit_the_camera-1.
 37. Durante *Calibrate* premi *Apply* nel pannello: la camera viene scritta e la
     sessione si chiude (come Invio).
 
-## Orientamento FTC e Ray Gizmo (ultime aggiunte alla 1.0.0)
+## Orientamento FTC (ultima aggiunta alla 1.0.0; Move Along View e Ray Gizmo rimossi)
 38. Calibra, *Apply*: nel menu *Transform Orientations* (in alto nel viewport)
     compare **FTC**; senza *Align to Scene* è uguale a Global.
 39. *Align to Scene* › *3D Cursor* con il cursore ruotato (o *Selection* su una
-    faccia inclinata): **Tools › FTC Orientation** (resta premuto) → il gizmo di
-    spostamento e G X / G Y / G Z seguono le linee della foto (es. G X scorre
-    lungo le guide dell'asse X). *Rotate 90°* / *Flip* / *Scene Origin*
-    aggiornano l'orientamento. Ricliccando il pulsante torna Global.
+    faccia inclinata): **Tools › FTC Orientation** (resta premuto) → il gizmo
+    nativo di spostamento/rotazione/scala e G X / R Z / S Y seguono gli assi della
+    foto. *Rotate 90°* / *Flip* / *Scene Origin* aggiornano l'orientamento.
+    Ricliccando il pulsante torna Global.
 40. Edit Mode su una mesh: con *FTC Orientation* attivo, G X su vertici/spigoli/
-    facce si muove lungo l'asse X della foto; con lo snapping (es. a vertice) idem.
-41. **Tools › Ray Gizmo** acceso, vista camera, seleziona un oggetto: sulla sua
-    origine compare un cerchio chiaro con un punto e due frecce laterali.
-    Trascina a destra: l'oggetto si allontana restando fermo nella foto
-    (diventa più piccolo); a sinistra si avvicina. Shift: movimento fine. Al
-    rilascio un solo passo di undo (Ctrl+Z lo annulla).
-42. Durante il trascinamento: S attiva/disattiva la scala, numeri = distanza
-    dalla camera, Esc/tasto destro annulla. Icona accanto a *Ray Gizmo* accesa:
-    l'oggetto si scala con la distanza (stessa dimensione nella foto).
-43. Edit Mode: seleziona alcune facce: il gizmo è nel loro centro e muove solo
-    quelle. Senza selezione, fuori dalla vista camera o durante *Calibrate* il
-    gizmo non c'è.
+    facce si muove lungo l'asse X della foto; con lo snapping idem.
+41. Il menu *Object › Transform* non ha più *Move Along View*.
 
 ## Da riportare
 Comportamenti strani, errori in console (Window › Toggle System Console),

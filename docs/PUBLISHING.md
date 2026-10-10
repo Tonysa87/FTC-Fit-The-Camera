@@ -78,8 +78,8 @@ Match a camera to a single image – a photo, a render or a drawing – then ren
 - Uncertainty of the result and guide fit, with warnings for lines that are not
   really parallel, a wrong EXIF focal length or a far vanishing point
 - Align the calibrated floor or wall to the 3D cursor, a face or an object
-- Move Along View: move objects along the camera rays, keeping them in place in
-  the image
+- "FTC" transform orientation: Blender's own move/rotate/scale tools and
+  snapping work along the photo's axes, also after aligning it to the scene
 
 **Render over the photo**
 - Prepare Render: Standard view transform (the photo comes out unchanged),

@@ -356,14 +356,8 @@ class FTC_PT_main(Panel):
         header.label(text="Tools")
         if body is None:
             return
-        scene = context.scene
-        body.operator("ftc.use_orientation", icon="ORIENTATION_GLOBAL", depress=ops_orientation.in_use(scene))
-        col = body.column(align=True)
-        col.use_property_split = False
-        col.operator("ftc.move_along_view", icon="EMPTY_SINGLE_ARROW")
-        row = col.row(align=True)
-        row.prop(scene, "ftc_ray_gizmo", toggle=True, icon="GIZMO")
-        row.prop(scene, "ftc_ray_scale", toggle=True, icon="FULLSCREEN_ENTER", text="")
+        in_use = ops_orientation.in_use(context.scene)
+        body.operator("ftc.use_orientation", icon="ORIENTATION_GLOBAL", depress=in_use)
 
 
 classes = (FTC_PT_main,)
