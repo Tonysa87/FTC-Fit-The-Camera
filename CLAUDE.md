@@ -19,13 +19,15 @@ Extensions audience) and `README.it.md` (Italian); developer docs
 - Python has no list of custom orientations: `ops_orientation.find` switches slot
   0 to "FTC" for a moment; `create` runs `transform.create_orientation(use_view=True)`
   with the main region of a 3D view (other sources need an active object).
-- **Next**: the user's GUI test (`docs/TEST_GUI.md`, steps 38–41 are the new
-  ones; fix what he reports), then: move tag v1.0.0 to the final commit (user
-  authorized it), push, GitHub release with the zip, submission to
-  extensions.blender.org with `extensions_listing/` (description already updated:
-  FTC orientation instead of Move Along View).
+- **Next (resume 2026-10-11)**: the user's GUI test of the FTC orientation
+  (`docs/TEST_GUI.md` 38–41; fix what he reports, rebuild, re-upload the zip to
+  the draft with `gh release upload v1.0.0 dist/fit_the_camera-1.0.0.zip --clobber`
+  and move the tag again if the code changes). Then publish the draft release
+  (`gh release edit v1.0.0 --draft=false`) and submit to extensions.blender.org
+  with `extensions_listing/` (`docs/PUBLISHING.md`).
 - GitHub: https://github.com/Tonysa87/FTC-Fit-The-Camera (public, `origin`).
-  Tag v1.0.0 is still on the old a67c8f0 and no GitHub release exists yet.
+  Tag v1.0.0 moved (authorized) to the final 1.0.0 commit and pushed; GitHub
+  release v1.0.0 exists as a **draft** with the zip (not published yet).
 - `extensions_listing/` (git-ignored, asked by the user): everything to upload to
   extensions.blender.org (icon, featured 1920×1080, previews, description.md) and
   the scripts that regenerate the images (previews use `samples/elevator.jpg`).
