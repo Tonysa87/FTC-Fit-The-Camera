@@ -55,10 +55,17 @@ def orthocenter(a, b, c) -> np.ndarray:
     return np.linalg.solve(m, rhs)
 
 
+INCOMPATIBLE = (
+    "the vanishing points do not fit a real camera: the two directions are probably not perpendicular "
+    "in reality (e.g. two facades that are nearly parallel), or one vanishes too far away; "
+    "use the known focal length or other lines"
+)
+
+
 def focal_from_two_vps(v1, v2, p) -> float:
     f2 = -float((np.asarray(v1) - p) @ (np.asarray(v2) - p))
     if f2 <= 0.0:
-        raise SolverError("vanishing points are not compatible with a real camera: move the guides")
+        raise SolverError(INCOMPATIBLE)
     return float(np.sqrt(f2))
 
 
@@ -126,7 +133,7 @@ def best_pair_focal(vps, p, image_size) -> float:
     if best is None:
         if len(vps) == 2 and not all(is_finite_vp(v, image_size) for v in vps):
             raise SolverError("guide lines are parallel in the image: the vanishing point is at infinity")
-        raise SolverError("vanishing points are not compatible with a real camera: move the guides")
+        raise SolverError(INCOMPATIBLE)
     return best[1]
 
 

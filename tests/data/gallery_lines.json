@@ -1,0 +1,141 @@
+{
+ "description": "Edges measured (sub-pixel) on a 4096x3072 phone photo of a gallery room seen almost frontally (one-point perspective), pixels with origin bottom-left. Back wall horizontals (across) and verticals agree with the EXIF focal (25 mm eq. = 2958 px) within 0.2 deg; the depth lines (light rails, side floor lines) are NOT perpendicular to the back wall.",
+ "image_size": [
+  4096,
+  3072
+ ],
+ "exif_focal_mm": 5.895,
+ "exif_focal_35mm": 25,
+ "lines": {
+  "vertical_left_pillar": [
+   [
+    815.1,
+    3011.6
+   ],
+   [
+    778.3,
+    1531.9
+   ]
+  ],
+  "vertical_right_pillar": [
+   [
+    3130.7,
+    3011.7
+   ],
+   [
+    3175.6,
+    1532.5
+   ]
+  ],
+  "vertical_panel_left": [
+   [
+    1168.5,
+    2001.9
+   ],
+   [
+    1149.9,
+    1082.2
+   ]
+  ],
+  "vertical_panel_right": [
+   [
+    2891.7,
+    2001.7
+   ],
+   [
+    2910.5,
+    1082.1
+   ]
+  ],
+  "vertical_left_door": [
+   [
+    930.9,
+    1881.9
+   ],
+   [
+    912.6,
+    1062.4
+   ]
+  ],
+  "across_panel_top": [
+   [
+    1190.0,
+    2048.9
+   ],
+   [
+    2880.0,
+    2039.6
+   ]
+  ],
+  "across_panel_bottom": [
+   [
+    1190.0,
+    1048.6
+   ],
+   [
+    2880.0,
+    1048.7
+   ]
+  ],
+  "across_step_front": [
+   [
+    460.2,
+    253.6
+   ],
+   [
+    3480.0,
+    275.5
+   ]
+  ],
+  "across_step_back": [
+   [
+    910.0,
+    364.1
+   ],
+   [
+    3109.9,
+    370.6
+   ]
+  ],
+  "depth_left_light_rail": [
+   [
+    1256.3,
+    2799.7
+   ],
+   [
+    1618.0,
+    2207.7
+   ]
+  ],
+  "depth_right_light_rail": [
+   [
+    2709.3,
+    2800.1
+   ],
+   [
+    2416.0,
+    2155.5
+   ]
+  ],
+  "depth_left_floor": [
+   [
+    765.6,
+    980.4
+   ],
+   [
+    1144.0,
+    1043.9
+   ]
+  ],
+  "depth_right_floor": [
+   [
+    2927.1,
+    1053.3
+   ],
+   [
+    3178.7,
+    981.5
+   ]
+  ]
+ }
+}
