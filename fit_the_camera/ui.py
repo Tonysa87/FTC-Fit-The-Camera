@@ -8,7 +8,7 @@ import bpy
 from bpy.app.translations import pgettext_iface as iface_
 from bpy.types import Panel
 
-from . import calibrate
+from . import calibrate, ops_render
 from .draw import remaining_axis, third_axis
 from .exif import is_native_aspect
 from .ops_load import background_for
@@ -114,6 +114,7 @@ class FTC_PT_main(Panel):
         self.draw_calibration(context, layout, settings)
         self.draw_display(context, layout, cam_obj, settings)
         self.draw_results(context, layout, settings)
+        self.draw_render(context, layout, settings)
         self.draw_tools(context, layout)
 
     # ------------------------------------------------------------------
@@ -317,6 +318,27 @@ class FTC_PT_main(Panel):
         info_row(col, iface_("Yaw"), f"{math.degrees(res.yaw):.2f}°")
         if settings.straighten:
             info_row(col, iface_("Removed Roll"), f"{math.degrees(res.removed_roll):+.2f}°", alert=True)
+
+    def draw_render(self, context, layout, settings):
+        header, body = layout.panel("ftc_render", default_closed=True)
+        header.label(text="Render")
+        if body is None:
+            return
+        scene = context.scene
+        row = body.row()
+        row.scale_y = 1.4
+        row.operator("ftc.prepare_render", icon="SCENE")
+        view = scene.view_settings
+        if view.view_transform != "Standard" or view.look != "None" or not scene.render.film_transparent:
+            body.label(text="Scene not set up for the photo: use Prepare Render", icon="INFO")
+        if scene.render.engine != "CYCLES" and ops_render.has_catchers(scene):
+            body.label(text="Shadow catchers work only in Cycles", icon="ERROR")
+
+        body.label(text="Object Roles")
+        body.template_list("FTC_UL_roles", "", scene, "objects", scene, "ftc_role_index", rows=4)
+        row = body.row(align=True)
+        row.operator_menu_enum("ftc.set_role", "role", icon="RESTRICT_SELECT_OFF")
+        row.operator("ftc.add_catcher", icon="MESH_PLANE")
 
     def draw_tools(self, context, layout):
         header, body = layout.panel("ftc_tools", default_closed=True)

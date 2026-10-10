@@ -52,6 +52,28 @@ class Mock:
                 return SimpleNamespace()
 
             return operator
+        if name == "operator_menu_enum":
+
+            def operator_menu_enum(idname, prop, *a, **k):
+                mod, op = idname.split(".")
+                try:
+                    rna = getattr(getattr(bpy.ops, mod), op).get_rna_type()
+                    if prop not in rna.properties:
+                        problems.add(f"missing operator prop {idname}.{prop}")
+                except Exception:
+                    problems.add(f"missing operator {idname}")
+
+            return operator_menu_enum
+        if name == "template_list":
+
+            def template_list(list_id, _list, data, prop, active_data, active_prop, *a, **k):
+                if not hasattr(bpy.types, list_id):
+                    problems.add(f"missing UIList {list_id}")
+                for d, p in ((data, prop), (active_data, active_prop)):
+                    if p not in d.bl_rna.properties:
+                        problems.add(f"missing prop {d.bl_rna.identifier}.{p}")
+
+            return template_list
         if name in ("label", "separator", "template_ID", "context_pointer_set"):
             return lambda *a, **k: None
         return Mock()
@@ -96,7 +118,13 @@ for mode, vp, scale, focal, cube, size, pp in itertools.product(
             pp,
         )
     calibrate.refresh(cam.data)
-    for fn in (ui.FTC_PT_main.draw_calibration, ui.FTC_PT_main.draw_display, ui.FTC_PT_main.draw_results):
+    sections = (
+        ui.FTC_PT_main.draw_calibration,
+        ui.FTC_PT_main.draw_display,
+        ui.FTC_PT_main.draw_results,
+        ui.FTC_PT_main.draw_render,
+    )
+    for fn in sections:
         try:
             if fn.__name__ == "draw_display":
                 fn(panel, ctx, Mock(), cam, s)

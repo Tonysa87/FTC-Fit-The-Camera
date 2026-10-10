@@ -607,6 +607,130 @@ def rectangle_on_a_wall_aligns_to_a_face():
     assert (cam.matrix_world.translation - Vector(syn.position)).length < 1e-3
 
 
+def _render_to_array(scene, name):
+    scene.render.filepath = os.path.join(SCRATCH, name)
+    scene.render.image_settings.file_format = "PNG"
+    bpy.ops.render.render(write_still=True)
+    img = bpy.data.images.load(scene.render.filepath + ".png")
+    out = np.array(img.pixels[:]).reshape(img.size[1], img.size[0], 4)
+    bpy.data.images.remove(img)
+    return out
+
+
+@test
+def prepare_render_gives_back_the_photo():
+    scene = fresh_scene()
+    cam = load(write_photo("render.jpg", (64, 48)))
+    s = cam.data.ftc
+    user_tree = bpy.data.node_groups.new("Mine", "CompositorNodeTree")
+    scene.compositing_node_group = user_tree
+    scene.view_settings.view_transform = "AgX"
+    scene.view_settings.exposure = 1.0
+    scene.render.resolution_x = 100  # changed by hand: back to the photo size
+    assert bpy.ops.ftc.prepare_render(output="PHOTO", use_cycles=True) == {"FINISHED"}
+    assert scene.render.engine == "CYCLES" and scene.render.film_transparent
+    assert scene.view_settings.view_transform == "Standard" and scene.view_settings.look == "None"
+    assert scene.view_settings.exposure == 0.0 and scene.display_settings.display_device == "sRGB"
+    assert (scene.render.resolution_x, scene.render.resolution_y) == (64, 48)
+    assert scene.view_layers[0].cycles.use_pass_shadow_catcher
+    tree = scene.compositing_node_group
+    assert tree is not user_tree and tree.get("ftc_compositing") and user_tree.use_fake_user
+    photo = next(n for n in tree.nodes if n.bl_idname == "CompositorNodeImage")
+    assert photo.image == s.image
+    mix = next(n for n in tree.nodes if n.bl_idname == "ShaderNodeMix")
+    assert any(link.from_socket.name == "Shadow Catcher" and link.to_node == mix for link in tree.links)
+    out = next(n for n in tree.nodes if n.bl_idname == "NodeGroupOutput")
+    assert out.inputs[0].is_linked
+    # Again: the same tree is rebuilt, not a new one.
+    bpy.ops.ftc.prepare_render(output="PHOTO", use_cycles=True)
+    assert scene.compositing_node_group == tree
+    assert sum(1 for t in bpy.data.node_groups if t.get("ftc_compositing")) == 1
+
+    # Empty scene, render at 50%: the output is the photo, opaque, to the 8-bit level.
+    scene.cycles.samples = 1
+    scene.cycles.use_denoising = False
+    scene.render.dither_intensity = 0.0
+    scene.render.resolution_percentage = 50
+    scene.render.image_settings.color_mode = "RGBA"
+    got = _render_to_array(scene, "render_photo")
+    assert got.shape == (24, 32, 4), got.shape
+    want = s.image.pixels[0]
+    assert np.abs(got[..., :3] - want).max() < 1.5 / 255, np.abs(got[..., :3] - want).max()
+    assert got[..., 3].min() == 1.0
+
+
+@test
+def prepare_render_transparent_keeps_shadows_in_alpha():
+    scene = fresh_scene()
+    load(write_photo("render_alpha.jpg", (64, 48)))
+    bpy.ops.ftc.prepare_render(output="PHOTO", use_cycles=True)
+    scene.render.image_settings.file_format = "JPEG"
+    assert bpy.ops.ftc.prepare_render(output="ALPHA", use_cycles=True) == {"FINISHED"}
+    assert scene.compositing_node_group is None
+    assert not any(t.get("ftc_compositing") for t in bpy.data.node_groups)
+    assert not scene.view_layers[0].cycles.use_pass_shadow_catcher
+    assert scene.render.image_settings.file_format == "PNG" and scene.render.image_settings.color_mode == "RGBA"
+    # EEVEE kept: no pass, no Shadow Catcher multiply.
+    bpy.ops.ftc.prepare_render(output="PHOTO", use_cycles=False)
+    scene.render.engine = "BLENDER_EEVEE"
+    bpy.ops.ftc.prepare_render(output="PHOTO", use_cycles=False)
+    tree = scene.compositing_node_group
+    assert not any(n.bl_idname == "ShaderNodeMix" for n in tree.nodes)
+
+
+@test
+def object_roles_map_to_render_flags():
+    scene = fresh_scene()
+    mesh = bpy.data.meshes.new("m")
+    objs = [bpy.data.objects.new(f"o{i}", mesh) for i in range(2)]
+    for obj in objs:
+        scene.collection.objects.link(obj)
+    obj = objs[0]
+    assert obj.ftc_role == "OBJECT"
+    obj.ftc_role = "CATCHER"
+    assert obj.is_shadow_catcher and not obj.is_holdout and not obj.hide_render
+    obj.ftc_role = "HOLDOUT"
+    assert obj.is_holdout and not obj.is_shadow_catcher
+    obj.ftc_role = "HIDDEN"
+    assert obj.hide_render and not obj.is_holdout
+    obj.ftc_role = "OBJECT"
+    assert not (obj.hide_render or obj.is_holdout or obj.is_shadow_catcher)
+    for o in objs:
+        o.select_set(True)
+    assert bpy.ops.ftc.set_role(role="HOLDOUT") == {"FINISHED"}
+    assert all(o.ftc_role == "HOLDOUT" for o in objs)
+    # Clicking in the list selects the object.
+    scene.ftc_role_index = list(scene.objects).index(objs[1])
+    assert bpy.context.view_layer.objects.active == objs[1] and not objs[0].select_get()
+    # The list shows only renderable objects.
+    bpy.ops.object.camera_add()
+    ul = importlib.import_module(PKG + ".ops_render").FTC_UL_roles
+    flags, _order = ul.filter_items(SimpleNamespace(filter_name="", bitflag_filter_item=1), None, scene, "objects")
+    assert sum(flags) == 2
+
+
+@test
+def shadow_catcher_plane_lies_on_the_reference_plane():
+    scene, cam, syn = _calibrated_camera((1600, 1200))
+    assert bpy.ops.ftc.add_catcher() == {"FINISHED"}
+    catchers = [o for o in scene.objects if o.get("ftc_shadow_catcher")]
+    assert len(catchers) == 1
+    plane = catchers[0]
+    assert plane.is_shadow_catcher and plane.display_type == "WIRE"
+    corners = [plane.matrix_world @ v.co for v in plane.data.vertices]
+    assert all(abs(c.z) < 1e-6 for c in corners)
+    # Big enough to reach well past the camera.
+    assert max(c.length for c in corners) > 2 * cam.matrix_world.translation.length
+    s = cam.data.ftc
+    anchor = Matrix.Translation((4.0, -1.0, 0.5)) @ Matrix.Rotation(math.radians(30.0), 4, "Z")
+    s.anchor_matrix = anchor
+    s.use_anchor = True
+    calibrate.update(bpy.context, cam, apply=True)
+    bpy.ops.ftc.add_catcher()
+    assert [o for o in scene.objects if o.get("ftc_shadow_catcher")] == [plane]
+    assert all(abs(a - b) < 1e-5 for ra, rb in zip(plane.matrix_world, anchor) for a, b in zip(ra, rb))
+
+
 @test
 def every_button_has_a_tooltip():
     """Operators and the settings drawn as buttons all carry a description."""
@@ -627,6 +751,9 @@ def every_button_has_a_tooltip():
         "align_flip",
         "flip_axis",
         "move_along_view",
+        "prepare_render",
+        "set_role",
+        "add_catcher",
     ):
         if not getattr(bpy.ops.ftc, op).get_rna_type().description.strip():
             missing.append("ftc." + op)
@@ -637,6 +764,8 @@ def every_button_has_a_tooltip():
                 continue
             if not prop.description.strip():
                 missing.append(f"{rna.identifier}.{prop.identifier}")
+    if not bpy.types.Object.bl_rna.properties["ftc_role"].description.strip():
+        missing.append("Object.ftc_role")
     assert not missing, missing
 
 

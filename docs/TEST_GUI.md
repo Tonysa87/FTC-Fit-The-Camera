@@ -1,10 +1,11 @@
-# Test GUI in Blender (Windows) – da fare per la 0.6.1
+# Test GUI in Blender (Windows) – da fare per la 1.0.0
 
-Stato: **non ancora provata in GUI**. Tutti i test automatici passano (96 pytest,
-22 test headless in Blender) e le sonde `scripts/probe.sh` (pannello, overlay,
-trascinamento simulato) sono pulite; manca la prova a mano.
+Stato: **non ancora provata in GUI** (né la 0.6.1 né la sezione Render della
+1.0.0). Tutti i test automatici passano (96 pytest, 26 test headless in Blender,
+compreso un render Cycles reale) e le sonde `scripts/probe.sh` (pannello, overlay,
+trascinamento simulato, render) sono pulite; manca la prova a mano.
 
-Zip: `\\wsl.localhost\Ubuntu-24.04\home\tony\Projects\FTC\dist\fit_the_camera-0.6.1.zip`
+Zip: `\\wsl.localhost\Ubuntu-24.04\home\tony\Projects\FTC\dist\fit_the_camera-1.0.0.zip`
 (se manca: `pixi run build`).
 
 ## Installazione
@@ -48,6 +49,29 @@ Zip: `\\wsl.localhost\Ubuntu-24.04\home\tony\Projects\FTC\dist\fit_the_camera-0.
 15. 3 punti di fuga + punto principale *Solve*: la scelta della focale è disattivata
     con la spiegazione.
 16. Rettangolo noto con EXIF: tiene la focale nota (un rettangolo non scopre lo zoom).
+
+## Render (1.0.0)
+17. Dopo una calibrazione, apri **Render** (in fondo, sopra *Tools*): con AgX
+    compare "Scene not set up for the photo".
+18. **Prepare Render** › dialogo › *Over the Photo*, *Use Cycles* › OK. Controlla:
+    Render › Color Management = sRGB / Standard / None; Film › Transparent;
+    View Layer › Passes › Shadow Catcher attivo; workspace **Compositing**: albero
+    `FTC Compositing` (Render Layers, Photo › Scale › Shadows on Photo › Alpha
+    Over › Group Output + Viewer).
+19. Aggiungi un oggetto (es. un cubo appoggiato sul piano) e una luce Sun.
+    **Shadow Catcher Plane**: piano a fil di ferro sul pavimento, ruolo *Shadow
+    Catcher*; la foto resta visibile nel viewport.
+20. F12: la CG sopra la foto con l'ombra sul pavimento; fuori dalla CG la foto è
+    identica all'originale (nessun cambio di colori/contrasto).
+21. **Object Roles**: clic su una riga seleziona l'oggetto; cambia ruolo dal menu
+    a tendina (Holdout: un oggetto davanti al cubo ne nasconde la parte dietro
+    mostrando la foto). *Set Role of Selected* con più oggetti selezionati.
+22. **Prepare Render** › *Transparent*: F12 dà la CG con l'ombra su sfondo
+    trasparente; il compositor FTC sparisce, formato PNG RGBA.
+23. Con un tuo albero compositor già presente: Prepare Render lo sostituisce ma
+    resta nel file (fake user, si ritrova nel selettore dei gruppi nodi).
+24. Allinea al 3D cursor e ripremi **Shadow Catcher Plane**: il piano segue,
+    senza duplicarsi.
 
 ## Da riportare
 Comportamenti strani, errori in console (Window › Toggle System Console),
