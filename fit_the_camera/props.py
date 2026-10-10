@@ -138,6 +138,7 @@ class FTC_Settings(PropertyGroup):
 
     mode: EnumProperty(
         name="Mode",
+        description="What in the image defines the camera",
         items=[
             ("VP", "Vanishing Points", "Calibrate from parallel lines converging to 1, 2 or 3 vanishing points"),
             ("RECT", "Known Rectangle", "Calibrate from the four corners of a rectangle of known size"),
@@ -148,6 +149,7 @@ class FTC_Settings(PropertyGroup):
     )
     vp_count: EnumProperty(
         name="Vanishing Points",
+        description="Number of vanishing points to draw",
         items=[
             ("1", "1", "One vanishing point: needs the focal length and the horizon direction"),
             ("2", "2", "Two vanishing points: solves the focal length"),
@@ -156,14 +158,33 @@ class FTC_Settings(PropertyGroup):
         default="2",
         update=_guides_changed,
     )
-    vp1_axis: EnumProperty(name="Vanishing Point 1", items=AXIS_ITEMS, default="+X", update=_guides_changed)
-    vp2_axis: EnumProperty(name="Vanishing Point 2", items=AXIS_ITEMS, default="+Y", update=_guides_changed)
-    vp3_axis: EnumProperty(name="Vanishing Point 3", items=AXIS_ITEMS, default="+Z", update=_guides_changed)
+    vp1_axis: EnumProperty(
+        name="Vanishing Point 1",
+        description="World axis of the first guide pair (the sign says which way it runs, away from the camera)",
+        items=AXIS_ITEMS,
+        default="+X",
+        update=_guides_changed,
+    )
+    vp2_axis: EnumProperty(
+        name="Vanishing Point 2",
+        description="World axis of the second guide pair, or of the axis line with one vanishing point",
+        items=AXIS_ITEMS,
+        default="+Y",
+        update=_guides_changed,
+    )
+    vp3_axis: EnumProperty(
+        name="Vanishing Point 3",
+        description="World axis of the third guide pair (follows from the first two)",
+        items=AXIS_ITEMS,
+        default="+Z",
+        update=_guides_changed,
+    )
     active_vp: IntProperty(default=0, min=0, max=2, options={"HIDDEN"})
     handles: CollectionProperty(type=FTC_Handle)
 
     scale_mode: EnumProperty(
         name="Scale",
+        description="How the real-world size of the scene is set",
         items=[
             ("DISTANCE", "Camera Distance", "Distance from the camera to the origin"),
             ("REFERENCE", "Reference Distance", "A known length along an axis, starting from the origin line"),
@@ -172,20 +193,49 @@ class FTC_Settings(PropertyGroup):
         update=_changed,
     )
     camera_distance: FloatProperty(
-        name="Camera Distance", default=10.0, min=1e-4, subtype="DISTANCE", unit="LENGTH", update=_changed
+        name="Camera Distance",
+        description="Distance from the camera to the origin handle",
+        default=10.0,
+        min=1e-4,
+        subtype="DISTANCE",
+        unit="LENGTH",
+        update=_changed,
     )
     ref_axis: EnumProperty(
         name="Reference Axis",
+        description="Axis along which the reference distance is measured",
         items=[("X", "X", ""), ("Y", "Y", ""), ("Z", "Z", "")],
         default="X",
         update=_changed,
     )
     ref_length: FloatProperty(
-        name="Reference Length", default=1.0, min=1e-4, subtype="DISTANCE", unit="LENGTH", update=_changed
+        name="Reference Length",
+        description="Real length between the two reference handles",
+        default=1.0,
+        min=1e-4,
+        subtype="DISTANCE",
+        unit="LENGTH",
+        update=_changed,
     )
 
-    rect_width: FloatProperty(name="Width", default=1.0, min=1e-4, subtype="DISTANCE", unit="LENGTH", update=_changed)
-    rect_height: FloatProperty(name="Height", default=1.0, min=1e-4, subtype="DISTANCE", unit="LENGTH", update=_changed)
+    rect_width: FloatProperty(
+        name="Width",
+        description="Real length of the rectangle's first edge (corner 1 to 2)",
+        default=1.0,
+        min=1e-4,
+        subtype="DISTANCE",
+        unit="LENGTH",
+        update=_changed,
+    )
+    rect_height: FloatProperty(
+        name="Height",
+        description="Real length of the rectangle's second edge (corner 2 to 3)",
+        default=1.0,
+        min=1e-4,
+        subtype="DISTANCE",
+        unit="LENGTH",
+        update=_changed,
+    )
     rect_use_focal: BoolProperty(
         name="Use Known Focal Length",
         description="Use the focal length from the camera data instead of solving it",
@@ -194,10 +244,17 @@ class FTC_Settings(PropertyGroup):
     )
 
     camera_height: FloatProperty(
-        name="Camera Height", default=1.6, min=1e-4, subtype="DISTANCE", unit="LENGTH", update=_changed
+        name="Camera Height",
+        description="Height of the camera above the ground",
+        default=1.6,
+        min=1e-4,
+        subtype="DISTANCE",
+        unit="LENGTH",
+        update=_changed,
     )
     yaw_source: EnumProperty(
         name="Yaw",
+        description="Where the camera heading comes from",
         items=[("EXIF", "From EXIF", "Use the image direction from GPS metadata"), ("MANUAL", "Manual", "")],
         default="EXIF",
         update=_changed,
@@ -211,6 +268,7 @@ class FTC_Settings(PropertyGroup):
 
     pp_mode: EnumProperty(
         name="Principal Point",
+        description="Point of the image hit by the optical axis",
         items=[
             ("CENTER", "Center", "Principal point at the image centre"),
             ("MANUAL", "Manual", "Drag the principal point in the viewport"),
@@ -219,7 +277,12 @@ class FTC_Settings(PropertyGroup):
         update=_changed,
     )
     straighten: BoolProperty(name="Straighten Horizon", description="Force zero roll", default=False, update=_changed)
-    pitch_offset: FloatProperty(name="Pitch Correction", subtype="ANGLE", update=_changed)
+    pitch_offset: FloatProperty(
+        name="Pitch Correction",
+        description="Manual tilt from the horizon handle; reset when the guides change",
+        subtype="ANGLE",
+        update=_changed,
+    )
 
     live: BoolProperty(
         name="Live Update",
@@ -228,15 +291,43 @@ class FTC_Settings(PropertyGroup):
         update=_changed,
     )
     freeze: BoolProperty(name="Freeze Guides", description="Lock the guides against accidental edits")
-    show_grid: BoolProperty(name="Grid", description="Show the verification grid on Z = 0", default=True)
-    grid_opacity: FloatProperty(name="Grid Opacity", default=0.6, min=0.0, max=1.0, subtype="FACTOR")
+    show_grid: BoolProperty(name="Grid", description="Show the verification grid on the reference plane", default=True)
+    grid_opacity: FloatProperty(
+        name="Grid Opacity",
+        description="Opacity of the verification grid",
+        default=0.6,
+        min=0.0,
+        max=1.0,
+        subtype="FACTOR",
+    )
 
+    ref_plane: EnumProperty(
+        name="Reference Plane",
+        description="Calibrated plane used for the rectangle, the grid and the scene alignment",
+        items=[
+            ("XY", "XY", "Floor or any horizontal plane"),
+            ("XZ", "XZ", "Wall facing -Y, with Z up"),
+            ("YZ", "YZ", "Wall facing +X, with Z up"),
+        ],
+        default="XY",
+        update=_guides_changed,
+    )
     use_anchor: BoolProperty(
-        name="Anchor to 3D Cursor",
-        description="Place the calibrated origin at the stored 3D cursor location and rotation",
+        name="Align to Scene",
+        description="Place the reference plane on the stored scene target (3D cursor, face or object)",
         update=_changed,
     )
+    # Scene target frame: origin, x axis, y axis and normal of the target plane.
     anchor_matrix: FloatVectorProperty(size=(4, 4), subtype="MATRIX")
+    align_source: StringProperty(name="Aligned To", description="Scene target of the alignment")
+    align_rotation: IntProperty(
+        name="Rotation",
+        description="Quarter turns of the reference plane about its normal on the target",
+        min=0,
+        max=3,
+        update=_changed,
+    )
+    align_flip: BoolProperty(name="Flip", description="Turn the reference plane over on the target", update=_changed)
 
     camera_data: PointerProperty(type=FTC_CameraData)
     results: PointerProperty(type=FTC_Results)

@@ -17,7 +17,8 @@ fit_the_camera/          # l'estensione (questa cartella diventa lo zip)
   props.py               # PropertyGroup salvato su ogni Camera (camera.ftc)
   calibrate.py           # ponte impostazioni -> solver -> camera Blender
   ops_load.py            # Carica immagine, copia raddrizzata (orientamento EXIF)
-  ops_modal.py           # operatore modale, undo interno, Applica/Reset/Aggancio
+  ops_modal.py           # operatore modale, undo interno, Applica/Reset
+  ops_align.py           # allineamento del piano calibrato a cursore, faccia o oggetto
   ops_move_view.py       # Move Along View
   draw.py                # overlay gpu (guide, maniglie, griglia, orizzonte)
   ui.py                  # pannello nella sidebar, tab "FTC"
@@ -35,6 +36,9 @@ scripts/                 # build, Blender locale, runner dei test
 - Mondo destrorso con Z in alto. `rotation` del solver è camera→mondo e va
   direttamente in `matrix_world`.
 - Yaw in gradi, orario da +Y (come una bussola con il nord su +Y).
+- Piano di riferimento: XY (pavimento), XZ (parete rivolta a −Y), YZ (parete
+  rivolta a +X), con y locale verso l'alto sulle pareti. L'allineamento alla
+  scena porta questo piano sul bersaglio (cursore, faccia, oggetto).
 - Il sensore si applica al lato lungo dell'immagine (`sensor_fit` HORIZONTAL o
   VERTICAL secondo l'orientamento). Senza sensore noto si usa 36 mm, che dà la
   focale equivalente 35 mm.

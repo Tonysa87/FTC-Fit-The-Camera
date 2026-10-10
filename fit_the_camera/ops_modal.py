@@ -138,6 +138,15 @@ class FTC_OT_calibrate(Operator):
     def running(cls) -> bool:
         return cls._session is not None
 
+    @classmethod
+    def description(cls, context, properties):
+        if cls._session is not None:
+            return "End the calibration session, keeping the guides"
+        return (
+            "Edit the calibration guides in the camera view: drag the handles onto lines of the image. "
+            "Shortcuts are listed in the header"
+        )
+
     def invoke(self, context, event):
         if FTC_OT_calibrate._session is not None:
             # A second click on Calibrate ends the running session.
@@ -455,32 +464,7 @@ class FTC_OT_reset(Operator):
         return {"FINISHED"}
 
 
-class FTC_OT_anchor_cursor(Operator):
-    """Place the calibrated origin at the current 3D cursor location and rotation (stored)"""
-
-    bl_idname = "ftc.anchor_cursor"
-    bl_label = "Anchor to 3D Cursor"
-    bl_options = {"REGISTER", "UNDO"}
-
-    @classmethod
-    def poll(cls, context):
-        return _panel_camera(context) is not None
-
-    def execute(self, context):
-        cam_obj = _panel_camera(context)
-        settings = cam_obj.data.ftc
-        loc, rot, _ = context.scene.cursor.matrix.decompose()
-        matrix = rot.to_matrix().to_4x4()
-        matrix.translation = loc
-        with calibrate.suspended():
-            settings.anchor_matrix = matrix
-        settings.use_anchor = True
-        if FTC_OT_calibrate._session is None:
-            calibrate.update(context, cam_obj, apply=True)
-        return {"FINISHED"}
-
-
-classes = (FTC_OT_calibrate, FTC_OT_apply, FTC_OT_reset, FTC_OT_anchor_cursor)
+classes = (FTC_OT_calibrate, FTC_OT_apply, FTC_OT_reset)
 
 
 def end_session() -> None:

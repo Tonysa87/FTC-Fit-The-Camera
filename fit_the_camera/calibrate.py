@@ -22,6 +22,7 @@ from .solver import (
     solve_vanishing_points,
     to_blender,
 )
+from .solver.common import plane_frame
 
 # Default guide layout, in normalised image coordinates (0..1, origin bottom-left).
 # Vanishing point 1 (+X) converges to the right, 2 (+Y) to the left, 3 downwards,
@@ -237,6 +238,7 @@ def solve(settings, overrides: dict | None = None) -> CameraSolution:
             size,
             principal_point=pp,
             focal_px=focal,
+            plane=reference_plane(settings),
             **common,
         )
 
@@ -353,6 +355,29 @@ def refresh(cam_data) -> CameraSolution | None:
     return solution
 
 
+def reference_plane(settings) -> str:
+    """Plane used for the rectangle, the grid and the alignment (always the
+    ground in horizon mode)."""
+    return "XY" if settings.mode == "HORIZON" else settings.ref_plane
+
+
+def reference_frame(settings) -> Matrix:
+    """Reference plane frame in the calibrated world, with the user's quarter
+    turns and flip: x, y in the plane and z along its normal."""
+    frame = Matrix(plane_frame(reference_plane(settings)).tolist()).to_4x4()
+    frame = frame @ Matrix.Rotation(math.radians(90.0 * settings.align_rotation), 4, "Z")
+    if settings.align_flip:
+        frame = frame @ Matrix.Rotation(math.pi, 4, "X")
+    return frame
+
+
+def alignment_matrix(settings) -> Matrix:
+    """Calibrated world -> scene: puts the reference plane frame on the target."""
+    if not settings.use_anchor:
+        return Matrix.Identity(4)
+    return Matrix(settings.anchor_matrix) @ reference_frame(settings).inverted()
+
+
 def apply_solution(cam_obj, solution: CameraSolution) -> None:
     """Write ``solution`` into the camera object and its data."""
     settings = cam_obj.data.ftc
@@ -366,10 +391,7 @@ def apply_solution(cam_obj, solution: CameraSolution) -> None:
     cam.lens = bc.lens
     cam.shift_x = bc.shift_x
     cam.shift_y = bc.shift_y
-    matrix = Matrix(bc.matrix_world.tolist())
-    if settings.use_anchor:
-        matrix = Matrix(settings.anchor_matrix) @ matrix
-    cam_obj.matrix_world = matrix
+    cam_obj.matrix_world = alignment_matrix(settings) @ Matrix(bc.matrix_world.tolist())
 
 
 def update(context, cam_obj, *, apply: bool) -> CameraSolution | None:

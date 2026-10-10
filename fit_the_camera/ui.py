@@ -191,11 +191,28 @@ class FTC_PT_main(Panel):
         if settings.pitch_offset != 0.0:
             col.prop(settings, "pitch_offset")
 
+        self.draw_alignment(context, body, settings)
+
+    def draw_alignment(self, context, layout, settings):
+        header, body = layout.panel("ftc_align", default_closed=False)
+        header.label(text="Align to Scene")
+        if body is None:
+            return
+        if settings.mode != "HORIZON":
+            row = body.row(align=True)
+            row.prop(settings, "ref_plane", expand=True)
         row = body.row(align=True)
-        row.operator("ftc.anchor_cursor", icon="PIVOT_CURSOR")
-        sub = row.row(align=True)
-        sub.enabled = any(settings.anchor_matrix[i][i] != 0.0 for i in range(4))
-        sub.prop(settings, "use_anchor", text="", icon="LINKED" if settings.use_anchor else "UNLINKED")
+        row.operator("ftc.align_cursor", icon="PIVOT_CURSOR")
+        row.operator("ftc.align_selection", icon="RESTRICT_SELECT_OFF")
+        row.operator("ftc.align_clear", icon="WORLD")
+        if settings.use_anchor:
+            info_row(body, iface_("Aligned To"), settings.align_source or "—")
+            row = body.row(align=True)
+            row.operator("ftc.align_rotate", icon="FILE_REFRESH")
+            row.operator("ftc.align_flip", icon="ARROW_LEFTRIGHT", depress=settings.align_flip)
+        elif any(settings.anchor_matrix[i][i] != 0.0 for i in range(4)):
+            # A target is stored but switched off: offer to switch it back on.
+            body.prop(settings, "use_anchor", text=iface_("Use Stored Target") + f" ({settings.align_source})")
 
     def draw_display(self, context, layout, cam_obj, settings):
         header, body = layout.panel("ftc_display", default_closed=False)
