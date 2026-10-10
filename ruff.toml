@@ -7,3 +7,8 @@ ignore = ["B905"]
 
 [lint.isort]
 known-first-party = ["solver"]
+
+# Diagnostic probes (scripts/probe.sh): quick scripts that reuse the Blender test
+# helpers via exec, so imports follow it.
+[lint.per-file-ignores]
+"scripts/probes/*.py" = ["E402", "E501", "SIM115", "SIM117", "UP031", "B007"]

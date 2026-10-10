@@ -86,7 +86,8 @@ fit_the_camera/          # l'estensione (questa cartella diventa lo zip)
   solver/                # numpy puro, senza bpy (testabile con pytest)
     common.py            # convenzioni, CameraSolution, piani, reframe
     vp.py                # punti di fuga 1/2/3, segni degli assi, aderenza
-    refine.py            # minimi quadrati (Levenberg-Marquardt) su tutte le guide
+    refine.py            # minimi quadrati (Levenberg-Marquardt), focale nota come vincolo
+    scale.py             # cubo di scala
     plane.py             # rettangolo noto (omografia, vincoli di Zhang)
     horizon.py           # orizzonte
     convert.py           # soluzione -> camera Blender, focale da mm / 35 mm
@@ -97,15 +98,17 @@ fit_the_camera/          # l'estensione (questa cartella diventa lo zip)
   ops_modal.py           # operatore modale, undo interno, Applica/Reset
   ops_align.py           # allineamento alla scena
   ops_move_view.py       # Move Along View
-  draw.py                # overlay gpu (guide, maniglie, griglia, orizzonte)
+  draw.py                # overlay gpu (guide, maniglie, griglia, orizzonte, cubo)
   ui.py                  # pannello
   translations.py        # traduzione italiana
 tests/                   # pytest: solver, EXIF, dati da foto reali, fuzz
 tests/data/              # linee misurate al sub-pixel su foto reali (senza foto)
 tests_blender/           # test dentro Blender (headless; GUI simulata facoltativa)
 scripts/                 # build, Blender locale, runner dei test
+scripts/probes/          # sonde diagnostiche: bash scripts/probe.sh <nome>
 samples/                 # foto di prova (ignorata da git: contengono GPS)
 docs/CHANGELOG.md
+docs/TEST_GUI.md         # checklist del test a mano in Blender (da fare: 0.6.1)
 ```
 
 ## Convenzioni
