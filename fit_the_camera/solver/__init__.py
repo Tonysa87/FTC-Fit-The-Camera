@@ -5,7 +5,7 @@ from .common import CameraSolution, SolverError
 from .convert import BlenderCamera, focal_px_from_35mm, focal_px_from_mm, to_blender
 from .horizon import solve_horizon
 from .plane import solve_rectangle
-from .scale import ScaleCube, cube_corners
+from .scale import ScaleCube, cube_corners, cube_top_px
 from .vp import ReferenceDistance, solve_vanishing_points
 
 __all__ = [
@@ -15,6 +15,7 @@ __all__ = [
     "ScaleCube",
     "SolverError",
     "cube_corners",
+    "cube_top_px",
     "focal_px_from_35mm",
     "focal_px_from_mm",
     "solve_horizon",

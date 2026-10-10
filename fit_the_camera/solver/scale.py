@@ -43,7 +43,12 @@ def _plane_hit(centre, direction, normal) -> np.ndarray | None:
 
 def cube_distance(cube: ScaleCube, origin_ray, world_to_cam, p, f) -> float:
     """Distance from the camera of the world origin (seen along ``origin_ray``)
-    that makes the cube's vertical edge ``cube.size`` long."""
+    that makes the cube's vertical edge ``cube.size`` long.
+
+    The top handle counts by its foot on the edge's image line, so moving it
+    across the edge does not change the scale; a top on the wrong side of the
+    plane measures the same height mirrored.
+    """
     if cube.size <= 0.0:
         raise SolverError("the scale cube size must be positive")
     origin = np.asarray(origin_ray, float)  # world origin at unit distance
@@ -54,9 +59,16 @@ def cube_distance(cube: ScaleCube, origin_ray, world_to_cam, p, f) -> float:
         raise SolverError(BEYOND_HORIZON)
     base = base + origin
     up = normal if normal @ origin < 0.0 else -normal  # towards the camera
-    height = closest_param_on_line(base, up, ray(cube.top, p, f))
+    p = np.asarray(p, float)
+    foot = p + f * base[:2] / -base[2]
+    along = f * up[:2] + up[2] * (foot - p)  # image direction of the edge at the base
+    if along @ along < 1e-18:
+        raise SolverError("the scale cube's vertical edge points at the camera")
+    top = np.asarray(cube.top, float)
+    top = foot + ((top - foot) @ along) / (along @ along) * along
+    height = abs(closest_param_on_line(base, up, ray(top, p, f)))
     if height <= 1e-9 * np.linalg.norm(base):
-        raise SolverError("the scale cube's top handle must be above its base corner")
+        raise SolverError("the scale cube has no height: drag its top handle away from the base")
     return cube.size / height
 
 
@@ -84,3 +96,15 @@ def cube_corners(solution: CameraSolution, base_px, size: float, plane: str) -> 
 
 # Pairs of corner indices joined by an edge, grouped by direction (x, y, normal).
 CUBE_EDGES = tuple(tuple((i, i | bit) for i in range(8) if not i & bit) for bit in (1, 2, 4))
+
+
+def cube_top_px(solution: CameraSolution, base_px, size: float, plane: str):
+    """Image point of the top of the cube's vertical edge above ``base_px``, or
+    ``None`` when the base is not on the plane or the top is behind the camera."""
+    corners = cube_corners(solution, base_px, size, plane)
+    if corners is None:
+        return None
+    cam = solution.rotation.T @ (corners[4] - solution.position)
+    if cam[2] > -1e-9:
+        return None
+    return solution.principal_point + solution.focal_px * cam[:2] / -cam[2]

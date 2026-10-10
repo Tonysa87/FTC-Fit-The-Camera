@@ -16,6 +16,7 @@ from .solver import (
     ReferenceDistance,
     ScaleCube,
     SolverError,
+    cube_top_px,
     focal_px_from_35mm,
     focal_px_from_mm,
     solve_horizon,
@@ -108,10 +109,13 @@ def _default_rectangle(settings, focal, w, h) -> dict:
     away = np.array([0.0, math.sin(tilt), -math.cos(tilt)]) * min(aspect, 2.0)
     corners = {}
     for _ in range(12):  # a wide lens shows the near side large: shrink to fit
+        depths = []
         for i, (a, b) in enumerate(((-1, -1), (1, -1), (1, 1), (-1, 1))):
             x, y, z = centre + side / 2.0 * (a * np.array([1.0, 0.0, 0.0]) + b * away)
+            depths.append(z)
             corners[f"rect_{i}"] = (0.5 + focal * x / -z / w, 0.5 + focal * y / -z / h)
-        if all(0.03 <= c <= 0.97 for co in corners.values() for c in co):
+        inside = all(0.03 <= c <= 0.97 for co in corners.values() for c in co)
+        if inside and all(depth < -0.05 for depth in depths):
             break
         side *= 0.8
     return corners
@@ -201,7 +205,10 @@ def cube_visible(settings) -> bool:
 
 
 def cube_size(settings) -> float:
-    return settings.cube_custom if settings.cube_size == "CUSTOM" else float(settings.cube_size)
+    """Edge of the scale cube in scene units (the presets are metres)."""
+    if settings.cube_size == "CUSTOM":
+        return settings.cube_custom
+    return float(settings.cube_size) / (bpy.context.scene.unit_settings.scale_length or 1.0)
 
 
 # ----------------------------------------------------------------------------
@@ -246,11 +253,15 @@ def focal_source(settings) -> str:
     the guides) or "SOLVE" (from the guides only)."""
     if mode_needs_focal(settings):
         return "KNOWN"
-    if settings.focal_mode == "AUTO":
-        pp_solved = settings.mode == "VP" and settings.vp_count == "3" and settings.pp_mode == "SOLVE"
-        if pp_solved or known_focal_px(settings) is None:
-            return "SOLVE"
+    if pp_solved(settings):
+        return "SOLVE"  # the orthocentre fixes the focal length too
+    if settings.focal_mode == "AUTO" and known_focal_px(settings) is None:
+        return "SOLVE"
     return settings.focal_mode
+
+
+def pp_solved(settings) -> bool:
+    return settings.mode == "VP" and settings.vp_count == "3" and settings.pp_mode == "SOLVE"
 
 
 def _focal_inputs(settings) -> dict:
@@ -271,11 +282,12 @@ def _focal_inputs(settings) -> dict:
 # Solving
 
 
-def solve(settings, overrides: dict | None = None) -> CameraSolution:
+def solve(settings, overrides: dict | None = None, distance: float | None = None) -> CameraSolution:
     """Solve the camera described by ``settings``; raises ``SolverError``.
 
     ``overrides`` replaces some handle positions (normalised), without touching
-    the stored settings.
+    the stored settings. ``distance`` replaces the vanishing point scale by the
+    camera's distance from the origin.
     """
     size = image_size(settings)
     if not size[0] or not size[1]:
@@ -309,7 +321,9 @@ def solve(settings, overrides: dict | None = None) -> CameraSolution:
             a, b = _points(settings, ["hz_a", "hz_b"])
             axis2_line = (a, b)
         reference = cube = None
-        if settings.scale_mode == "REFERENCE":
+        if distance is not None:
+            pass
+        elif settings.scale_mode == "REFERENCE":
             ra, rb = _points(settings, ["ref_a", "ref_b"])
             reference = ReferenceDistance(settings.ref_axis, ra, rb, settings.ref_length)
         else:
@@ -327,6 +341,7 @@ def solve(settings, overrides: dict | None = None) -> CameraSolution:
             origin=at("origin"),
             reference=reference,
             cube=cube,
+            camera_distance=distance or 10.0,
             **common,
         )
 
@@ -362,7 +377,7 @@ def solve(settings, overrides: dict | None = None) -> CameraSolution:
 
 
 # Handles that only place or scale the result, not its orientation or focal length.
-_POSE_ONLY_KEYS = {"origin", "ref_a", "ref_b", "cube_base", "cube_top", "pp"}
+POSE_ONLY_KEYS = {"origin", "ref_a", "ref_b", "cube_base", "cube_top", "pp"}
 # Assumed placement error of a handle, as a fraction of the long image side.
 PLACEMENT_ERROR = 1e-3
 UNSTABLE_FOCAL = 0.05
@@ -375,7 +390,7 @@ UNSTABLE_ANGLE_DEG = 1.0
 
 
 def calibrate_keys(settings) -> list[str]:
-    return [k for k in active_handle_keys(settings) if k not in _POSE_ONLY_KEYS]
+    return [k for k in active_handle_keys(settings) if k not in POSE_ONLY_KEYS]
 
 
 def uncertainty(settings, solution: CameraSolution) -> tuple[float, float]:
@@ -401,6 +416,66 @@ def uncertainty(settings, solution: CameraSolution) -> tuple[float, float]:
             cos = (np.trace(solution.rotation.T @ nudged.rotation) - 1.0) / 2.0
             angle_var += math.degrees(math.acos(min(1.0, max(-1.0, cos)))) ** 2
     return math.sqrt(focal_var), math.sqrt(angle_var)
+
+
+def seed_cube(cam_data, solution: CameraSolution | None = None) -> None:
+    """Put the scale cube's top handle on the top of its vertical edge for
+    ``solution`` (default: the cached one), so that the scale stays as it is.
+
+    Used when the reference plane changes, when the cube takes over the scale and
+    for files saved before the cube existed. A base corner that is not on the
+    reference plane moves next to the origin.
+    """
+    settings = cam_data.ftc
+    if _updating and solution is None:
+        return  # settings written together (``suspended``, undo): keep their handles
+    solution = solution or cached_solution(cam_data)
+    if not cube_scales(settings) or solution is None:
+        return
+    w, h = image_size(settings)
+    size, plane = cube_size(settings), reference_plane(settings)
+    base = to_pixels(settings, handle(settings, "cube_base"))
+    top = cube_top_px(solution, base, size, plane)
+    if top is None:
+        # Half an edge from the origin along the plane, so both handles stay pickable.
+        frame = plane_frame(plane)
+        near = project_point(solution, 0.5 * size * (frame[:, 0] + frame[:, 1]))
+        if near is None:
+            return
+        base = near
+        top = cube_top_px(solution, base, size, plane)
+        if top is None:
+            return
+    with suspended():
+        set_handle(settings, "cube_base", (float(base[0] / w), float(base[1] / h)))
+        set_handle(settings, "cube_top", (float(top[0] / w), float(top[1] / h)))
+
+
+def project_point(solution: CameraSolution, point):
+    """Image point of a world point, ``None`` behind the camera."""
+    cam = solution.rotation.T @ (np.asarray(point, float) - solution.position)
+    if cam[2] > -1e-9:
+        return None
+    return solution.principal_point + solution.focal_px * cam[:2] / -cam[2]
+
+
+def _migrate_cube(cam_data) -> None:
+    """Files saved before the scale cube: seed it so that the camera keeps its
+    distance from the origin (the old "Camera Distance")."""
+    settings = cam_data.ftc
+    if not cube_scales(settings) or settings.handles.get("cube_top") is not None or not len(settings.handles):
+        return
+    users = [o for o in bpy.data.objects if o.data == cam_data]
+    if not users:
+        return
+    distance = (users[0].matrix_world.translation - alignment_matrix(settings).translation).length
+    if distance <= 0.0:
+        return
+    try:
+        solution = solve(settings, distance=distance)
+    except (SolverError, ArithmeticError, ValueError, np.linalg.LinAlgError):
+        return
+    seed_cube(cam_data, solution)
 
 
 def seed_third_axis(cam_data) -> None:
@@ -469,24 +544,24 @@ def _store_results(settings, solution: CameraSolution | None, error: str) -> Non
             "or use the known focal length",
         )
     res.guide_misfit = math.radians(solution.guide_misfit)
+    # Independent checks: a misfit names its cause even when the focal also moved.
+    head = []
     if source == "KNOWN" and solution.guide_misfit > MISFIT_KNOWN_FOCAL_DEG:
-        warnings.insert(
-            0,
+        head.append(
             f"the guides disagree with the known focal length by up to {solution.guide_misfit:.1f}°: "
-            "the photo may be cropped or zoomed, try solving the focal length",
-        )
-    elif abs(res.focal_shift) > FOCAL_SHIFT:
-        warnings.insert(
-            0,
-            f"the guides overrule the known focal length ({100 * res.focal_shift:+.0f}%): "
-            "the photo is probably cropped or zoomed",
+            "the photo may be cropped or zoomed, try solving the focal length"
         )
     elif solution.guide_misfit > MISFIT_DEG:
-        warnings.insert(
-            0,
+        head.append(
             f"the guides do not meet consistently (up to {solution.guide_misfit:.1f}° off): "
-            "some lines may not be parallel to their axis",
+            "some lines may not be parallel to their axis"
         )
+    if abs(res.focal_shift) > FOCAL_SHIFT:
+        head.append(
+            f"the guides overrule the known focal length ({100 * res.focal_shift:+.0f}%): "
+            "the photo may be cropped or zoomed"
+        )
+    warnings[:0] = head
     res.warnings = "\n".join(warnings)
     res.removed_roll = math.radians(solution.removed_roll)
     res.focal_px = solution.focal_px
@@ -509,6 +584,7 @@ def _finite(solution: CameraSolution) -> bool:
 def refresh(cam_data) -> CameraSolution | None:
     """Solve ``cam_data``'s settings, cache the solution and store the results."""
     settings = cam_data.ftc
+    _migrate_cube(cam_data)
     try:
         solution = solve(settings)
         error = ""

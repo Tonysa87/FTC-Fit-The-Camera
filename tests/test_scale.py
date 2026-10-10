@@ -33,8 +33,7 @@ def test_cube_base_anywhere_on_the_plane(camera):
 
 
 def test_top_handle_off_the_edge_uses_the_closest_point(camera):
-    """Only the height along the vertical edge counts: a sideways miss in the image
-    changes the scale very little."""
+    """Only the height along the vertical edge counts."""
     cube = cube_on(camera, (1.0, 0.5, 0.0), (1.0, 0.5, 1.0), 1.0)
     cube.top = (cube.top[0] + 6.0, cube.top[1])
     assert_matches(solve_with_cube(camera, cube), camera, pos_tol=0.003)
@@ -53,10 +52,24 @@ def test_base_beyond_the_horizon_is_an_error(camera):
         solve_with_cube(camera, cube)
 
 
-def test_top_below_the_base_is_an_error(camera):
+def test_top_below_the_base_measures_the_mirrored_height(camera):
+    """A top handle on the wrong side of the plane (e.g. after switching the
+    reference plane) still gives a valid scale instead of breaking the solve."""
     cube = cube_on(camera, (1.0, 0.5, 0.0), (1.0, 0.5, -1.0), 1.0)
-    with pytest.raises(SolverError, match="above its base"):
-        solve_with_cube(camera, cube)
+    sol = solve_with_cube(camera, cube)
+    assert np.isfinite(sol.position).all()
+    flat = cube_on(camera, (1.0, 0.5, 0.0), (1.0, 0.5, 0.0), 1.0)
+    with pytest.raises(SolverError, match="no height"):
+        solve_with_cube(camera, flat)
+
+
+def test_top_handle_across_the_edge_keeps_the_scale(camera):
+    """The top handle counts by its foot on the edge's image line."""
+    cube = cube_on(camera, (1.0, 0.5, 0.0), (1.0, 0.5, 1.0), 1.0)
+    edge = np.subtract(cube.top, cube.base)
+    across = np.array([-edge[1], edge[0]]) / np.linalg.norm(edge)
+    cube.top = tuple(np.add(cube.top, 120.0 * across))
+    assert_matches(solve_with_cube(camera, cube), camera, pos_tol=1e-6)
 
 
 def as_solution(cam):

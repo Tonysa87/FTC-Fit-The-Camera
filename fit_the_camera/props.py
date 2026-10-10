@@ -40,6 +40,17 @@ def _guides_changed(self, context):
     calibrate.settings_changed(self.id_data, context, reset_pitch=True)
 
 
+def _cube_seeded(reset_pitch):
+    """Update callback that first keeps the scene scale on the scale cube."""
+
+    def update(self, context):
+        # The cached solution is still the one before the change: seed from it.
+        calibrate.seed_cube(self.id_data)
+        calibrate.settings_changed(self.id_data, context, reset_pitch=reset_pitch)
+
+    return update
+
+
 def _third_axis_changed(self, context):
     # The cached solution is still the one before the change: seed from it.
     calibrate.seed_third_axis(self.id_data)
@@ -204,19 +215,19 @@ class FTC_Settings(PropertyGroup):
             ("REFERENCE", "Reference Distance", "A known length along an axis, starting from the origin line"),
         ],
         default="CUBE",
-        update=_changed,
+        update=_cube_seeded(reset_pitch=False),
     )
     cube_size: EnumProperty(
         name="Cube Size",
         description="Edge length of the scale cube",
         items=[
-            ("0.1", "10 cm", ""),
-            ("0.2", "20 cm", ""),
-            ("0.5", "50 cm", ""),
-            ("1", "1 m", ""),
-            ("2", "2 m", ""),
-            ("5", "5 m", ""),
-            ("10", "10 m", ""),
+            ("0.1", "10 cm", "Cube edge of 10 cm"),
+            ("0.2", "20 cm", "Cube edge of 20 cm"),
+            ("0.5", "50 cm", "Cube edge of 50 cm"),
+            ("1", "1 m", "Cube edge of 1 m"),
+            ("2", "2 m", "Cube edge of 2 m"),
+            ("5", "5 m", "Cube edge of 5 m"),
+            ("10", "10 m", "Cube edge of 10 m"),
             ("CUSTOM", "Custom Size", "Enter the edge length"),
         ],
         default="1",
@@ -374,7 +385,7 @@ class FTC_Settings(PropertyGroup):
             ("YZ", "YZ", "Wall facing +X, with Z up"),
         ],
         default="XY",
-        update=_guides_changed,
+        update=_cube_seeded(reset_pitch=True),
     )
     use_anchor: BoolProperty(
         name="Align to Scene",

@@ -37,6 +37,9 @@ from .refine import (
 # Below this angle between the plane normal and the view axis the focal length
 # cannot be estimated reliably from a rectangle.
 FRONTAL_LIMIT_DEG = 12.0
+# Largest corner reprojection error, as a fraction of the long image side, that
+# still counts as agreeing with a known focal length.
+KNOWN_FOCAL_TOLERANCE = 5e-3
 
 
 def _normalization(points: np.ndarray) -> np.ndarray:
@@ -114,7 +117,8 @@ def _pose(hmat: np.ndarray, f: float) -> tuple[np.ndarray, np.ndarray]:
 def refine_with_known_focal(plane_pts, image_pts, f, world_to_cam, origin_cam, known, weight):
     """Least squares on the corner reprojection plus ``focal_prior_residual``, over
     focal length, rotation and translation. Returns the refined focal length,
-    world -> camera rotation, origin in camera space and the final cost."""
+    world -> camera rotation, origin in camera space and the largest corner
+    reprojection error (pixels)."""
     x_world = np.column_stack([plane_pts, np.zeros(len(plane_pts))])
     reach = float(np.linalg.norm(origin_cam))
 
@@ -137,8 +141,11 @@ def refine_with_known_focal(plane_pts, image_pts, f, world_to_cam, origin_cam, k
         return step
 
     x, cost = least_squares(fun, 7, bounded)
+    if not math.isfinite(cost):
+        return f, world_to_cam, origin_cam, math.inf
     focal, rot, t = unpack(x)
-    return focal, orthonormalize(rot), t, cost
+    worst = float(np.max(np.hypot(*fun(x)[:-1].reshape(-1, 2).T)))
+    return focal, orthonormalize(rot), t, worst
 
 
 def solve_rectangle(
@@ -183,13 +190,13 @@ def solve_rectangle(
                 raise SolverError("the focal length cannot be estimated from this rectangle")
         world_to_cam, origin_cam = _pose(hmat, f)
         if known_focal_px and not focal_px:
-            # Start from the corners' own focal length and from the known one: keep the better fit.
+            # The corners overrule the known focal length only when they cannot
+            # agree with it (a cropped or zoomed photo) and have one of their own.
             weight = focal_prior_weight(image_size)
-            fits = [
-                refine_with_known_focal(plane, centred, start, *_pose(hmat, start), known_focal_px, weight)
-                for start in {f, known_focal_px}
-            ]
-            f, world_to_cam, origin_cam, _ = min(fits, key=lambda fit: fit[3])
+            known = float(known_focal_px)
+            fit = refine_with_known_focal(plane, centred, known, *_pose(hmat, known), known, weight)
+            if fit[3] <= KNOWN_FOCAL_TOLERANCE * max(image_size) or f == known:
+                f, world_to_cam, origin_cam = fit[:3]
         position = -world_to_cam.T @ origin_cam
         return f, world_to_cam, origin_cam, position
 

@@ -156,6 +156,28 @@ def best_pair_focal(vps, p, image_size) -> float:
     return best[1]
 
 
+# Largest guide misfit (degrees) that still counts as agreeing with a known focal length.
+KNOWN_FOCAL_TOLERANCE_DEG = 1.0
+
+
+def refine_known_focal(groups, p, prior, guides_focal, initial_rotation):
+    """Known focal length refined by the guides, as far as they measure it.
+
+    The guides overrule it only when they cannot agree with it (a guide more
+    than ``KNOWN_FOCAL_TOLERANCE_DEG`` off, e.g. a cropped or zoomed photo) and
+    fit clearly better with their own focal length.
+    """
+    known = prior[0]
+    f, rotation, _ = refine(groups, p, known, initial_rotation(known), fix_focal=False, focal_prior=prior)
+    misfit = max_misfit(groups, p, f, rotation)
+    if misfit <= KNOWN_FOCAL_TOLERANCE_DEG or guides_focal is None:
+        return f, rotation
+    f_g, rotation_g, _ = refine(groups, p, guides_focal, initial_rotation(guides_focal), fix_focal=False)
+    if max_misfit(groups, p, f_g, rotation_g) < 0.75 * misfit:
+        return f_g, rotation_g
+    return f, rotation
+
+
 def solve_vanishing_points(
     vp_lines,
     axes,
@@ -187,7 +209,8 @@ def solve_vanishing_points(
       known focal length) the camera is refined by least squares on all guides.
     * ``known_focal_px``: with 2 or 3 points and no ``focal_px``, a focal length
       known from the camera (EXIF): the guides refine it by least squares, as far
-      as they measure it; a weak or inconsistent configuration stays close to it.
+      as they measure it, and overrule it only when they cannot agree with it
+      (see ``refine_known_focal``).
     * 3 points with ``solve_principal_point``: the principal point is the
       orthocentre of the vanishing points (closed form, no refinement).
     * ``third_axis_line``: with two vanishing points, an optional segment along the
@@ -232,11 +255,12 @@ def solve_vanishing_points(
             f = focal_from_two_vps(vps[0][:2], vps[1][:2], p)
         else:
             p = image_center(image_size) if principal_point is None else np.asarray(principal_point, float)
+            guides_focal = None
             if focal_px:
                 f = float(focal_px)
             else:
                 try:
-                    f = best_pair_focal(vps, p, image_size)
+                    f = guides_focal = best_pair_focal(vps, p, image_size)
                 except SolverError:
                     # The guides alone fit no camera: the known focal length can.
                     if not known_focal_px:
@@ -266,17 +290,10 @@ def solve_vanishing_points(
             prior = (float(known_focal_px), focal_prior_weight(image_size))
         overdetermined = count == 3 or focal_px or prior or third_axis_line is not None
         if overdetermined and not (count == 3 and solve_principal_point):
-            # With a known focal length the cost may have two minima, one near
-            # the guides' own focal length and one near the known one.
-            starts = [f]
-            if prior and abs(math.log(f / prior[0])) > 0.02:
-                starts.append(prior[0])
-            best = None
-            for start in starts:
-                fit = refine(groups, p, start, initial_rotation(start), fix_focal=bool(focal_px), focal_prior=prior)
-                if best is None or fit[2] < best[2]:
-                    best = fit
-            f, rotation, _ = best
+            if prior:
+                f, rotation = refine_known_focal(groups, p, prior, guides_focal, initial_rotation)
+            else:
+                f, rotation, _ = refine(groups, p, f, rotation, fix_focal=bool(focal_px))
 
     misfit = max_misfit(groups, p, f, rotation)
     rotation, removed_roll = finish_rotation(rotation, straighten_horizon, pitch_offset, warnings)
