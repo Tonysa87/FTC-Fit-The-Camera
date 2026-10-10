@@ -8,7 +8,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from solver import solve_vanishing_points
+from solver import SolverError, solve_vanishing_points
 
 DATA = json.loads((Path(__file__).parent / "data" / "elevator_lines.json").read_text())
 SIZE = tuple(DATA["image_size"])
@@ -80,3 +80,36 @@ def test_floor_only_misses_the_verticals():
     case of an extrusion drifting away from the jambs."""
     sol = solve_vanishing_points([TILES_X, TILES_Y], ["+X", "-Y"], SIZE)
     assert guide_misfit(sol, VERTICALS, 2) > 1.0
+
+
+GALLERY = json.loads((Path(__file__).parent / "data" / "gallery_lines.json").read_text())
+GL = GALLERY["lines"]
+G_SIZE = tuple(GALLERY["image_size"])
+G_ACROSS = [v for k, v in GL.items() if k.startswith("across")]
+G_VERTICALS = [v for k, v in GL.items() if k.startswith("vertical")]
+G_DEPTH = [v for k, v in GL.items() if k.startswith("depth")]
+G_EXIF_FOCAL_PX = 25.0 * math.hypot(*G_SIZE) / math.hypot(36.0, 24.0)  # native 4:3 image
+
+
+def test_gallery_back_wall_and_verticals_agree_with_exif():
+    """Near one-point perspective: horizontals of the back wall + verticals with
+    the EXIF focal fit every one of the nine lines within 0.3 degrees."""
+    sol = solve_vanishing_points([G_ACROSS, G_VERTICALS], ["+X", "-Z"], G_SIZE, focal_px=G_EXIF_FOCAL_PX)
+    assert guide_misfit(sol, G_ACROSS, 0) < 0.3
+    assert guide_misfit(sol, G_VERTICALS, 2) < 0.3
+    assert sol.pitch == pytest.approx(3.9, abs=0.3)
+    assert abs(sol.roll) < 0.3
+
+
+def test_gallery_depth_lines_are_not_perpendicular_to_the_back_wall():
+    """The light rails and side floor lines look like depth lines but are not:
+    with the well-determined camera they miss the depth vanishing point by degrees."""
+    sol = solve_vanishing_points([G_ACROSS, G_VERTICALS], ["+X", "-Z"], G_SIZE, focal_px=G_EXIF_FOCAL_PX)
+    assert guide_misfit(sol, G_DEPTH, 1) > 3.0
+
+
+def test_far_horizontal_vanishing_point_cannot_give_the_focal_length():
+    """Back wall horizontals vanish ~160000 px away: two vanishing points cannot
+    solve the focal length; a clear error explains why."""
+    with pytest.raises(SolverError, match="perpendicular"):
+        solve_vanishing_points([G_ACROSS, G_DEPTH], ["+X", "+Y"], G_SIZE)
