@@ -19,7 +19,9 @@ from gpu_extras.batch import batch_for_shader
 from . import calibrate
 from .solver.common import vanishing_point
 
-HANDLE_RADIUS = 6.0
+HANDLE_RADIUS = 7.0
+HANDLE_GAP = 2.5
+HANDLE_TICK = 5.0
 PICK_RADIUS = 12.0
 GUIDE_WIDTH = 2.0
 GRID_LINES = 10
@@ -226,21 +228,6 @@ def dashed(a, b, color, width=1.0, dash=8.0):
     lines(coords, color, width)
 
 
-def disc(center, radius, color, segments=20):
-    shader = _shader("UNIFORM_COLOR")
-    shader.bind()
-    shader.uniform_float("color", color)
-    cx, cy = center
-    ring = [
-        (cx + radius * math.cos(2 * math.pi * i / segments), cy + radius * math.sin(2 * math.pi * i / segments))
-        for i in range(segments)
-    ]
-    tris = []
-    for i in range(segments):
-        tris += [(cx, cy, 0.0), (*ring[i], 0.0), (*ring[(i + 1) % segments], 0.0)]
-    batch_for_shader(shader, "TRIS", {"pos": tris}).draw(shader)
-
-
 def circle(center, radius, color, width=1.0, segments=24):
     cx, cy = center
     pts = [
@@ -253,13 +240,14 @@ def circle(center, radius, color, width=1.0, segments=24):
     lines(coords, color, width)
 
 
-def diamond(center, radius, color):
-    shader = _shader("UNIFORM_COLOR")
-    shader.bind()
-    shader.uniform_float("color", color)
+def diamond_outline(center, radius, color):
     cx, cy = center
-    pts = [(cx + radius, cy, 0.0), (cx, cy + radius, 0.0), (cx - radius, cy, 0.0), (cx, cy - radius, 0.0)]
-    batch_for_shader(shader, "TRIS", {"pos": [pts[0], pts[1], pts[2], pts[0], pts[2], pts[3]]}).draw(shader)
+    pts = [(cx + radius, cy), (cx, cy + radius), (cx - radius, cy), (cx, cy - radius)]
+    coords = []
+    for i in range(4):
+        coords += [pts[i], pts[(i + 1) % 4]]
+    lines(coords, SHADOW, 3.5)
+    lines(coords, color, 1.5)
 
 
 def text(position, string, color=WHITE, size=11.0):
@@ -273,16 +261,46 @@ def text(position, string, color=WHITE, size=11.0):
     blf.disable(font, blf.SHADOW)
 
 
+def handle_radius(hovered=False) -> float:
+    return HANDLE_RADIUS * ui_scale() * (1.25 if hovered else 1.0)
+
+
 def handle_marker(pos, color, *, hovered=False, active=False, frozen=False, first=False):
+    """Hollow ring with a crosshair whose centre is left clear, so the exact
+    image point under the handle stays visible."""
     s = ui_scale()
-    r = HANDLE_RADIUS * s * (1.3 if hovered or active else 1.0)
+    r = handle_radius(hovered or active)
+    gap, reach = HANDLE_GAP * s, r + HANDLE_TICK * s
+    x, y = pos
+    cross = [
+        (x - reach, y), (x - gap, y), (x + gap, y), (x + reach, y),
+        (x, y - reach), (x, y - gap), (x, y + gap), (x, y + reach),
+    ]  # fmt: skip
+    if active:
+        color = WHITE
+    elif frozen:
+        color = with_alpha(color, 0.45)
+    # A dark outline under the colour keeps the marker readable on bright images.
+    lines(cross, SHADOW, 3.0)
+    circle(pos, r, SHADOW, 3.5)
     if first:
-        circle(pos, r + 4.0 * s, color, 2.0)
-    if frozen:
-        circle(pos, r, color, 2.0)
+        circle(pos, r + 4.0 * s, SHADOW, 3.5)
+        circle(pos, r + 4.0 * s, color, 1.5)
+    lines(cross, color, 1.0)
+    circle(pos, r, color, 1.5)
+
+
+def segment(a, b, color, width=1.0, trim_a=True, trim_b=True):
+    """Guide line between two handles, stopped at the handle rings."""
+    length = math.dist(a, b)
+    r = handle_radius()
+    cut = r * (trim_a + trim_b)
+    if length <= cut:
         return
-    disc(pos, r + 1.5 * s, SHADOW)
-    disc(pos, r, WHITE if active else color)
+    ux, uy = (b[0] - a[0]) / length, (b[1] - a[1]) / length
+    ta = r if trim_a else 0.0
+    tb = r if trim_b else 0.0
+    lines([(a[0] + ux * ta, a[1] + uy * ta), (b[0] - ux * tb, b[1] - uy * tb)], color, width)
 
 
 # ----------------------------------------------------------------------------
@@ -353,7 +371,7 @@ def _origin_gizmo(view, solution, settings):
     for axis, vec in (("X", (length, 0, 0)), ("Y", (0, length, 0)), ("Z", (0, 0, length))):
         tip = project(solution, [vec])[0]
         if not np.isnan(tip).any():
-            lines([o, view.px_to_region(tip)], colors[axis], 2.5)
+            segment(o, view.px_to_region(tip), colors[axis], 2.5, trim_b=False)
 
 
 def axis_letter(label: str) -> str:
@@ -407,18 +425,23 @@ def draw_guides(view, settings, solution, session, unit_system):
                 k = calibrate.vp_keys(i)
                 width = GUIDE_WIDTH * (1.5 if session.active_vp == i - 1 else 1.0)
                 segs = [hpos(k[0]), hpos(k[1]), hpos(k[2]), hpos(k[3])]
-                lines(segs, color, width)
+                segment(segs[0], segs[1], color, width)
+                segment(segs[2], segs[3], color, width)
                 vp = vanishing_point_px(settings, i)
                 if vp is not None:
                     vpr = view.px_to_region(vp)
                     for a, b in ((segs[0], segs[1]), (segs[2], segs[3])):
                         near = b if math.dist(b, vpr) < math.dist(a, vpr) else a
-                        dashed(near, vpr, with_alpha(color, 0.5), 1.0)
+                        d = math.dist(near, vpr)
+                        if d > handle_radius():
+                            t = handle_radius() / d
+                            start = (near[0] + (vpr[0] - near[0]) * t, near[1] + (vpr[1] - near[1]) * t)
+                            dashed(start, vpr, with_alpha(color, 0.5), 1.0)
                 mid = ((segs[0][0] + segs[1][0]) / 2, (segs[0][1] + segs[1][1]) / 2)
                 text((mid[0] + 8 * s, mid[1] + 8 * s), labels[i - 1], color)
             if count == 1:
                 color = colors[axis_letter(settings.vp2_axis)]
-                lines([hpos("hz_a"), hpos("hz_b")], color, GUIDE_WIDTH)
+                segment(hpos("hz_a"), hpos("hz_b"), color, GUIDE_WIDTH)
                 text((hpos("hz_b")[0] + 8 * s, hpos("hz_b")[1] + 8 * s), settings.vp2_axis, color)
             if settings.scale_mode == "REFERENCE":
                 color = colors[settings.ref_axis]
@@ -430,9 +453,9 @@ def draw_guides(view, settings, solution, session, unit_system):
             pts = [hpos(f"rect_{i}") for i in range(4)]
             edge_colors = [colors["X"], colors["Y"], colors["X"], colors["Y"]]
             for i in range(4):
-                lines([pts[i], pts[(i + 1) % 4]], edge_colors[i], GUIDE_WIDTH)
+                segment(pts[i], pts[(i + 1) % 4], edge_colors[i], GUIDE_WIDTH)
         else:
-            lines([hpos("hz_a"), hpos("hz_b")], HORIZON_COLOR, GUIDE_WIDTH)
+            segment(hpos("hz_a"), hpos("hz_b"), HORIZON_COLOR, GUIDE_WIDTH)
 
         if solution is not None:
             _origin_gizmo(view, solution, settings)
@@ -472,8 +495,7 @@ def draw_guides(view, settings, solution, session, unit_system):
             if ph is not None:
                 pos = view.px_to_region(ph)
                 hovered = session.hover == "pitch" or session.drag_key == "pitch"
-                diamond(pos, (HANDLE_RADIUS + 3) * s * (1.3 if hovered else 1.0), SHADOW)
-                diamond(pos, (HANDLE_RADIUS + 1.5) * s * (1.3 if hovered else 1.0), HORIZON_COLOR)
+                diamond_outline(pos, handle_radius(hovered) + 2.0 * s, HORIZON_COLOR)
 
         res = settings.results
         if not res.valid and res.error:
