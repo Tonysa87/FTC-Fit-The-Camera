@@ -36,7 +36,20 @@ versioni: [`docs/CHANGELOG.md`](docs/CHANGELOG.md). Sviluppo:
    premi **Prepare Render** e renderizza (F12): l'oggetto è nella foto con la
    sua ombra.
 
-![Guide, griglia e assi sulla foto durante una calibrazione](docs/images/ftc_guides.jpg)
+![Calibrazione nella vista camera: guide dei punti di fuga sulla porta e sul pavimento, misura di riferimento di 0,8 m e pannello FTC](docs/images/ftc_calibration.jpg)
+
+<table>
+  <tr>
+    <td width="33%"><img src="docs/images/ftc_elevator.jpg" alt="Un oggetto CG davanti alla porta di un ascensore, con l'ombra sul pavimento vero" width="100%"></td>
+    <td width="33%"><img src="docs/images/ftc_fountain_view.jpg" alt="La camera calibrata nel viewport: orizzonte, griglia e origine su una piazza" width="100%"></td>
+    <td width="33%"><img src="docs/images/ftc_gallery.jpg" alt="Un oggetto CG in una foto di una galleria, in scala reale" width="100%"></td>
+  </tr>
+  <tr>
+    <td>Il risultato: un oggetto CG con l'ombra sul pavimento vero (shadow catcher)</td>
+    <td>La camera calibrata nel viewport: orizzonte, griglia e origine</td>
+    <td>Un oggetto CG in una galleria, in scala reale</td>
+  </tr>
+</table>
 
 Il resto della pagina spiega ogni opzione.
 
