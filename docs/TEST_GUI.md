@@ -1,7 +1,7 @@
 # Test GUI in Blender (Windows) – da fare per la 1.0.0
 
 Stato (2026-10-10, sera): prova a mano fatta fino al punto 37; **da provare
-l'orientamento FTC (punti 38–41)**. Move Along View e il gizmo lungo i raggi
+l'orientamento FTC (punti 38–41) e i lati del rettangolo (42)**. Move Along View e il gizmo lungo i raggi
 della camera sono stati rimossi dopo la prova. Tutti i test automatici passano
 (106 pytest, 28 test headless in Blender, compreso un render Cycles reale) e le
 sonde `scripts/probe.sh` (pannello, overlay, trascinamento simulato, render) sono
@@ -120,6 +120,9 @@ Zip: `\\wsl.localhost\Ubuntu-24.04\home\tony\Projects\FTC\dist\fit_the_camera-1.
 40. Edit Mode su una mesh: con *FTC Orientation* attivo, G X su vertici/spigoli/
     facce si muove lungo l'asse X della foto; con lo snapping idem.
 41. Il menu *Object › Transform* non ha più *Move Along View*.
+42. *Known Rectangle*: sotto i modi c'è il piano **XY / XZ / YZ**; le misure si
+    chiamano *Lato X* / *Lato Y* su XY, *Lato X* / *Lato Z* su XZ, *Lato Y* /
+    *Lato Z* su YZ, e i lati dell'overlay hanno gli stessi colori degli assi.
 
 ## Da riportare
 Comportamenti strani, errori in console (Window › Toggle System Console),

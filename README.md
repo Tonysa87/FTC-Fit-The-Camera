@@ -10,7 +10,7 @@ the real ground.
 
 - **Vanishing points**: 1, 2 or 3, two guide lines per axis, with the axis and
   direction of each group (X, Y, Z, ±).
-- **Known rectangle**: the four corners of a rectangle of known width and height.
+- **Known rectangle**: the four corners of a rectangle of known size, lying on the reference plane (XY, XZ or YZ).
 - **Horizon**: the horizon line, the camera height and the heading.
 - **EXIF**: camera, lens, focal length, 35 mm equivalent, sensor size, GPS and
   compass direction are read from the image. The known focal length can be refined
@@ -74,7 +74,7 @@ Open the sidebar of the 3D viewport (N) and the **FTC** tab.
 | 1 vanishing point | 2 guides for axis 1 + a line along axis 2 | needs the focal length |
 | 2 vanishing points | 2 guides per axis | optional *Third Axis Line* |
 | 3 vanishing points | 2 guides per axis | principal point at the centre, by hand or solved |
-| Known rectangle | 4 corners, real width and height | on XY, XZ or YZ |
+| Known rectangle | 4 corners, real length of the two sides | on XY, XZ or YZ |
 | Horizon | horizon line, camera height, heading | needs the focal length |
 
 ### Scale cube
