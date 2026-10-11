@@ -1,9 +1,10 @@
 # Test GUI in Blender (Windows) – da fare per la 1.0.0
 
 Stato (2026-10-11): prova a mano fatta fino al punto 37; **da provare
-l'orientamento FTC (punti 38–41) i lati del rettangolo / cubo (42–43) e la scelta della camera (44–46)**. Move Along View e il gizmo lungo i raggi
-della camera sono stati rimossi dopo la prova. Tutti i test automatici passano
-(106 pytest, 28 test headless in Blender, compreso un render Cycles reale) e le
+l'orientamento FTC (punti 38–41), i lati del rettangolo / cubo (42–43),
+la scelta della camera (44–46) e la lente (47–49)**. Move Along View e il gizmo
+lungo i raggi della camera sono stati rimossi dopo la prova. Tutti i test automatici passano
+(106 pytest, 30 test headless in Blender, compreso un render Cycles reale) e le
 sonde `scripts/probe.sh` (pannello, overlay, trascinamento simulato, render) sono
 pulite. La release v1.0.0 su GitHub è pronta come bozza: si pubblica dopo questa
 prova.
@@ -136,6 +137,17 @@ Zip: `\\wsl.localhost\Ubuntu-24.04\home\tony\Projects\FTC\dist\fit_the_camera-1.
     l'altra → la vista passa a quella e il pannello mostra la sua calibrazione.
 46. *Vanishing Points* su una foto nuova: la scala parte da *Reference
     Distance*, il cubo non c'è.
+
+## Lente d'ingrandimento
+47. *Calibrate*, trascina una maniglia e tieni **Shift**: compare una lente
+    tonda (×4) centrata sulla maniglia, il cursore sparisce, la foto scorre sotto
+    la maniglia ferma; guide e altre maniglie sono ingrandite nella lente.
+    Rilasciando Shift (o il mouse, o con Esc) la lente si chiude e il cursore torna.
+48. Colori: la foto nella lente deve avere gli stessi colori dello sfondo
+    della camera (non più scura né più chiara). Prova anche con zoom diversi della
+    vista e vicino ai bordi.
+49. Shift premuto prima di cliccare la maniglia: la lente si apre subito. Sul
+    rombo dell'orizzonte (pitch) la lente non compare.
 
 ## Da riportare
 Comportamenti strani, errori in console (Window › Toggle System Console),

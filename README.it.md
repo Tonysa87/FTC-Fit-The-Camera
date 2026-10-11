@@ -36,7 +36,7 @@ Sidebar del viewport (N) › tab **FTC**.
    ritaglio centrato di un sensore 4:3 (come fanno i telefoni).
 3. **Calibration** – modalità e parametri, poi **Calibrate** (operatore modale nel
    viewport camera). Scorciatoie nell'header: trascina = sposta maniglia,
-   Shift = fine, Ctrl = snap, 1/2/3 = asse, F = inverti verso, H = raddrizza,
+   Shift = fine, con una lente ×4 sulla maniglia, Ctrl = snap, 1/2/3 = asse, F = inverti verso, H = raddrizza,
    Ctrl+Z / Ctrl+Shift+Z = undo/redo interni, Invio = applica, Esc/RMB = esci.
    Con *Live Update* (default) la camera segue le guide mentre trascini; Invio o
    **Apply** la scrivono e chiudono la sessione. Fuori dalla sessione, le

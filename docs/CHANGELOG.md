@@ -21,6 +21,10 @@
   non viene più sostituita per errore. *Name After Photo* (attivo di default)
   dà alla nuova camera il nome del file. Con più camere calibrate il nome della
   camera nel pannello è un menu per passare dall'una all'altra.
+- **Lente d'ingrandimento**: tenendo Shift mentre trascini una maniglia (movimento
+  fine) si apre una lente ×4 centrata sulla maniglia: la maniglia resta ferma al
+  centro e la foto scorre sotto, con guide e maniglie ingrandite. Il cursore è
+  nascosto finché la lente è aperta.
 - In *Vanishing Points* le foto nuove partono con la scala **Reference
   Distance** (prima il cubo da 1 m). I file salvati che non avevano scelto
   restano col cubo e mantengono la loro scala.

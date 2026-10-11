@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Viewport overlay: guides, handles, verification grid and horizon.
+"""Viewport overlay: guides, handles, verification grid, horizon and magnifier.
 
 Everything is drawn in region pixels with the built-in ``gpu`` shaders, which
 work on every GPU backend (OpenGL, Vulkan, Metal).
@@ -16,6 +16,7 @@ import gpu
 import numpy as np
 from bpy_extras.view3d_utils import location_3d_to_region_2d
 from gpu_extras.batch import batch_for_shader
+from mathutils import Matrix
 
 from . import calibrate
 from .solver.common import plane_frame, vanishing_point
@@ -34,6 +35,12 @@ ERROR_COLOR = (1.0, 0.35, 0.3, 1.0)
 
 
 MAX_DASHES = 200
+
+# Magnifier shown on the dragged handle while Shift is held (fine dragging).
+LENS_RADIUS = 100.0
+LENS_ZOOM = 4.0
+LENS_SEGMENTS = 64
+LENS_BACKGROUND = (0.12, 0.12, 0.12, 1.0)
 
 
 def ui_scale() -> float:
@@ -473,7 +480,11 @@ def draw_overlay(session):
     session.view = view
     if view is None:
         return
-    draw_guides(view, settings, calibrate.cached_solution(cam_obj.data), session, context.scene.unit_settings.system)
+    solution = calibrate.cached_solution(cam_obj.data)
+    unit_system = context.scene.unit_settings.system
+    draw_guides(view, settings, solution, session, unit_system)
+    if magnifying(session):
+        draw_lens(view, settings, solution, session, unit_system)
 
 
 def draw_guides(view, settings, solution, session, unit_system):
@@ -601,6 +612,113 @@ def draw_guides(view, settings, solution, session, unit_system):
             wrapped = [w for line in res.warnings.splitlines() for w in textwrap.wrap(line, chars)]
             for i, line in enumerate(wrapped):
                 text((view.x0 + 10 * s, view.y1 - (22 + 16 * i) * s), line, HORIZON_COLOR, 12.0)
+    finally:
+        gpu.state.blend_set("NONE")
+
+
+# ----------------------------------------------------------------------------
+# Magnifier
+
+
+def magnifying(session) -> bool:
+    """The lens is shown while a handle (not the pitch diamond) is dragged with Shift."""
+    return bool(getattr(session, "magnify", False)) and session.drag_key not in (None, "pitch")
+
+
+def lens_view(view, centre, zoom, size) -> View:
+    """``view`` magnified ``zoom`` times about the region point ``centre``, moved
+    so that ``centre`` lands in the middle of a ``size`` x ``size`` buffer."""
+    half = size / 2.0
+
+    def moved(x, y):
+        return (half + (x - centre[0]) * zoom, half + (y - centre[1]) * zoom)
+
+    x0, y0 = moved(view.x0, view.y0)
+    x1, y1 = moved(view.x1, view.y1)
+    return View(x0, y0, x1, y1, view.image_size)
+
+
+_lens_buffer: dict = {}
+
+
+def _lens_target(size: int):
+    """Cached texture and framebuffer for the lens; float, so dark tones keep their
+    precision. A plain framebuffer, not a ``GPUOffScreen``: leaving a nested
+    offscreen binds the window's framebuffer instead of the region's, while
+    ``GPUFrameBuffer.bind()`` restores the one that was bound."""
+    if _lens_buffer.get("size") != size:
+        texture = gpu.types.GPUTexture((size, size), format="RGBA16F")
+        _lens_buffer.update(size=size, texture=texture, framebuffer=gpu.types.GPUFrameBuffer(color_slots=texture))
+    return _lens_buffer["texture"], _lens_buffer["framebuffer"]
+
+
+def free_lens() -> None:
+    # Textures and framebuffers are freed with their last reference.
+    _lens_buffer.clear()
+
+
+def _photo(view, image) -> None:
+    """The photo over the camera frame of ``view``, as the camera background shows it."""
+    try:
+        texture = gpu.texture.from_image(image)
+    except Exception:  # no pixels (missing file): the lens shows the guides only
+        return
+    shader = _shader("IMAGE")
+    shader.bind()
+    shader.uniform_sampler("image", texture)
+    corners = [(view.x0, view.y0), (view.x1, view.y0), (view.x1, view.y1), (view.x0, view.y1)]
+    uvs = [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)]
+    batch_for_shader(shader, "TRIS", {"pos": corners, "texCoord": uvs}, indices=[(0, 1, 2), (0, 2, 3)]).draw(shader)
+
+
+def _disk(centre, radius, texture) -> None:
+    """``texture`` mapped onto a disk: its inscribed circle fills the disk."""
+    shader = _shader("IMAGE")
+    shader.bind()
+    shader.uniform_sampler("image", texture)
+    pos, uvs = [centre], [(0.5, 0.5)]
+    for i in range(LENS_SEGMENTS + 1):
+        a = 2.0 * math.pi * i / LENS_SEGMENTS
+        pos.append((centre[0] + radius * math.cos(a), centre[1] + radius * math.sin(a)))
+        uvs.append((0.5 + 0.5 * math.cos(a), 0.5 + 0.5 * math.sin(a)))
+    tris = [(0, i, i + 1) for i in range(1, LENS_SEGMENTS + 1)]
+    batch_for_shader(shader, "TRIS", {"pos": pos, "texCoord": uvs}, indices=tris).draw(shader)
+
+
+def draw_lens(view, settings, solution, session, unit_system) -> None:
+    """Magnifier centred on the dragged handle: the photo and the whole overlay
+    ``LENS_ZOOM`` times larger, the handle fixed in the middle while the photo
+    slides under it."""
+    s = ui_scale()
+    radius = LENS_RADIUS * s
+    size = int(math.ceil(2.0 * radius))
+    centre = view.to_region(handle_co(settings, solution, session.drag_key))
+    zoomed = lens_view(view, centre, LENS_ZOOM, size)
+    texture, framebuffer = _lens_target(size)
+    viewport = gpu.state.viewport_get()
+    with framebuffer.bind():
+        gpu.state.viewport_set(0, 0, size, size)
+        framebuffer.clear(color=LENS_BACKGROUND)
+        with gpu.matrix.push_pop(), gpu.matrix.push_pop_projection():
+            gpu.matrix.load_identity()
+            gpu.matrix.load_projection_matrix(
+                Matrix(((2.0 / size, 0, 0, -1.0), (0, 2.0 / size, 0, -1.0), (0, 0, 1.0, 0), (0, 0, 0, 1.0)))
+            )
+            if settings.image is not None:
+                _photo(zoomed, settings.image)
+            draw_guides(zoomed, settings, solution, session, unit_system)
+    gpu.state.viewport_set(*viewport)
+    _lens_disk(centre, radius, texture, s)
+
+
+def _lens_disk(centre, radius, texture, s) -> None:
+    gpu.state.blend_set("ALPHA")
+    try:
+        _disk(centre, radius, texture)
+        circle(centre, radius + 1.0 * s, (0.0, 0.0, 0.0, 0.6), 1.0, segments=LENS_SEGMENTS)
+        circle(centre, radius, (1.0, 1.0, 1.0, 0.9), 1.5, segments=LENS_SEGMENTS)
+        corner = (centre[0] + 0.62 * radius, centre[1] + 0.82 * radius)
+        text(corner, f"\u00d7{LENS_ZOOM:g}", NEUTRAL)
     finally:
         gpu.state.blend_set("NONE")
 

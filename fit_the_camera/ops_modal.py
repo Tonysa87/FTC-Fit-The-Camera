@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import math
 
 import bpy
@@ -43,7 +44,7 @@ SHORTCUT_KEYS = {"F", "H", *AXIS_KEYS}
 
 MODE_NAMES = {"VP": "Vanishing Points", "RECT": "Known Rectangle", "HORIZON": "Horizon"}
 STATUS_KEYS = (
-    "LMB drag: move  Shift: fine  Ctrl: snap  1/2/3: axis  F: flip  H: straighten  "
+    "LMB drag: move  Shift: fine + magnifier  Ctrl: snap  1/2/3: axis  F: flip  H: straighten  "
     "Ctrl+Z / Ctrl+Shift+Z: undo/redo  Enter: apply  Esc/RMB: exit"
 )
 
@@ -68,6 +69,10 @@ class Session:
         self.stop_requested = False
         self.status = ""
         self.handler = None
+        # Magnifier on the dragged handle (Shift); the system cursor is hidden
+        # meanwhile: with fine dragging it drifts away from the handle.
+        self.magnify = False
+        self.cursor_window = None
 
 
 def snapshot(settings) -> dict:
@@ -154,6 +159,26 @@ def above_base(base, top, pos):
     u = (axis[0] / length, axis[1] / length)
     lift = MIN_CUBE_PX - ((pos[0] - base[0]) * u[0] + (pos[1] - base[1]) * u[1])
     return (pos[0] + lift * u[0], pos[1] + lift * u[1]) if lift > 0.0 else pos
+
+
+def set_magnifier(session, window, on: bool) -> None:
+    """Show or hide the lens, hiding the system cursor while it is shown."""
+    on = on and session.drag_key not in (None, "pitch")
+    if on == session.magnify:
+        return
+    session.magnify = on
+    if on and window is not None:
+        window.cursor_modal_set("NONE")
+        session.cursor_window = window
+    elif not on:
+        restore_cursor(session)
+
+
+def restore_cursor(session) -> None:
+    window, session.cursor_window = session.cursor_window, None
+    if window is not None:
+        with contextlib.suppress(ReferenceError):  # the window was closed
+            window.cursor_modal_restore()
 
 
 def push_undo(session, snap) -> None:
@@ -344,6 +369,12 @@ class FTC_OT_calibrate(Operator):
 
         # Dragging -------------------------------------------------------
         if session.drag_key is not None:
+            if event.type in {"LEFT_SHIFT", "RIGHT_SHIFT"}:
+                set_magnifier(session, context.window, event.value == "PRESS")
+                area.tag_redraw()
+                return {"RUNNING_MODAL"}
+            if event.type == "MOUSEMOVE":
+                set_magnifier(session, context.window, event.shift)
             if event.type == "MOUSEMOVE" and view is not None:
                 raw = (event.mouse_x - region.x, event.mouse_y - region.y)
                 self.drag(context, session, settings, cam_obj, view, event, raw)
@@ -354,6 +385,7 @@ class FTC_OT_calibrate(Operator):
                 if snapshot(settings) != session.drag_start:
                     self.push_undo(session, session.drag_start)
                     self.changed(context, cam_obj, reset_pitch=False)
+                set_magnifier(session, context.window, False)
                 session.drag_key = None
                 session.pitch_drag = None
                 area.tag_redraw()
@@ -361,6 +393,7 @@ class FTC_OT_calibrate(Operator):
             if event.type in {"ESC", "RIGHTMOUSE"} and event.value == "PRESS":
                 calibrate.defer_uncertainty = False
                 restore(settings, session.drag_start)
+                set_magnifier(session, context.window, False)
                 session.drag_key = None
                 self.changed(context, cam_obj, reset_pitch=False)
                 return {"RUNNING_MODAL"}
@@ -406,6 +439,7 @@ class FTC_OT_calibrate(Operator):
                     session.active_vp = int(key[2]) - 1
                 elif key.startswith("hz") and settings.mode == "VP":
                     session.active_vp = 1
+                set_magnifier(session, context.window, event.shift)
                 area.tag_redraw()
             return {"RUNNING_MODAL"}
 
@@ -620,6 +654,8 @@ def end_session() -> None:
         if session.handler is not None:
             bpy.types.SpaceView3D.draw_handler_remove(session.handler, "WINDOW")
         clear_header(session)
+        restore_cursor(session)
+    draw.free_lens()
     FTC_OT_calibrate._session = None
     calibrate.session_camera = None
 

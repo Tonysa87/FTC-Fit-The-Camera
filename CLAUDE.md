@@ -24,8 +24,10 @@ Extensions audience) and `README.it.md` (Italian); developer docs
   with the plane selector in Calibration; panel Opacity -> Display, cube off by
   default in RECT/HORIZON; Load Image chooses the camera (New Camera named after
   the photo / scene camera) + `ftc.use_camera` switcher; new photos start with
-  Reference Distance. Logo PNGs with alpha in `logo/png/` (untracked: ask).
-- **Next**: the user's GUI test `docs/TEST_GUI.md` 38–46 (fix what he reports,
+  Reference Distance; Shift magnifier centred on the dragged handle (see
+  Magnifier). Logo PNGs with alpha in `logo/png/` (committed).
+- **Next**: the user's GUI test `docs/TEST_GUI.md` 38–49 (lens colours vs the
+  camera background can only be checked in the GUI) (fix what he reports,
   rebuild, `gh release upload v1.0.0 dist/fit_the_camera-1.0.0.zip --clobber`,
   move the tag if the code changes). Then publish the draft release
   (`gh release edit v1.0.0 --draft=false`) and submit to extensions.blender.org
@@ -61,7 +63,7 @@ Extensions audience) and `README.it.md` (Italian); developer docs
   section with a mock layout that validates props/operators), `drawall` (overlay in
   864 configs), `dragsim` (modal drag code on the cube handles), `planes`,
   `timing`, `snap` (overlay PNGs), `render` (Cycles render through Prepare
-  Render). Panels cannot be drawn headless otherwise; set ui_scale in mocks (it is
+  Render), `lens` (magnifier snapshot). Panels cannot be drawn headless otherwise; set ui_scale in mocks (it is
   0 in background mode).
 
 ## Architecture
@@ -183,6 +185,20 @@ the way the camera looks (`-rotation[:, 2]`, an axis seen nearly across keeps +,
 dragging (reported by the user). `uncertainty()` solves with the scale fixed. The top can't be dragged below
 `ops_modal.MIN_CUBE_PX` above the base (it would flip).
 
+## Magnifier
+Shift while dragging a handle (not the pitch diamond): `draw.draw_lens`, a disk of
+`LENS_RADIUS` 100 px centred on the shown handle (asked by the user, not beside
+the cursor), `LENS_ZOOM` ×4 of the current view; the photo slides under the fixed
+handle. Drawn by rendering photo + the whole `draw_guides` with
+`lens_view` (the view magnified about the handle) into a cached RGBA16F
+`GPUTexture` + `GPUFrameBuffer`, then mapped onto a disk. Not a `GPUOffScreen`:
+unbinding a nested offscreen leaves the window framebuffer bound with a
+(0,0,0,0) viewport (nothing drawn after it); `GPUFrameBuffer.bind()` restores the
+previous one, the viewport is saved/restored by hand. `ops_modal.set_magnifier`
+hides the system cursor (`cursor_modal_set("NONE")`) while the lens is open: with
+fine dragging (×0.2) the cursor drifts away from the handle. Probe `lens` writes
+`dist/probes/lens.png` (elevator photo with the lens open).
+
 ## Render setup (`ops_render.py`)
 - Standard view transform is the only one that gives back the sRGB photo
   (measured: AgX / PBR Neutral shift it ~9 levels median, >120 max). Exposure 0,
@@ -218,5 +234,5 @@ dragging (reported by the user). `uncertainty()` solves with the scale fixed. Th
 
 ## Open work
 - Pending: the user's GUI test of 1.0.0 (`docs/TEST_GUI.md`), release, Extensions.
-- Possible: magnifier near the cursor while dragging; more than two lines per VP;
+- Possible: more than two lines per VP;
   turn the `paneltest` / `drawall` probes into regular Blender tests.
