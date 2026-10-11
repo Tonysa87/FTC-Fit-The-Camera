@@ -67,7 +67,9 @@ The rest of this page explains every option.
 - **Uncertainty and guide fit**: how far the result can be trusted, with warnings
   for lines that are not really parallel, a wrong EXIF focal length, a vanishing
   point too far away.
-- **Precise handles**: Shift moves a handle finely under a ×4 magnifier.
+- **Magnifier on the handles**: hold Shift while dragging a handle to open a ×4
+  lens centred on it; the photo slides underneath and the handle moves finely,
+  for pixel-precise placement on edges and corners.
 - **One camera per photo**: each photo can get its own camera, named after it;
   the panel switches between the calibrated cameras.
 - **Align to the scene**: put the calibrated floor or wall on the 3D cursor, a
