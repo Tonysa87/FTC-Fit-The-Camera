@@ -8,10 +8,15 @@ Extensions audience) and `README.it.md` (Italian); developer docs
 
 ## Status / next session (bookmark 2026-10-11, afternoon)
 - **v1.0.0 released on GitHub** (2026-10-11) after the user's full GUI test
-  (`docs/TEST_GUI.md` 1–49). Next: the user submits it to extensions.blender.org
-  following `docs/PUBLISHING.md` (*Compilare la bozza*); everything to upload is in
-  `extensions_listing/upload/` + `description.md`. Reviewer requests -> fix, bump
-  to 1.0.1 (manifest + pixi.toml), new GitHub release, *Upload new version*.
+  (`docs/TEST_GUI.md` 1–49) and **submitted to extensions.blender.org the same
+  day: status "Awaiting Review"** (developer account TonyS87). Listing: icon,
+  featured `00_featured.jpg`, 4 previews (elevator result, calibration composite
+  `06_calibration_16x9.jpg`, fountain viewport `08_fountain_view.png`, gallery),
+  text from `extensions_listing/description.md`, release notes "V1.0.0".
+  Next: moderators' comments (on the extension page / email) -> fix, bump to
+  1.0.1 (manifest + pixi.toml), GitHub release, *Upload New Version* (do not use
+  *Convert to Draft*). Screenshots with the GPS visible are in
+  `extensions_listing/screenshots_originali/`: never upload them.
 - 1.0.0 contents beyond 0.6.1: Render section, two audit rounds, Transform
   Orientation "FTC" (`ops_orientation.py`: calibrated axes = rotation of
   `alignment_matrix`, Global without Align; synced on Apply, on Enter and by every
@@ -227,6 +232,7 @@ fine dragging (×0.2) the cursor drifts away from the handle. Probe `lens` write
   their untouched hand-made default guides (~22 mm equivalent) may then warn.
 
 ## Open work
-- Pending: extensions.blender.org review of 1.0.0.
+- Pending: extensions.blender.org review of 1.0.0 (submitted 2026-10-11).
+- Possible: English changelog (docs/CHANGELOG.md is Italian, linked from the Extensions release notes); tag "Compositing" in the manifest.
 - Possible: more than two lines per VP;
   turn the `paneltest` / `drawall` probes into regular Blender tests.
