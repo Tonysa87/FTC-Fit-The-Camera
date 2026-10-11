@@ -1,13 +1,9 @@
-# Test GUI in Blender (Windows) – da fare per la 1.0.0
+# Test GUI in Blender (Windows) – 1.0.0
 
-Stato (2026-10-11): prova a mano fatta fino al punto 37; **da provare
-l'orientamento FTC (punti 38–41), i lati del rettangolo / cubo (42–43),
-la scelta della camera (44–46) e la lente (47–49)**. Move Along View e il gizmo
-lungo i raggi della camera sono stati rimossi dopo la prova. Tutti i test automatici passano
-(106 pytest, 30 test headless in Blender, compreso un render Cycles reale) e le
-sonde `scripts/probe.sh` (pannello, overlay, trascinamento simulato, render) sono
-pulite. La release v1.0.0 su GitHub è pronta come bozza: si pubblica dopo questa
-prova.
+Stato (2026-10-11): prova a mano completata dall'autore (punti 1–49), 1.0.0
+pubblicata. Tutti i test automatici passano (106 pytest, 30 test headless in
+Blender, compreso un render Cycles reale) e le sonde `scripts/probe.sh` sono
+pulite.
 
 Zip: `\\wsl.localhost\Ubuntu-24.04\home\tony\Projects\FTC\dist\fit_the_camera-1.0.0.zip`
 (se manca: `pixi run build`).

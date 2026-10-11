@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.0.0 – 2026-10-10
+## 1.0.0 – 2026-10-11
 - **Orientamento "FTC"** (Transform Orientation): gli assi calibrati della foto
   nella scena, creato/aggiornato da *Apply*, da Invio a fine sessione e dagli
   operatori di *Align to Scene*. Il pulsante *FTC Orientation* in *Tools* lo rende
