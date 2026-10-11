@@ -116,7 +116,7 @@ _IT = {
 # Generic words, translated only where FTC asks with its own context ("FTC"):
 # registered in the default context they would change the rest of Blender too.
 CONTEXT = "FTC"
-_IT_FTC = {"Results": "Risultati", "Yaw": "Imbardata"}
+_IT_FTC = {"Results": "Risultati", "Yaw": "Imbardata", "Display": "Visualizzazione"}
 
 translations_dict = {"it_IT": {("*", en): it for en, it in _IT.items()}}
 translations_dict["it_IT"].update({(CONTEXT, en): it for en, it in _IT_FTC.items()})

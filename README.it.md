@@ -75,7 +75,8 @@ scorre sul piano (mettila ai piedi di un oggetto di altezza nota); quella in cim
 scorre lungo lo spigolo verticale: portala all'altezza dell'oggetto e la scala
 della scena si adegua. Cubo e *Misura di riferimento* si escludono: sullo schermo
 c'è solo quello scelto nel menu *Scala*. Nel rettangolo noto e nell'orizzonte la
-scala è già nota e il cubo è solo un controllo visivo (si nasconde in *Opacity*).
+scala è già nota e il cubo è solo un controllo visivo, spento di default (si accende
+in *Display* › *Scale Cube*, con la sua dimensione).
 Spostando la base o l'origine il cubo non si ribalta: si estende nel verso in cui
 guarda la camera (su una parete: verso l'alto).
 

@@ -259,7 +259,7 @@ class FTC_Settings(PropertyGroup):
             "Show the cube of known size on the reference plane, to check the scale by eye "
             "(known rectangle and horizon)"
         ),
-        default=True,
+        default=False,
         update=_changed,
     )
     ref_axis: EnumProperty(

@@ -164,7 +164,7 @@ Cube UI: scale option *Scale Cube* (default) / *Reference Distance* in VP mode;
 size presets 10 cm…10 m + custom. Cube and Reference Distance are mutually
 exclusive on screen (`calibrate.reference_scales` hides the cube, asked by the
 user); in RECT / HORIZON it is a visual check with only the base handle, toggled
-by `show_cube` in the Opacity panel. Edges are drawn
+by `show_cube` (default off, asked by the user) in the Display panel (was "Opacity"). Edges are drawn
 in the colours of the world axes they run along; in the plane the cube extends
 the way the camera looks (`-rotation[:, 2]`, an axis seen nearly across keeps +,
 `scale.ACROSS`), on walls upwards: rules based on base or origin flipped it while

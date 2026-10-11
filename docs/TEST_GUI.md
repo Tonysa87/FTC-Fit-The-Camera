@@ -1,7 +1,7 @@
 # Test GUI in Blender (Windows) – da fare per la 1.0.0
 
 Stato (2026-10-10, sera): prova a mano fatta fino al punto 37; **da provare
-l'orientamento FTC (punti 38–41) e i lati del rettangolo (42)**. Move Along View e il gizmo lungo i raggi
+l'orientamento FTC (punti 38–41) e i lati del rettangolo / cubo (42–43)**. Move Along View e il gizmo lungo i raggi
 della camera sono stati rimossi dopo la prova. Tutti i test automatici passano
 (106 pytest, 28 test headless in Blender, compreso un render Cycles reale) e le
 sonde `scripts/probe.sh` (pannello, overlay, trascinamento simulato, render) sono
@@ -37,10 +37,10 @@ Zip: `\\wsl.localhost\Ubuntu-24.04\home\tony\Projects\FTC\dist\fit_the_camera-1.
 8. *Align to Scene* › piano **XZ**, poi **YZ**, poi XY: la calibrazione resta valida,
    il cubo va sulla parete, la scala non cambia.
 9. Passa a *Misura di riferimento* e torna a *Cubo*: la scala resta la stessa; con
-   la misura il cubo sparisce (anche da *Opacity*), col cubo spariscono i due
+   la misura il cubo sparisce (anche da *Display*), col cubo spariscono i due
    estremi della misura.
 10. Rettangolo noto e Orizzonte: il cubo è solo controllo visivo (solo maniglia alla
-    base); si nasconde da *Opacity* › *Cubo di scala*.
+    base), spento di default; si accende da *Display* › *Scale Cube*.
 11. Apri un .blend salvato con la 0.5.2 (scala "Distanza camera"): la camera resta
     alla stessa distanza.
 
@@ -123,6 +123,10 @@ Zip: `\\wsl.localhost\Ubuntu-24.04\home\tony\Projects\FTC\dist\fit_the_camera-1.
 42. *Known Rectangle*: sotto i modi c'è il piano **XY / XZ / YZ**; le misure si
     chiamano *Lato X* / *Lato Y* su XY, *Lato X* / *Lato Z* su XZ, *Lato Y* /
     *Lato Z* su YZ, e i lati dell'overlay hanno gli stessi colori degli assi.
+43. Il pannello *Opacity* ora si chiama **Display**. In *Known Rectangle* e
+    *Horizon* il cubo è spento di default: si accende e si dimensiona da
+    *Display* › *Scale Cube*. In *Vanishing Points* col cubo come scala resta
+    sempre visibile, con la dimensione in Calibration.
 
 ## Da riportare
 Comportamenti strani, errori in console (Window › Toggle System Console),

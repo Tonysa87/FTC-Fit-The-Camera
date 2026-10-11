@@ -351,8 +351,11 @@ def scale_cube_sets_the_scale():
     assert math.dist(shown, top) < 1e-3, (shown, top)
     check_projection(scene, cam, syn)
 
-    # Elsewhere the cube is only a visual check: its base moves, nothing scales.
+    # Elsewhere the cube is only a visual check, off by default: its base moves,
+    # nothing scales.
     s.mode = "RECT"
+    assert not s.show_cube and "cube_base" not in calibrate.active_handle_keys(s)
+    s.show_cube = True
     keys = calibrate.active_handle_keys(s)
     assert "cube_base" in keys and "cube_top" not in keys
     s.show_cube = False
