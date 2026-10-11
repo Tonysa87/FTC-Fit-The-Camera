@@ -9,7 +9,7 @@ from bpy.app.translations import pgettext_iface as iface_
 from bpy.types import Panel
 
 from . import calibrate, ops_orientation, ops_render
-from .draw import remaining_axis, third_axis
+from .draw import plane_axes, remaining_axis, third_axis
 from .exif import is_native_aspect
 from .ops_load import background_for
 from .ops_modal import FTC_OT_calibrate
@@ -211,8 +211,12 @@ class FTC_PT_main(Panel):
             if count == 1 and not has_focal:
                 col.label(text="Needs the focal length (Camera Data)", icon="ERROR")
         elif settings.mode == "RECT":
-            col.prop(settings, "rect_width")
-            col.prop(settings, "rect_height")
+            # The rectangle lies on the reference plane: its sides run along the
+            # plane's two axes (never "height" unless the plane is a wall).
+            col.row(align=True).prop(settings, "ref_plane", expand=True)
+            first, second = plane_axes(settings.ref_plane)[:2]
+            col.prop(settings, "rect_width", text=iface_("Side {}").format(first))
+            col.prop(settings, "rect_height", text=iface_("Side {}").format(second))
             draw_focal_mode(col, settings, has_focal)
             col.prop(settings, "pp_mode")
         else:
@@ -255,7 +259,8 @@ class FTC_PT_main(Panel):
         header.label(text="Align to Scene")
         if body is None:
             return
-        if settings.mode != "HORIZON":
+        if settings.mode == "VP":
+            # (RECT shows the plane with the rectangle, HORIZON is always the ground.)
             row = body.row(align=True)
             row.prop(settings, "ref_plane", expand=True)
         row = body.row(align=True)

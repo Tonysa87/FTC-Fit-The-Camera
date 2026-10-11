@@ -64,7 +64,7 @@ Sidebar del viewport (N) › tab **FTC**.
 | Punti di fuga 1 | 2 guide per l'asse 1 + una linea lungo l'asse 2 | richiede la focale |
 | Punti di fuga 2 | 2 guide per asse | opzioni: focale, *Linea terzo asse* |
 | Punti di fuga 3 | 2 guide per asse | punto principale al centro (default), manuale o *Risolvi* (ortocentro, instabile) |
-| Rettangolo noto | 4 angoli, larghezza/altezza reali | su XY, XZ o YZ; focale come sopra |
+| Rettangolo noto | 4 angoli, lunghezza reale dei due lati | su XY, XZ o YZ; focale come sopra |
 | Orizzonte | linea d'orizzonte, altezza camera, yaw | richiede la focale |
 
 ### Cubo di scala

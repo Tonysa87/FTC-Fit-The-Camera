@@ -297,8 +297,9 @@ class FTC_Settings(PropertyGroup):
     )
 
     rect_width: FloatProperty(
-        name="Width",
-        description="Real length of the rectangle's first edge (corner 1 to 2)",
+        name="First Side",
+        description="Real length of the rectangle's first side (corner 1 to 2), along the "
+        "reference plane's first axis: X on XY and XZ, Y on YZ",
         default=1.0,
         min=1e-4,
         subtype="DISTANCE",
@@ -306,8 +307,9 @@ class FTC_Settings(PropertyGroup):
         update=_changed,
     )
     rect_height: FloatProperty(
-        name="Height",
-        description="Real length of the rectangle's second edge (corner 2 to 3)",
+        name="Second Side",
+        description="Real length of the rectangle's second side (corner 2 to 3), along the "
+        "reference plane's second axis: Y on XY, Z on XZ and YZ",
         default=1.0,
         min=1e-4,
         subtype="DISTANCE",

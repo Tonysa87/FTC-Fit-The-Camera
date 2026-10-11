@@ -10,6 +10,11 @@
 - **Move Along View rimosso** (su richiesta, dopo la prova): per spostare,
   ruotare e scalare si usano gli strumenti nativi di Blender con l'orientamento
   FTC. Un gizmo "lungo i raggi della camera" è stato provato e scartato.
+- **Rettangolo noto**: i lati si chiamano *Lato X* / *Lato Y* (o *Lato Z*) secondo
+  il piano di riferimento, che ora si sceglie lì, sopra le misure (prima
+  "Width / Height" facevano pensare a un'altezza lungo Z anche sul pavimento).
+  I lati e gli angoli dell'overlay hanno i colori degli assi del piano (su XZ e
+  YZ prima erano sempre rosso/verde).
 - Nuova sezione **Render** nel pannello:
   - **Prepare Render**: view transform Standard (la foto esce identica), look
     None, display sRGB, esposizione/gamma neutre, film trasparente, risoluzione

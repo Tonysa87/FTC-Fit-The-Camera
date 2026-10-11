@@ -105,6 +105,9 @@ _IT = {
         "Keyframe, driver o vincoli sulla camera (o sul suo genitore) sovrascrivono la calibrazione"
     ),
     "Only the active view layer is composited over the photo": ("Solo il view layer attivo viene composto sulla foto"),
+    "First Side": "Primo lato",
+    "Second Side": "Secondo lato",
+    "Side {}": "Lato {}",
     # FTC orientation
     "FTC Orientation": "Orientamento FTC",
     "No 3D view to create the orientation from": "Nessuna vista 3D da cui creare l'orientamento",

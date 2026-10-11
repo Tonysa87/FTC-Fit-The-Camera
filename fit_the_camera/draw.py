@@ -543,7 +543,8 @@ def draw_guides(view, settings, solution, session, unit_system):
                 text((b[0] + 8 * s, b[1] - 16 * s), length, color)
         elif settings.mode == "RECT":
             pts = [hpos(f"rect_{i}") for i in range(4)]
-            edge_colors = [colors["X"], colors["Y"], colors["X"], colors["Y"]]
+            first, second = plane_axes(calibrate.reference_plane(settings))[:2]
+            edge_colors = [colors[first], colors[second], colors[first], colors[second]]
             for i in range(4):
                 segment(pts[i], pts[(i + 1) % 4], edge_colors[i], GUIDE_WIDTH)
         else:
@@ -574,7 +575,8 @@ def draw_guides(view, settings, solution, session, unit_system):
             elif key.startswith("hz"):
                 color = colors[axis_letter(settings.vp2_axis)] if settings.mode == "VP" else HORIZON_COLOR
             else:
-                color = colors["X"] if key in ("rect_0", "rect_1") else colors["Y"]
+                first, second = plane_axes(calibrate.reference_plane(settings))[:2]
+                color = colors[first] if key in ("rect_0", "rect_1") else colors[second]
             handle_marker(
                 hpos(key),
                 color,

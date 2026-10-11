@@ -137,7 +137,7 @@ class FTC_OT_align_selection(Operator):
             centre = sum(verts, Vector()) / len(verts)
             store_target(context, settings, frame_matrix(centre, edge, normal.normalized()), f"{obj.name} (face)")
             if settings.mode == "RECT" and len(verts) == 4:
-                # The face is the rectangle: corner 0 -> 1 is the width, 1 -> 2 the height.
+                # The face is the rectangle: corner 0 -> 1 is the first side, 1 -> 2 the second.
                 with calibrate.suspended():
                     settings.rect_width = (verts[1] - verts[0]).length
                 settings.rect_height = (verts[2] - verts[1]).length
@@ -167,7 +167,7 @@ class FTC_OT_align_clear(Operator):
 
 
 class FTC_OT_align_rotate(Operator):
-    """Turn the reference plane 90° about its normal on the target (the rectangle's width and height swap with it)"""
+    """Turn the reference plane 90° about its normal on the target (the rectangle's two sides swap with it)"""
 
     bl_idname = "ftc.align_rotate"
     bl_label = "Rotate 90°"
