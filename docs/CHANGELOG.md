@@ -15,6 +15,15 @@
   "Width / Height" facevano pensare a un'altezza lungo Z anche sul pavimento).
   I lati e gli angoli dell'overlay hanno i colori degli assi del piano (su XZ e
   YZ prima erano sempre rosso/verde).
+- **Load Image sceglie la camera**: nella finestra file, menu *Camera* con
+  *New Camera* o le camere della scena (con la loro foto). Propone la camera
+  inquadrata se non ha ancora una foto, altrimenti una nuova: una calibrazione
+  non viene più sostituita per errore. *Name After Photo* (attivo di default)
+  dà alla nuova camera il nome del file. Con più camere calibrate il nome della
+  camera nel pannello è un menu per passare dall'una all'altra.
+- In *Vanishing Points* le foto nuove partono con la scala **Reference
+  Distance** (prima il cubo da 1 m). I file salvati che non avevano scelto
+  restano col cubo e mantengono la loro scala.
 - Il pannello *Opacity* si chiama **Display**; nel rettangolo noto e
   nell'orizzonte il cubo di controllo è **spento di default** (si accende lì,
   con la sua dimensione).

@@ -95,6 +95,11 @@ Extensions audience) and `README.it.md` (Italian); developer docs
   origin when its handles would leave the image (floor base on a wall plane).
 - `calibrate.transform_overridden`: keyframes/NLA/drivers on transform or lens,
   enabled constraints, animated parents -> red warning.
+- Load Image: operator enum `camera` (NEW or a scene camera, SKIP_SAVE, set in
+  `invoke` by `ops_load.default_camera`: the camera in view while it has no photo,
+  else NEW; scripts without it get the same rule) + `name_after_photo` (default
+  on). `ftc.use_camera` (panel menu on the camera label with 2+ photo cameras)
+  looks through another calibrated camera.
 - `ops_render.sync_photo` (render_pre handler + Load Image/upright) keeps the
   compositor's "FTC Photo" node on the scene camera's photo.
 - Generated images: call `image.update()` after `pixels.foreach_set` before
@@ -160,7 +165,9 @@ drag; the stored top is synced to it. Dragging the base moves the top with it
 (scale kept); `calibrate.seed_cube` keeps the scale on plane / scale-mode changes
 and migrates pre-cube files (camera distance kept). Seeding skips `suspended()`.
 
-Cube UI: scale option *Scale Cube* (default) / *Reference Distance* in VP mode;
+Cube UI: scale option *Scale Cube* / *Reference Distance* in VP mode (a camera's
+first photo sets REFERENCE in Load Image, asked by the user; the RNA default stays
+CUBE so files that never chose keep the cube's scale);
 size presets 10 cm…10 m + custom. Cube and Reference Distance are mutually
 exclusive on screen (`calibrate.reference_scales` hides the cube, asked by the
 user); in RECT / HORIZON it is a visual check with only the base handle, toggled

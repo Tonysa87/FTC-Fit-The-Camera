@@ -108,6 +108,25 @@ _IT = {
     "First Side": "Primo lato",
     "Second Side": "Secondo lato",
     "Side {}": "Lato {}",
+    # Camera choice
+    "New Camera": "Nuova camera",
+    "Name After Photo": "Nome dalla foto",
+    "no photo": "nessuna foto",
+    "Use Camera": "Usa camera",
+    "Create a new camera for the photo": "Crea una nuova camera per la foto",
+    "Load the photo into this camera": "Carica la foto in questa camera",
+    "Load the photo into this camera, replacing its photo": "Carica la foto in questa camera, al posto della sua",
+    "Look through this camera and calibrate it": "Guarda da questa camera e calibrala",
+    "The chosen camera is no longer in the scene": "La camera scelta non è più nella scena",
+    "Camera that receives the photo: a new one, or one of the scene (its photo is replaced)": (
+        "Camera che riceve la foto: una nuova o una della scena (la sua foto viene sostituita)"
+    ),
+    "Name the new camera after the photo file (otherwise \"FTC Camera\")": (
+        "Dà alla nuova camera il nome del file della foto (altrimenti \"FTC Camera\")"
+    ),
+    "Look through another camera with a photo and calibrate it (it becomes the scene camera)": (
+        "Guarda da un'altra camera con foto e calibrala (diventa la camera della scena)"
+    ),
     # FTC orientation
     "FTC Orientation": "Orientamento FTC",
     "No 3D view to create the orientation from": "Nessuna vista 3D da cui creare l'orientamento",
