@@ -15,6 +15,9 @@
   "Width / Height" facevano pensare a un'altezza lungo Z anche sul pavimento).
   I lati e gli angoli dell'overlay hanno i colori degli assi del piano (su XZ e
   YZ prima erano sempre rosso/verde).
+- Il pannello *Opacity* si chiama **Display**; nel rettangolo noto e
+  nell'orizzonte il cubo di controllo è **spento di default** (si accende lì,
+  con la sua dimensione).
 - Nuova sezione **Render** nel pannello:
   - **Prepare Render**: view transform Standard (la foto esce identica), look
     None, display sRGB, esposizione/gamma neutre, film trasparente, risoluzione

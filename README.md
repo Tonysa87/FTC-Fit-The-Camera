@@ -84,7 +84,8 @@ reference plane. Put the base handle at the foot of something of known height an
 drag the top handle up to its top: the scale of the scene follows. The cube and
 the *Reference Distance* exclude each other: only the one chosen in the *Scale*
 menu is shown. With a known rectangle or the horizon the scale is already known
-and the cube is an optional visual check (*Opacity* panel). Dragging the base
+and the cube is an optional visual check, off by default (*Display* › *Scale Cube*,
+with its size). Dragging the base
 or the origin never flips the cube: it extends the way the camera looks (on a
 wall: upwards).
 

@@ -278,7 +278,7 @@ class FTC_PT_main(Panel):
 
     def draw_display(self, context, layout, cam_obj, settings):
         header, body = layout.panel("ftc_display", default_closed=False)
-        header.label(text="Opacity")
+        header.label(text="Display", text_ctxt="FTC")
         if body is None:
             return
         bg = background_for(cam_obj.data, settings.image)
