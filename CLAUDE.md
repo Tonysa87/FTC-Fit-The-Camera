@@ -6,12 +6,19 @@ Extensions audience) and `README.it.md` (Italian); developer docs
 `docs/PUBLISHING.md`. History: `docs/CHANGELOG.md`. Original spec: `FTC – Specifica addon Blender 5.2+.md` (says
 "Camera Match": the final name is **FTC**, package `fit_the_camera`, tab "FTC").
 
-## Status / next session (bookmark 2026-10-11, midday)
-- **v1.0.0** = 0.6.1 + Render section + two audit rounds + Transform Orientation
-  "FTC" (`ops_orientation.py`: calibrated axes = rotation of `alignment_matrix`,
-  Global without Align; synced on Apply, on Enter and by every Align to Scene op
-  via `ops_align.apply_now`; panel toggle `ftc.use_orientation` in Tools).
-  Moving/rotating/scaling = Blender's native tools with that orientation.
+## Status / next session (bookmark 2026-10-11, afternoon)
+- **v1.0.0 released on GitHub** (2026-10-11) after the user's full GUI test
+  (`docs/TEST_GUI.md` 1–49). Next: the user submits it to extensions.blender.org
+  following `docs/PUBLISHING.md` (*Compilare la bozza*); everything to upload is in
+  `extensions_listing/upload/` + `description.md`. Reviewer requests -> fix, bump
+  to 1.0.1 (manifest + pixi.toml), new GitHub release, *Upload new version*.
+- 1.0.0 contents beyond 0.6.1: Render section, two audit rounds, Transform
+  Orientation "FTC" (`ops_orientation.py`: calibrated axes = rotation of
+  `alignment_matrix`, Global without Align; synced on Apply, on Enter and by every
+  Align to Scene op via `ops_align.apply_now`; toggle `ftc.use_orientation` in
+  Tools), rectangle sides named after the plane axes, Display panel (cube off by
+  default in RECT/HORIZON), Load Image camera choice + `ftc.use_camera`, VP photos
+  start with Reference Distance, Shift magnifier (see Magnifier).
 - **Removed on the user's request after his GUI test**: Move Along View and a
   "Ray Gizmo" (handle to move the selection along the camera rays). He found them
   broken and wants only native gizmos: do NOT reintroduce custom transform
@@ -19,24 +26,11 @@ Extensions audience) and `README.it.md` (Italian); developer docs
 - Python has no list of custom orientations: `ops_orientation.find` switches slot
   0 to "FTC" for a moment; `create` runs `transform.create_orientation(use_view=True)`
   with the main region of a 3D view (other sources need an active object).
-- 2026-10-11 fixes from the user's GUI use (in 1.0.0, tag moved, zip re-uploaded
-  to the draft): known rectangle sides named after the plane axes (Side X/Y/Z)
-  with the plane selector in Calibration; panel Opacity -> Display, cube off by
-  default in RECT/HORIZON; Load Image chooses the camera (New Camera named after
-  the photo / scene camera) + `ftc.use_camera` switcher; new photos start with
-  Reference Distance; Shift magnifier centred on the dragged handle (see
-  Magnifier). Logo PNGs with alpha in `logo/png/` (committed).
-- **Next**: the user's GUI test `docs/TEST_GUI.md` 38–49 (lens colours vs the
-  camera background can only be checked in the GUI) (fix what he reports,
-  rebuild, `gh release upload v1.0.0 dist/fit_the_camera-1.0.0.zip --clobber`,
-  move the tag if the code changes). Then publish the draft release
-  (`gh release edit v1.0.0 --draft=false`) and submit to extensions.blender.org
-  with `extensions_listing/` (`docs/PUBLISHING.md`).
 - GitHub: https://github.com/Tonysa87/FTC-Fit-The-Camera (public, `origin`).
-  Tag v1.0.0 moved (authorized) to the final 1.0.0 commit and pushed; GitHub
-  release v1.0.0 exists as a **draft** with the zip (not published yet).
+  Release v1.0.0 published with `fit_the_camera-1.0.0.zip`; README images in
+  `docs/images/` (hero = the user's gallery render, guides = elevator preview).
 - `extensions_listing/` (git-ignored, asked by the user): everything to upload to
-  extensions.blender.org (icon, featured 1920×1080, previews, description.md) and
+  extensions.blender.org: `upload/` (icon, 00_featured 16:9 from the user's FTC_scene3, previews 01–05), `description.md` (text + captions) and
   the scripts that regenerate the images (previews use `samples/elevator.jpg`).
 - `dist/` is git-ignored; only the latest zip matters (older ones may have been
   rebuilt by `blender-tests` with newer code before a version bump).
@@ -233,6 +227,6 @@ fine dragging (×0.2) the cursor drifts away from the handle. Probe `lens` write
   their untouched hand-made default guides (~22 mm equivalent) may then warn.
 
 ## Open work
-- Pending: the user's GUI test of 1.0.0 (`docs/TEST_GUI.md`), release, Extensions.
+- Pending: extensions.blender.org review of 1.0.0.
 - Possible: more than two lines per VP;
   turn the `paneltest` / `drawall` probes into regular Blender tests.

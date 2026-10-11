@@ -23,26 +23,50 @@ Riassunto delle regole di [extensions.blender.org](https://extensions.blender.or
    Blender non aggiorna da solo: l'utente vede l'aggiornamento in *Get
    Extensions*.
 
-## Da preparare per la bozza
+## Materiale (stato 2026-10-11: tutto pronto)
 
-Il materiale pronto (icona, immagine in evidenza, anteprime, testi) sta in
-`extensions_listing/`, cartella locale esclusa da git (vedi il suo README).
-
+Il materiale sta in `extensions_listing/`, cartella locale esclusa da git (vedi
+il suo README): immagini in `extensions_listing/upload/`, testi e didascalie in
+`extensions_listing/description.md`.
 
 | Elemento | Requisito | Stato |
 | --- | --- | --- |
-| Zip | `pixi run build` (manifest validato) | pronto: `dist/fit_the_camera-<ver>.zip` |
-| Icona | PNG, al massimo 256 × 256 (obbligatoria) | pronta: `logo/ftc_icona_256.png` (da `logo/ftc_icona.svg`) |
-| Immagine in evidenza (*featured image*) | JPEG, PNG o WebP (obbligatoria; mostrata in home) | **da fare** |
-| Anteprime | almeno 1: JPEG, PNG, WebP o video MP4, con didascalia | **da fare** |
-| Descrizione | deve elencare tutto ciò che fa l'estensione | bozza sotto |
+| Zip | `pixi run build` (manifest validato) | pronto: `dist/fit_the_camera-1.0.0.zip`, uguale a quello della release GitHub |
+| Icona | PNG, al massimo 256 × 256 (obbligatoria) | `upload/icon.png` |
+| Immagine in evidenza | JPEG, PNG o WebP (obbligatoria; in home in un riquadro 16:9) | `upload/00_featured.jpg` (1920 × 1080) |
+| Anteprime | almeno 1: JPEG, PNG, WebP o MP4, didascalia ≤ 255 caratteri; ridotte senza ritaglio | `upload/01…05_*.jpg` |
+| Descrizione | deve elencare tutto ciò che fa l'estensione | `description.md` |
 | Support URL | issue tracker del repository | `https://github.com/Tonysa87/FTC-Fit-The-Camera/issues` |
 | Website | nel manifest | GitHub |
 
 Immagini: niente logo di Blender, niente GIF pesanti nella descrizione. Le
-immagini incluse nello zip devono essere CC0 (FTC non ne include). Suggerimento
-per le anteprime: overlay delle guide su una foto vera, pannello FTC, render con
-oggetto e ombra sopra la foto, prima/dopo.
+immagini incluse nello zip devono essere CC0 (FTC non ne include).
+
+## Compilare la bozza sul sito (passo per passo)
+
+1. <https://extensions.blender.org> › *Sign in* con il Blender ID (crealo se
+   non c'è).
+2. <https://extensions.blender.org/submit/>: carica
+   `dist/fit_the_camera-1.0.0.zip` e accetta i termini (licenza GPL). Il sito
+   legge nome, versione, tagline, licenza, tag e permessi dal manifest e apre la
+   bozza; se il manifest non va, lo dice qui.
+3. Nella bozza (pagina *Edit* dell'estensione):
+   - **Description**: incolla la sezione *Description* di `description.md`
+     (Markdown).
+   - **Support URL**: l'indirizzo delle issue (in `description.md`).
+   - **Icon**: `upload/icon.png`.
+   - **Featured image**: `upload/00_featured.jpg`.
+   - **Previews**: aggiungi `01…05_*.jpg` nell'ordine, ognuna con la sua
+     didascalia (tabella in `description.md`).
+   - Salva (*Save draft*) e controlla l'anteprima della pagina.
+4. *Submit for review*. L'estensione va nella coda di approvazione: i commenti
+   dei moderatori arrivano per email e sulla pagina dell'estensione.
+5. Se chiedono modifiche: correggi, alza `version` (es. 1.0.1) in
+   `fit_the_camera/blender_manifest.toml` e `pixi.toml`, `pixi run check`,
+   `pixi run build`, poi *Upload new version* sulla pagina dell'estensione e
+   rispondi nei commenti. Pubblica la stessa versione anche come release GitHub.
+6. Dopo l'approvazione l'estensione compare in *Get Extensions* dentro Blender
+   (cercando "FTC" o "Fit The Camera") e sul sito.
 
 ## Regole già verificate su FTC
 
@@ -57,40 +81,11 @@ oggetto e ombra sopra la foto, prima/dopo.
 - Nome senza la parola "Blender"; nessuna pubblicità o link di donazione
   nell'interfaccia (sono ammessi solo nella descrizione sul sito).
 
-## Da decidere prima di caricare
+## Scelte fatte
 
-- **Maintainer**: lo schema chiede `"Nome <email>"`; ora è solo il nome (la
-  validazione passa). Se si aggiunge un'email sarà pubblica sulla pagina.
-- **Test GUI** della 1.0.0 (`docs/TEST_GUI.md`): i moderatori provano le
-  funzioni di base; meglio caricare dopo il test.
-
-## Bozza della descrizione (inglese, Markdown)
-
-```markdown
-Match a camera to a single image – a photo, a render or a drawing – then render
-3D objects over it with their shadows.
-
-**Calibration**
-- Vanishing points (1, 2 or 3), a known rectangle or the horizon line
-- Focal length, sensor and GPS read from EXIF; the guides refine a known focal
-  length or solve it
-- Real-world scale from a scale cube of known size or a reference distance
-- Uncertainty of the result and guide fit, with warnings for lines that are not
-  really parallel, a wrong EXIF focal length or a far vanishing point
-- Align the calibrated floor or wall to the 3D cursor, a face or an object
-- "FTC" transform orientation: Blender's own move/rotate/scale tools and
-  snapping work along the photo's axes, also after aligning it to the scene
-
-**Render over the photo**
-- Prepare Render: Standard view transform (the photo comes out unchanged),
-  transparent film, Cycles, and a compositor that puts the render over the photo
-  with the Shadow Catcher pass – or a transparent output for other programs
-- Object roles: shadow catcher and holdout for the objects standing in for real
-  surfaces and objects of the photo
-
-Sidebar › FTC tab. Interface in English and Italian.
-Documentation: https://github.com/Tonysa87/FTC-Fit-The-Camera
-```
+- **Maintainer**: solo il nome, senza email (lo schema suggerisce
+  `"Nome <email>"`, ma la validazione passa; un'email sarebbe pubblica).
+- **Test GUI** della 1.0.0 (`docs/TEST_GUI.md`) fatto dall'autore il 2026-10-11.
 
 ## Fonti
 

@@ -2,11 +2,45 @@
 
 **English** · [Italiano](README.it.md)
 
+![A CG object rendered into a photo calibrated with FTC](docs/images/ftc_hero.jpg)
+
 A Blender 5.2+ extension that matches a camera to a single image (a photo, a
 render, a drawing). From a few lines drawn over the image it finds the focal
 length, the position and the rotation of the camera, at real-world scale. It can
 then set up the scene to render 3D objects over the photo, with their shadows on
 the real ground.
+
+## Quick start
+
+1. **Install** – download `fit_the_camera-<version>.zip` from the
+   [Releases](https://github.com/Tonysa87/FTC-Fit-The-Camera/releases), then in
+   Blender *Edit › Preferences › Get Extensions › ⌄ › Install from Disk…*
+2. **Load the photo** – 3D viewport sidebar (**N**) › **FTC** tab › **Load
+   Image**. The photo goes onto the scene camera (onto a new camera named after
+   the photo when that one already has a photo) and the view looks through it;
+   focal length and sensor come from the EXIF data (check them in *Camera
+   Data*).
+3. **Draw the guides** – keep *Vanishing Points* with 2 groups and press
+   **Calibrate**. Drag the two **red** guides (X) onto two edges that run the
+   same way in reality – floor tiles, a skirting board, the bottom of a door –
+   and the two **green** guides (Y) onto two edges at right angles to them, on
+   the floor too. Put the white origin handle on the floor where you want the
+   scene's centre. Hold **Shift** to move finely with a ×4 magnifier.
+4. **Set the scale** – drag the two *Reference Distance* handles onto the ends
+   of something whose length you know (a door width, a tile) and type it in
+   *Reference Length*.
+5. **Apply** – press **Enter**: the camera is placed. *Results* shows the focal
+   length, the camera height and how far the guides can be trusted.
+6. **Render over the photo** – model your object, add a plane on the real floor
+   and give it the *Shadow Catcher* role (*Render › Object Roles*), press
+   **Prepare Render**, then render (F12): the object is in the photo with its
+   shadow.
+
+![Guides, grid and axes over the photo during a calibration](docs/images/ftc_guides.jpg)
+
+The rest of this page explains every option.
+
+## Features
 
 - **Vanishing points**: 1, 2 or 3, two guide lines per axis, with the axis and
   direction of each group (X, Y, Z, ±).
@@ -20,6 +54,9 @@ the real ground.
 - **Uncertainty and guide fit**: how far the result can be trusted, with warnings
   for lines that are not really parallel, a wrong EXIF focal length, a vanishing
   point too far away.
+- **Precise handles**: Shift moves a handle finely under a ×4 magnifier.
+- **One camera per photo**: each photo can get its own camera, named after it;
+  the panel switches between the calibrated cameras.
 - **Align to the scene**: put the calibrated floor or wall on the 3D cursor, a
   face or an object.
 - **FTC transform orientation**: the photo's axes for Blender's own move, rotate
@@ -39,7 +76,7 @@ the real ground.
 The extension only reads the image file you load (and its EXIF metadata). It
 does not use the network.
 
-## Quick start
+## The panel, step by step
 
 Open the sidebar of the 3D viewport (N) and the **FTC** tab.
 
@@ -49,15 +86,15 @@ Open the sidebar of the 3D viewport (N) and the **FTC** tab.
    while it has no photo yet, otherwise a new one. Then it sets the image as the
    camera's background, matches the render resolution, reads the EXIF data and
    looks through the camera. With several calibrated cameras, the camera name in
-   the panel is a menu to switch between them. Photos stored rotated (EXIF orientation) get an upright
-   copy with **Make Upright Copy**.
+   the panel is a menu to switch between them. Photos stored rotated (EXIF
+   orientation) get an upright copy with **Make Upright Copy**.
 2. **Camera Data** – check or enter the focal length and the sensor width (or the
    35 mm equivalent). Every field shows whether it comes from EXIF, is missing
    (red) or was typed in.
 3. **Calibration** – pick a mode and press **Calibrate**: drag the handles of the
    guides onto edges of the image that are parallel in the real world.
-   Shift = fine, with a ×4 magnifier on the handle, Ctrl = snap, 1/2/3 = axis, F = flip the direction, H =
-   straighten the horizon, Ctrl+Z / Ctrl+Shift+Z = undo / redo, Enter = apply,
+   Shift = fine, with a ×4 magnifier on the handle, Ctrl = snap, 1/2/3 = axis,
+   F = flip the direction, H = straighten the horizon, Ctrl+Z / Ctrl+Shift+Z = undo / redo, Enter = apply,
    Esc / right click = exit. With *Live Update* (default) the camera follows the
    guides while you drag; Enter or **Apply** writes it and ends the session.
    Outside a session, changes made in the panel move the camera only on
@@ -87,11 +124,11 @@ A wireframe cube of known size (10 cm to 10 m, or custom) standing on the
 reference plane. Put the base handle at the foot of something of known height and
 drag the top handle up to its top: the scale of the scene follows. The cube and
 the *Reference Distance* exclude each other: only the one chosen in the *Scale*
-menu is shown (new photos start with the reference distance). With a known rectangle or the horizon the scale is already known
-and the cube is an optional visual check, off by default (*Display* › *Scale Cube*,
-with its size). Dragging the base
-or the origin never flips the cube: it extends the way the camera looks (on a
-wall: upwards).
+menu is shown (new photos start with the reference distance). With a known
+rectangle or the horizon the scale is already known and the cube is an optional
+visual check, off by default (*Display* › *Scale Cube*, with its size). Dragging
+the base or the origin never flips the cube: it extends the way the camera looks
+(on a wall: upwards).
 
 ### Reference distance
 

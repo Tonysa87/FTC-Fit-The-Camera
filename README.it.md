@@ -2,11 +2,43 @@
 
 [English](README.md) · **Italiano**
 
+![Un oggetto CG renderizzato in una foto calibrata con FTC](docs/images/ftc_hero.jpg)
+
 Estensione per Blender 5.2+ che calibra una camera su una singola immagine
 (foto, render, disegno): focale, sensore, posizione e rotazione, con scala reale;
 poi prepara la scena per renderizzare oggetti 3D sopra la foto. Storia delle
 versioni: [`docs/CHANGELOG.md`](docs/CHANGELOG.md). Sviluppo:
 [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md).
+
+## Guida rapida
+
+1. **Installa** – scarica `fit_the_camera-<versione>.zip` dalle
+   [Release](https://github.com/Tonysa87/FTC-Fit-The-Camera/releases), poi in
+   Blender *Edit › Preferences › Get Extensions › ⌄ › Install from Disk…*
+2. **Carica la foto** – sidebar del viewport (**N**) › tab **FTC** › **Load
+   Image**. La foto va sulla camera della scena (su una nuova camera col nome
+   della foto, se quella ha già una foto) e la vista guarda da lì; focale e
+   sensore arrivano dall'EXIF (controllali in *Camera Data*).
+3. **Disegna le guide** – lascia *Vanishing Points* con 2 gruppi e premi
+   **Calibrate**. Trascina le due guide **rosse** (X) su due spigoli che nella
+   realtà vanno nella stessa direzione – fughe delle piastrelle, un battiscopa,
+   il fondo di una porta – e le due **verdi** (Y) su due spigoli ad angolo retto
+   con quelli, sempre sul pavimento. Metti la maniglia bianca dell'origine sul
+   pavimento, dove vuoi il centro della scena. Tieni **Shift** per muovere fine
+   con una lente ×4.
+4. **Imposta la scala** – trascina le due maniglie di *Reference Distance*
+   sugli estremi di qualcosa di cui conosci la lunghezza (una porta, una
+   piastrella) e scrivila in *Reference Length*.
+5. **Applica** – premi **Invio**: la camera è a posto. *Results* mostra focale,
+   altezza della camera e quanto ci si può fidare delle guide.
+6. **Renderizza sopra la foto** – modella il tuo oggetto, aggiungi un piano sul
+   pavimento vero e dagli il ruolo *Shadow Catcher* (*Render › Object Roles*),
+   premi **Prepare Render** e renderizza (F12): l'oggetto è nella foto con la
+   sua ombra.
+
+![Guide, griglia e assi sulla foto durante una calibrazione](docs/images/ftc_guides.jpg)
+
+Il resto della pagina spiega ogni opzione.
 
 ## Installazione
 
@@ -17,7 +49,7 @@ versioni: [`docs/CHANGELOG.md`](docs/CHANGELOG.md). Sviluppo:
 3. Interfaccia in italiano: *Preferences › Interface › Translation*, lingua
    Italiano.
 
-## Uso
+## Il pannello, passo per passo
 
 Sidebar del viewport (N) › tab **FTC**.
 
