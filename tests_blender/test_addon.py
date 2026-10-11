@@ -630,6 +630,85 @@ def overlay_draws_in_every_mode():
 
 
 @test
+def magnifier_shows_the_photo_around_the_handle():
+    """Shift while dragging: the lens is centred on the handle, 4x larger, and
+    hides the system cursor until it closes (never for the pitch diamond)."""
+    draw = importlib.import_module(PKG + ".draw")
+    ops_modal = importlib.import_module(PKG + ".ops_modal")
+
+    view = draw.View(20.0, 30.0, 380.0, 232.5, (1920, 1080))
+    zoomed = draw.lens_view(view, (100.0, 80.0), 4.0, 200)
+    assert zoomed.to_region(view.to_norm(100.0, 80.0)) == (100.0, 100.0)
+    assert abs((zoomed.x1 - zoomed.x0) - 4.0 * (view.x1 - view.x0)) < 1e-9
+
+    calls = []
+    window = SimpleNamespace(
+        cursor_modal_set=lambda c: calls.append(c), cursor_modal_restore=lambda: calls.append("restore")
+    )
+    session = SimpleNamespace(drag_key="pitch", magnify=False, cursor_window=None)
+    ops_modal.set_magnifier(session, window, True)
+    assert not session.magnify and not calls
+    session.drag_key = "vp1_1a"
+    ops_modal.set_magnifier(session, window, True)
+    ops_modal.set_magnifier(session, window, True)
+    assert session.magnify and calls == ["NONE"]
+    ops_modal.set_magnifier(session, window, False)
+    assert not session.magnify and calls == ["NONE", "restore"]
+
+    import gpu
+
+    try:
+        gpu.init()
+    except Exception as exc:  # no GPU at all: nothing to draw
+        print(f"SKIP  magnifier drawing: {exc}")
+        return
+    _, cam, _ = _calibrated_camera((1920, 1080))
+    settings = cam.data.ftc
+    # Gradient photo: red = u, green = v, so every lens pixel tells where it samples.
+    w, h = 1920, 1080
+    photo = bpy.data.images.new("gradient", w, h)
+    u, v = np.meshgrid((np.arange(w) + 0.5) / w, (np.arange(h) + 0.5) / h)
+    photo.pixels.foreach_set(np.dstack([u, v, np.zeros_like(u), np.ones_like(u)]).astype(np.float32).ravel())
+    photo.update()
+    settings.image = photo
+    solution = calibrate.refresh(cam.data)
+    key = "vp1_1a"
+    session = SimpleNamespace(active_vp=0, hover=None, drag_key=key, magnify=True)
+    assert draw.magnifying(session)
+    centre = view.to_region(draw.handle_co(settings, solution, key))
+    width, height = 400, 300
+    offscreen = gpu.types.GPUOffScreen(width, height)
+    try:
+        with offscreen.bind():
+            fb = gpu.state.active_framebuffer_get()
+            fb.clear(color=(0.0, 0.0, 0.0, 0.0))
+            with gpu.matrix.push_pop(), gpu.matrix.push_pop_projection():
+                gpu.matrix.load_identity()
+                gpu.matrix.load_projection_matrix(
+                    Matrix(((2 / width, 0, 0, -1), (0, 2 / height, 0, -1), (0, 0, 1, 0), (0, 0, 0, 1)))
+                )
+                draw.draw_lens(view, settings, solution, session, "METRIC")
+            pixels = np.asarray(fb.read_color(0, 0, width, height, 4, 0, "FLOAT").to_list(), dtype=float)
+    finally:
+        offscreen.free()
+        draw.free_lens()
+
+    def srgb(c):  # the sRGB texture is sampled as linear and stored as such here
+        return np.where(c <= 0.0031308, 12.92 * c, 1.055 * np.power(np.clip(c, 0.0, None), 1 / 2.4) - 0.055)
+
+    hits = 0
+    for k in range(12):
+        a = 2 * math.pi * k / 12
+        x, y = centre[0] + 50.0 * math.cos(a), centre[1] + 50.0 * math.sin(a)
+        if not (0 <= x < width and 0 <= y < height):
+            continue
+        expected = np.array(view.to_norm(centre[0] + 50.0 * math.cos(a) / 4.0, centre[1] + 50.0 * math.sin(a) / 4.0))
+        got = srgb(pixels[int(y), int(x), :2])
+        hits += bool(np.all(np.abs(got - expected) < 0.01))  # guides crossing a sample miss it
+    assert hits >= 6, hits
+
+
+@test
 def rectangle_on_a_wall_aligns_to_a_face():
     """A 4-sided wall face seen by a synthetic camera: after "Align to Selection"
     Blender's projection of the face's corners lands on the rectangle handles."""

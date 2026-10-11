@@ -56,7 +56,7 @@ Open the sidebar of the 3D viewport (N) and the **FTC** tab.
    (red) or was typed in.
 3. **Calibration** – pick a mode and press **Calibrate**: drag the handles of the
    guides onto edges of the image that are parallel in the real world.
-   Shift = fine, Ctrl = snap, 1/2/3 = axis, F = flip the direction, H =
+   Shift = fine, with a ×4 magnifier on the handle, Ctrl = snap, 1/2/3 = axis, F = flip the direction, H =
    straighten the horizon, Ctrl+Z / Ctrl+Shift+Z = undo / redo, Enter = apply,
    Esc / right click = exit. With *Live Update* (default) the camera follows the
    guides while you drag; Enter or **Apply** writes it and ends the session.
