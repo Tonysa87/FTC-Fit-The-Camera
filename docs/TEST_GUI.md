@@ -1,6 +1,6 @@
 # Test GUI in Blender (Windows) – da fare per la 1.0.0
 
-Stato (2026-10-10, sera): prova a mano fatta fino al punto 37; **da provare
+Stato (2026-10-11): prova a mano fatta fino al punto 37; **da provare
 l'orientamento FTC (punti 38–41) i lati del rettangolo / cubo (42–43) e la scelta della camera (44–46)**. Move Along View e il gizmo lungo i raggi
 della camera sono stati rimossi dopo la prova. Tutti i test automatici passano
 (106 pytest, 28 test headless in Blender, compreso un render Cycles reale) e le

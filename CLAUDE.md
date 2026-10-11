@@ -6,7 +6,7 @@ Extensions audience) and `README.it.md` (Italian); developer docs
 `docs/PUBLISHING.md`. History: `docs/CHANGELOG.md`. Original spec: `FTC – Specifica addon Blender 5.2+.md` (says
 "Camera Match": the final name is **FTC**, package `fit_the_camera`, tab "FTC").
 
-## Status / next session (bookmark 2026-10-10, evening)
+## Status / next session (bookmark 2026-10-11, midday)
 - **v1.0.0** = 0.6.1 + Render section + two audit rounds + Transform Orientation
   "FTC" (`ops_orientation.py`: calibrated axes = rotation of `alignment_matrix`,
   Global without Align; synced on Apply, on Enter and by every Align to Scene op
@@ -19,10 +19,15 @@ Extensions audience) and `README.it.md` (Italian); developer docs
 - Python has no list of custom orientations: `ops_orientation.find` switches slot
   0 to "FTC" for a moment; `create` runs `transform.create_orientation(use_view=True)`
   with the main region of a 3D view (other sources need an active object).
-- **Next (resume 2026-10-11)**: the user's GUI test of the FTC orientation
-  (`docs/TEST_GUI.md` 38–41; fix what he reports, rebuild, re-upload the zip to
-  the draft with `gh release upload v1.0.0 dist/fit_the_camera-1.0.0.zip --clobber`
-  and move the tag again if the code changes). Then publish the draft release
+- 2026-10-11 fixes from the user's GUI use (in 1.0.0, tag moved, zip re-uploaded
+  to the draft): known rectangle sides named after the plane axes (Side X/Y/Z)
+  with the plane selector in Calibration; panel Opacity -> Display, cube off by
+  default in RECT/HORIZON; Load Image chooses the camera (New Camera named after
+  the photo / scene camera) + `ftc.use_camera` switcher; new photos start with
+  Reference Distance. Logo PNGs with alpha in `logo/png/` (untracked: ask).
+- **Next**: the user's GUI test `docs/TEST_GUI.md` 38–46 (fix what he reports,
+  rebuild, `gh release upload v1.0.0 dist/fit_the_camera-1.0.0.zip --clobber`,
+  move the tag if the code changes). Then publish the draft release
   (`gh release edit v1.0.0 --draft=false`) and submit to extensions.blender.org
   with `extensions_listing/` (`docs/PUBLISHING.md`).
 - GitHub: https://github.com/Tonysa87/FTC-Fit-The-Camera (public, `origin`).
