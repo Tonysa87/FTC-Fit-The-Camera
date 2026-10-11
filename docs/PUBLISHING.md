@@ -23,7 +23,7 @@ Riassunto delle regole di [extensions.blender.org](https://extensions.blender.or
    Blender non aggiorna da solo: l'utente vede l'aggiornamento in *Get
    Extensions*.
 
-## Materiale (stato 2026-10-11: tutto pronto)
+## Materiale (2026-10-11: 1.0.0 inviata, in attesa di revisione)
 
 Il materiale sta in `extensions_listing/`, cartella locale esclusa da git (vedi
 il suo README): immagini in `extensions_listing/upload/`, testi e didascalie in
