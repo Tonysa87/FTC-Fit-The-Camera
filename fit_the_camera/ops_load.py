@@ -6,7 +6,8 @@ import tempfile
 
 import bpy
 import numpy as np
-from bpy.props import StringProperty
+from bpy.app.translations import pgettext_iface as iface_
+from bpy.props import BoolProperty, EnumProperty, StringProperty
 from bpy.types import Operator
 from bpy_extras.io_utils import ImportHelper
 
@@ -14,20 +15,70 @@ from . import calibrate
 from .exif import read_exif
 
 IMAGE_GLOB = "*.jpg;*.jpeg;*.png;*.tif;*.tiff;*.webp;*.bmp;*.tga;*.exr;*.hdr;*.jp2;*.dpx;*.cin"
+NEW = "NEW"
+GENERIC_NAME = "FTC Camera"
+
+# Blender keeps only pointers to the strings of dynamic enum items: hold them here.
+_camera_items: list = []
+_photo_camera_items: list = []
 
 
-def target_camera(context, create: bool):
-    """Active camera object, else the view/scene camera, else a new camera."""
+def target_camera(context):
+    """Active camera object, else the view/scene camera (``None`` without one)."""
     obj = context.active_object
-    if obj is not None and obj.type == "CAMERA":
+    if obj is not None and obj.type == "CAMERA" and obj.name in context.scene.objects:
         return obj
-    cam = calibrate.view_camera(context)
-    if cam is not None or not create:
-        return cam
-    data = bpy.data.cameras.new("FTC Camera")
-    cam = bpy.data.objects.new("FTC Camera", data)
+    return calibrate.view_camera(context)
+
+
+def default_camera(context) -> str:
+    """Camera proposed for a new photo: the one in use while it has no photo yet,
+    otherwise a new camera, so that no calibration is replaced by mistake."""
+    cam = target_camera(context)
+    if cam is not None and cam.data.ftc.image is None and cam.name in context.scene.objects:
+        return cam.name
+    return NEW
+
+
+def _scene_cameras(context):
+    scene = getattr(context, "scene", None)
+    return sorted((o for o in scene.objects if o.type == "CAMERA"), key=lambda o: o.name) if scene else []
+
+
+def _camera_label(obj) -> str:
+    image = obj.data.ftc.image
+    return f"{obj.name}  ·  {image.name}" if image is not None else f"{obj.name}  ({iface_('no photo')})"
+
+
+def camera_items(_self, context):
+    items = [(NEW, "New Camera", "Create a new camera for the photo", "ADD", 0)]
+    for i, obj in enumerate(_scene_cameras(context), 1):
+        tip = "Load the photo into this camera"
+        if obj.data.ftc.image is not None:
+            tip = "Load the photo into this camera, replacing its photo"
+        items.append((obj.name, _camera_label(obj), tip, "CAMERA_DATA", i))
+    _camera_items[:] = items
+    return items
+
+
+def photo_camera_items(_self, context):
+    items = [
+        (obj.name, _camera_label(obj), "Look through this camera and calibrate it", "CAMERA_DATA", i)
+        for i, obj in enumerate(o for o in _scene_cameras(context) if o.data.ftc.image is not None)
+    ]
+    _photo_camera_items[:] = items
+    return items
+
+
+def new_camera(context, name: str):
+    data = bpy.data.cameras.new(name)
+    cam = bpy.data.objects.new(name, data)
     context.scene.collection.objects.link(cam)
     return cam
+
+
+def photo_name(path: str) -> str:
+    return os.path.splitext(bpy.path.basename(path))[0] or GENERIC_NAME
 
 
 def background_for(cam_data, image):
@@ -129,9 +180,41 @@ class FTC_OT_load_image(Operator, ImportHelper):
     bl_options = {"REGISTER", "UNDO"}
 
     filter_glob: StringProperty(default=IMAGE_GLOB, options={"HIDDEN"})
+    camera: EnumProperty(
+        name="Camera",
+        description="Camera that receives the photo: a new one, or one of the scene (its photo is replaced)",
+        items=camera_items,
+        options={"SKIP_SAVE"},
+    )
+    name_after_photo: BoolProperty(
+        name="Name After Photo",
+        description="Name the new camera after the photo file (otherwise \"FTC Camera\")",
+        default=True,
+    )
+
+    def invoke(self, context, event):
+        self.camera = default_camera(context)
+        return super().invoke(context, event)
+
+    def draw(self, context):
+        layout = self.layout
+        layout.use_property_split = True
+        layout.use_property_decorate = False
+        layout.prop(self, "camera")
+        row = layout.row()
+        row.active = self.camera == NEW
+        row.prop(self, "name_after_photo")
 
     def execute(self, context):
         path = self.filepath
+        # From a script without a choice: the same camera the file browser proposes.
+        choice = self.camera if self.properties.is_property_set("camera") else default_camera(context)
+        cam_obj = None
+        if choice != NEW:
+            cam_obj = context.scene.objects.get(choice)
+            if cam_obj is None or cam_obj.type != "CAMERA":
+                self.report({"ERROR"}, "The chosen camera is no longer in the scene")
+                return {"CANCELLED"}
         existing = {i.as_pointer() for i in bpy.data.images}
         try:
             image = bpy.data.images.load(path, check_existing=True)
@@ -145,10 +228,16 @@ class FTC_OT_load_image(Operator, ImportHelper):
             self.report({"ERROR"}, "Cannot read the image")
             return {"CANCELLED"}
 
-        cam_obj = target_camera(context, create=True)
+        if cam_obj is None:
+            cam_obj = new_camera(context, photo_name(path) if self.name_after_photo else GENERIC_NAME)
         settings = cam_obj.data.ftc
         set_background(cam_obj.data, image, previous=settings.image)
         first_load = len(settings.handles) == 0 or settings.image is None
+        if first_load:
+            # A new photo starts with the reference distance. Set here and not as the
+            # property default: older files that never chose keep the cube's scale.
+            with calibrate.suspended():
+                settings.scale_mode = "REFERENCE"
         settings.image = image
         settings.source_path = path
         load_camera_data(settings, read_image_exif(image, bpy.path.abspath(path)), size)
@@ -157,6 +246,7 @@ class FTC_OT_load_image(Operator, ImportHelper):
             calibrate.reset_handles(settings)
         fit_scene_to_image(context.scene, size)
         view_through_camera(context, cam_obj)
+        select_camera(context, cam_obj)
         calibrate.refresh(cam_obj.data)
         sync_render_photo(context.scene)
 
@@ -186,6 +276,34 @@ def pack_as_jpeg(image) -> None:
         os.rmdir(folder)
     # Where "Unpack" puts it: next to the .blend file.
     image.filepath_raw = "//" + name
+
+
+class FTC_OT_use_camera(Operator):
+    """Look through another camera with a photo and calibrate it (it becomes the scene camera)"""
+
+    bl_idname = "ftc.use_camera"
+    bl_label = "Use Camera"
+    bl_options = {"REGISTER", "UNDO"}
+    bl_property = "camera"
+
+    camera: EnumProperty(name="Camera", description="Camera with a photo to work on", items=photo_camera_items)
+
+    def execute(self, context):
+        cam_obj = context.scene.objects.get(self.camera)
+        if cam_obj is None or cam_obj.type != "CAMERA":
+            return {"CANCELLED"}
+        view_through_camera(context, cam_obj)
+        select_camera(context, cam_obj)
+        calibrate.refresh(cam_obj.data)
+        sync_render_photo(context.scene)
+        return {"FINISHED"}
+
+
+def select_camera(context, cam_obj) -> None:
+    # Imported here: ops_render imports this module.
+    from .ops_render import select_only
+
+    select_only(context, cam_obj)
 
 
 def sync_render_photo(scene) -> None:
@@ -264,7 +382,7 @@ class FTC_OT_upright_image(Operator):
         return {"FINISHED"}
 
 
-classes = (FTC_OT_load_image, FTC_OT_upright_image)
+classes = (FTC_OT_load_image, FTC_OT_use_camera, FTC_OT_upright_image)
 
 
 def register():

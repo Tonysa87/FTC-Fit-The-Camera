@@ -15,8 +15,8 @@ the real ground.
 - **EXIF**: camera, lens, focal length, 35 mm equivalent, sensor size, GPS and
   compass direction are read from the image. The known focal length can be refined
   by the guides, or the guides can solve it on their own.
-- **Real scale** from a *scale cube* of known size placed in the image (or a
-  reference distance).
+- **Real scale** from a reference distance (a known length in the image) or a
+  *scale cube* of known size.
 - **Uncertainty and guide fit**: how far the result can be trusted, with warnings
   for lines that are not really parallel, a wrong EXIF focal length, a vanishing
   point too far away.
@@ -43,9 +43,13 @@ does not use the network.
 
 Open the sidebar of the 3D viewport (N) and the **FTC** tab.
 
-1. **Load Image** – uses the active camera (or creates one), sets the image as
-   its background, matches the render resolution, reads the EXIF data and looks
-   through the camera. Photos stored rotated (EXIF orientation) get an upright
+1. **Load Image** – in the file browser's side panel choose the **Camera**: a
+   new one (named after the photo with *Name After Photo*, on by default) or a
+   camera of the scene, whose photo is replaced. It proposes the camera in view
+   while it has no photo yet, otherwise a new one. Then it sets the image as the
+   camera's background, matches the render resolution, reads the EXIF data and
+   looks through the camera. With several calibrated cameras, the camera name in
+   the panel is a menu to switch between them. Photos stored rotated (EXIF orientation) get an upright
    copy with **Make Upright Copy**.
 2. **Camera Data** – check or enter the focal length and the sensor width (or the
    35 mm equivalent). Every field shows whether it comes from EXIF, is missing
@@ -83,7 +87,7 @@ A wireframe cube of known size (10 cm to 10 m, or custom) standing on the
 reference plane. Put the base handle at the foot of something of known height and
 drag the top handle up to its top: the scale of the scene follows. The cube and
 the *Reference Distance* exclude each other: only the one chosen in the *Scale*
-menu is shown. With a known rectangle or the horizon the scale is already known
+menu is shown (new photos start with the reference distance). With a known rectangle or the horizon the scale is already known
 and the cube is an optional visual check, off by default (*Display* › *Scale Cube*,
 with its size). Dragging the base
 or the origin never flips the cube: it extends the way the camera looks (on a

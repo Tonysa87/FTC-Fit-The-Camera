@@ -312,11 +312,54 @@ def uncertainty_flags_far_vanishing_points():
 
 
 @test
+def load_image_chooses_the_camera():
+    """A new camera named after the photo, the empty camera in view, or the one chosen."""
+    scene = fresh_scene()
+    ops_load = importlib.import_module(PKG + ".ops_load")
+    first = load(write_photo("piazza_nord.jpg", (400, 300)))
+    assert first.name == "piazza_nord" and first.data.name == "piazza_nord"
+
+    # The camera in view already has a photo: the next one gets its own camera.
+    second = load(write_photo("piazza_sud.jpg", (400, 300)))
+    assert second != first and second.name == "piazza_sud"
+    assert first.data.ftc.image.name.startswith("piazza_nord")
+    assert scene.camera == second
+
+    # Chosen by name: the photo replaces that camera's own.
+    assert bpy.ops.ftc.load_image(filepath=write_photo("again.jpg", (400, 300)), camera=first.name) == {"FINISHED"}
+    assert first.data.ftc.image.name.startswith("again") and scene.camera == first
+    assert len([o for o in scene.objects if o.type == "CAMERA"]) == 2
+
+    # A camera without a photo in view takes it, keeping its name.
+    empty = bpy.data.objects.new("Camera", bpy.data.cameras.new("Camera"))
+    scene.collection.objects.link(empty)
+    scene.camera = empty
+    bpy.context.view_layer.objects.active = empty
+    assert ops_load.default_camera(bpy.context) == "Camera"
+    assert load(write_photo("empty.jpg", (400, 300))) == empty and empty.name == "Camera"
+
+    # Without "Name After Photo" the new camera is the generic one.
+    path = write_photo("generic.jpg", (400, 300))
+    assert bpy.ops.ftc.load_image(filepath=path, camera="NEW", name_after_photo=False) == {"FINISHED"}
+    assert scene.camera.name.startswith("FTC Camera")
+
+    # The menu lists every camera; the panel switches between the calibrated ones.
+    names = {item[0] for item in ops_load.camera_items(None, bpy.context)}
+    assert names == {"NEW"} | {o.name for o in scene.objects if o.type == "CAMERA"}
+    assert bpy.ops.ftc.use_camera(camera="piazza_sud") == {"FINISHED"}
+    assert scene.camera == second
+    photo = {item[0] for item in ops_load.photo_camera_items(None, bpy.context)}
+    assert photo == {o.name for o in scene.objects if o.type == "CAMERA" and o.data.ftc.image}
+
+
+@test
 def live_writes_only_in_session_or_apply():
     fresh_scene()
     cam = load(write_photo("live.jpg", (1200, 800)))
     s = cam.data.ftc
-    assert s.scale_mode == "CUBE" and s.cube_size == "1"
+    assert s.scale_mode == "REFERENCE"  # a new photo starts with the reference distance
+    s.scale_mode = "CUBE"
+    assert s.cube_size == "1"
     distance = s.results.distance
     before = cam.matrix_world.copy()
     s.cube_size = "2"  # no session: results only
@@ -858,8 +901,8 @@ def second_audit_fixes():
     tree.use_fake_user = True  # a fake user does not make it "shared"
     bpy.ops.ftc.prepare_render(output="PHOTO", use_cycles=True)
     assert scene.compositing_node_group == tree
-    load(write_photo("second_photo.jpg", (80, 60)))
-    assert tree.nodes[ops_render.PHOTO_NODE].image == s.image and s.image.name.startswith("second_photo")
+    second = load(write_photo("second_photo.jpg", (80, 60))).data.ftc
+    assert tree.nodes[ops_render.PHOTO_NODE].image == second.image and second.image.name.startswith("second_photo")
 
     # Generic words are translated only in FTC's own context.
     tr = importlib.import_module(PKG + ".translations")
@@ -976,6 +1019,7 @@ def every_button_has_a_tooltip():
     missing = []
     for op in (
         "load_image",
+        "use_camera",
         "upright_image",
         "calibrate",
         "apply",

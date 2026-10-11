@@ -21,8 +21,13 @@ versioni: [`docs/CHANGELOG.md`](docs/CHANGELOG.md). Sviluppo:
 
 Sidebar del viewport (N) › tab **FTC**.
 
-1. **Load Image** – usa la camera attiva (o la crea), imposta lo sfondo, adatta la
-   risoluzione, legge l'EXIF e inquadra la camera. Foto salvate ruotate
+1. **Load Image** – nel pannello laterale della finestra file si sceglie la
+   **Camera**: una nuova (col nome della foto con *Name After Photo*, attivo di
+   default) o una della scena, di cui si sostituisce la foto. Propone la camera
+   inquadrata finché non ha una foto, altrimenti una nuova. Poi imposta lo
+   sfondo, adatta la risoluzione, legge l'EXIF e inquadra la camera. Con più
+   camere calibrate, il nome della camera nel pannello è un menu per passare
+   dall'una all'altra. Foto salvate ruotate
    (orientamento EXIF): **Make Upright Copy**.
 2. **Camera Data** – marca, modello, focale reale, equivalente 35 mm, sensore,
    GPS, direzione; ogni campo è *da EXIF*, *mancante* (rosso) o *manuale*.
@@ -41,8 +46,8 @@ Sidebar del viewport (N) › tab **FTC**.
    Accanto a ogni asse un pulsante ne inverte il verso.
    **Focale**: *Nota + guide* (default: parte dalla focale di Camera Data e le guide
    la correggono per quanto la misurano; se è sconosciuta la risolvono), *Solo
-   guide*, *Solo nota*. **Scala**: *Cubo di scala* (default) o *Misura di
-   riferimento*.
+   guide*, *Solo nota*. **Scala**: *Misura di riferimento* (default per le
+   foto nuove) o *Cubo di scala*.
 4. **Align to Scene** – porta il piano calibrato (XY, XZ, YZ) sul 3D cursor, sulla
    faccia attiva (Edit Mode) o sull'oggetto attivo; Ruota 90° / Inverti.
 5. **Results** – focale, FOV, altezza, angoli, **incertezza** (focale ± %,

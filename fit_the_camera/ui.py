@@ -103,7 +103,12 @@ class FTC_PT_main(Panel):
             return
 
         col = layout.column(align=True)
-        col.label(text=f"{cam_obj.name}  ·  {settings.image.name}", icon="CAMERA_DATA")
+        label = f"{cam_obj.name}  ·  {settings.image.name}"
+        if sum(1 for o in context.scene.objects if o.type == "CAMERA" and o.data.ftc.image is not None) > 1:
+            # Several calibrated cameras: the label is a menu to switch between them.
+            col.operator_menu_enum("ftc.use_camera", "camera", text=label, icon="CAMERA_DATA")
+        else:
+            col.label(text=label, icon="CAMERA_DATA")
         data = settings.camera_data
         if data.orientation > 1:
             box = layout.box()
