@@ -33,7 +33,8 @@ Extensions audience) and `README.it.md` (Italian); developer docs
   with the main region of a 3D view (other sources need an active object).
 - GitHub: https://github.com/Tonysa87/FTC-Fit-The-Camera (public, `origin`).
   Release v1.0.0 published with `fit_the_camera-1.0.0.zip`; README images in
-  `docs/images/` (hero = the user's gallery render, guides = elevator preview).
+  `docs/images/` = the Extensions listing set (hero = featured crop, calibration
+  composite with the GPS masked, elevator, fountain viewport, gallery).
 - `extensions_listing/` (git-ignored, asked by the user): everything to upload to
   extensions.blender.org: `upload/` (icon, 00_featured 16:9 from the user's FTC_scene3, previews 01–05), `description.md` (text + captions) and
   the scripts that regenerate the images (previews use `samples/elevator.jpg`).

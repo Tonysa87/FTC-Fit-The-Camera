@@ -36,7 +36,20 @@ the real ground.
    **Prepare Render**, then render (F12): the object is in the photo with its
    shadow.
 
-![Guides, grid and axes over the photo during a calibration](docs/images/ftc_guides.jpg)
+![Calibration in the camera view: vanishing point guides on the door and the floor, a 0.8 m reference distance, and the FTC panel](docs/images/ftc_calibration.jpg)
+
+<table>
+  <tr>
+    <td width="33%"><img src="docs/images/ftc_elevator.jpg" alt="A CG object in front of a lift door, with its shadow on the real floor" width="100%"></td>
+    <td width="33%"><img src="docs/images/ftc_fountain_view.jpg" alt="The calibrated camera in the viewport: horizon, grid and origin on a square" width="100%"></td>
+    <td width="33%"><img src="docs/images/ftc_gallery.jpg" alt="A CG object in a gallery photo, at real-world scale" width="100%"></td>
+  </tr>
+  <tr>
+    <td>The result: a CG object with its shadow on the real floor (shadow catcher)</td>
+    <td>The calibrated camera in the viewport: horizon, grid and origin</td>
+    <td>A CG object in a gallery photo, at real-world scale</td>
+  </tr>
+</table>
 
 The rest of this page explains every option.
 
