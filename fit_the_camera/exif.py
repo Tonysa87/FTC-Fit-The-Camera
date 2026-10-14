@@ -161,25 +161,27 @@ def capture_time(local, offset, gps) -> CaptureTime | None:
     """GPS time first (UTC from the satellites; when the camera clock agrees
     with it, the camera clock to the second), else the camera clock with its
     written offset, else the bare local time. Never guesses the zone from the
-    longitude (daylight saving time breaks it)."""
+    longitude (daylight saving time breaks it).
+
+    When the GPS time and a complete camera clock (time + offset) disagree, the
+    clock wins: phones write the time of the last GPS fix, which can be hours or
+    days old. Without an offset the GPS time is the only UTC there is."""
     if gps is not None:
-        implied, mismatch = offset, False
-        if local is not None:
-            minutes = (local - gps.replace(tzinfo=None)).total_seconds() / 60.0
-            zone = 15 * round(minutes / 15.0)
-            if abs(minutes - zone) <= CLOCK_TOLERANCE_MIN and _is_zone(zone):
-                implied = int(zone)
-                mismatch = offset is not None and offset != implied
-            else:
-                mismatch = True
-        if mismatch or implied is None:
-            return CaptureTime(gps, local, None, "GPS", mismatch)
         if local is None:
-            return CaptureTime(gps, (gps + timedelta(minutes=implied)).replace(tzinfo=None), implied, "GPS")
-        # Phones write the time of the last GPS fix, seconds before the shot: the
-        # camera clock gives the instant, the GPS time only its zone.
-        utc = local.replace(tzinfo=timezone(timedelta(minutes=implied))).astimezone(UTC)
-        return CaptureTime(utc, local, implied, "GPS")
+            shown = (gps + timedelta(minutes=offset)).replace(tzinfo=None) if offset is not None else None
+            return CaptureTime(gps, shown, offset, "GPS")
+        minutes = (local - gps.replace(tzinfo=None)).total_seconds() / 60.0
+        zone = 15 * round(minutes / 15.0)
+        agrees = abs(minutes - zone) <= CLOCK_TOLERANCE_MIN and _is_zone(zone)
+        if agrees and offset in (None, zone):
+            # Phones write the time of the last GPS fix, seconds before the shot:
+            # the camera clock gives the instant, the GPS time only its zone.
+            utc = local.replace(tzinfo=timezone(timedelta(minutes=zone))).astimezone(UTC)
+            return CaptureTime(utc, local, int(zone), "GPS")
+        if offset is not None:
+            utc = local.replace(tzinfo=timezone(timedelta(minutes=offset))).astimezone(UTC)
+            return CaptureTime(utc, local, offset, "OFFSET", clock_mismatch=True)
+        return CaptureTime(gps, local, None, "GPS", clock_mismatch=True)
     if local is None:
         return None
     if offset is not None:
@@ -271,6 +273,8 @@ def _dms(value, ref, negative: str) -> float | None:
     if not isinstance(value, list) or len(value) != 3 or any(v is None for v in value):
         return None
     degrees = value[0] + value[1] / 60.0 + value[2] / 3600.0
+    if not math.isfinite(degrees) or not 0.0 <= degrees <= 180.0:
+        return None
     return -degrees if isinstance(ref, str) and ref.upper().startswith(negative) else degrees
 
 
@@ -292,10 +296,9 @@ def _offset(value) -> int | None:
         hours, minutes = int(value[1:3]), int(value[4:6])
     except ValueError:
         return None
-    if hours > 14 or minutes > 59:
-        return None
     total = hours * 60 + minutes
-    return -total if value[0] == "-" else total
+    total = -total if value[0] == "-" else total
+    return total if minutes < 60 and _is_zone(total) else None
 
 
 def _gps_datetime(date, time) -> datetime | None:
@@ -362,7 +365,7 @@ def parse_tiff(data: bytes) -> ExifData:
         focal_plane_y_res=_first_number(exif.get(TAG_FOCAL_PLANE_Y_RES)),
         focal_plane_unit=integer(exif, TAG_FOCAL_PLANE_UNIT),
         orientation=_in_range(integer(ifd0, TAG_ORIENTATION), 1, 8),
-        gps_latitude=_dms(gps.get(GPS_LAT), gps.get(GPS_LAT_REF), "S"),
+        gps_latitude=_in_range(_dms(gps.get(GPS_LAT), gps.get(GPS_LAT_REF), "S"), -90.0, 90.0),
         gps_longitude=_dms(gps.get(GPS_LON), gps.get(GPS_LON_REF), "W"),
         gps_direction=_bearing(gps.get(GPS_DIRECTION)),
         gps_direction_ref=text(gps, GPS_DIRECTION_REF),

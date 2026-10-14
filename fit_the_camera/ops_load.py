@@ -170,7 +170,10 @@ def load_camera_data(settings, exif, size) -> None:
     load_time_place(data, exif)
     # Android phones rarely write the compass: then the north comes from a map.
     with calibrate.suspended():
-        settings.sun.north_source = "COMPASS" if exif.gps_direction is not None else "MAP"
+        if exif.gps_direction is not None:
+            settings.sun.north_source = "COMPASS"
+        elif settings.sun.north_source == "COMPASS":
+            settings.sun.north_source = "MAP"
 
 
 def load_time_place(data, exif) -> None:

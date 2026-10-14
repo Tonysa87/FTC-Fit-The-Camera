@@ -12,7 +12,7 @@ from bpy.app.translations import pgettext_iface as iface_
 from bpy.props import IntProperty
 from bpy.types import Operator
 
-from . import calibrate, draw, ops_orientation
+from . import calibrate, draw, ops_orientation, ops_sun
 from .ops_load import match_image_aspect
 from .solver import cube_top_px
 
@@ -330,7 +330,12 @@ class FTC_OT_calibrate(Operator):
     def push_undo(self, session, snap) -> None:
         push_undo(session, snap)
 
-    def changed(self, context, cam_obj, *, reset_pitch=True):
+    def changed(self, context, cam_obj, *, reset_pitch=True, key=None):
+        if key == ops_sun.LANDMARK_KEY:
+            # Not a calibration input: no solve (nor uncertainty), only the sun.
+            ops_sun.orient(cam_obj.data.ftc)
+            calibrate.tag_redraw(context)
+            return
         calibrate.settings_changed(cam_obj.data, context, reset_pitch=reset_pitch)
 
     # ------------------------------------------------------------------
@@ -384,7 +389,7 @@ class FTC_OT_calibrate(Operator):
                 calibrate.defer_uncertainty = False
                 if snapshot(settings) != session.drag_start:
                     self.push_undo(session, session.drag_start)
-                    self.changed(context, cam_obj, reset_pitch=False)
+                    self.changed(context, cam_obj, reset_pitch=False, key=session.drag_key)
                 set_magnifier(session, context.window, False)
                 session.drag_key = None
                 session.pitch_drag = None
@@ -542,7 +547,7 @@ class FTC_OT_calibrate(Operator):
             if top is not None:
                 calibrate.set_handle(settings, "cube_top", (float(top[0] / w), float(top[1] / h)))
         # Handles that only place or scale the scene keep the pitch correction.
-        self.changed(context, cam_obj, reset_pitch=key not in SCALE_KEYS)
+        self.changed(context, cam_obj, reset_pitch=key not in SCALE_KEYS, key=key)
         if key == "cube_top":
             # Keep the stored top on the edge, where it is shown.
             solution = calibrate.cached_solution(cam_obj.data)
@@ -603,8 +608,11 @@ class FTC_OT_reset(Operator):
         session = FTC_OT_calibrate._session
         if session is not None and session.camera_name == cam_obj.name:
             push_undo(session, snapshot(settings))
+        landmark = calibrate.handle(settings, ops_sun.LANDMARK_KEY)
         with calibrate.suspended():
             calibrate.reset_handles(settings)
+            # A sun input, not a guide: it stays on its landmark.
+            calibrate.set_handle(settings, ops_sun.LANDMARK_KEY, landmark)
             settings.pitch_offset = 0.0
         calibrate.settings_changed(cam_obj.data, context, reset_pitch=True)
         return {"FINISHED"}
@@ -672,6 +680,9 @@ def _on_undo(*_args):
     settings: re-solve them, or end the session if the image is gone."""
     session = FTC_OT_calibrate._session
     if session is None:
+        # The cached solutions may belong to the undone settings: solve again
+        # when next needed (the Fit Sun panel).
+        calibrate.forget_solutions()
         return
     cam_obj = session_camera(session)
     if cam_obj is None or cam_obj.data.ftc.image is None:

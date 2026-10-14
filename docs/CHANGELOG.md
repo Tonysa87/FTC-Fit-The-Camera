@@ -11,6 +11,11 @@
   ruotarlo a occhio. FTC orienta la luce Sole scelta, o una nuova con *New Sun*;
   intensità e colore restano dell'utente. Freccia del nord e direzione del sole
   sul piano di riferimento (*Display > North*).
+  Audit (alpha.2): orologio + fuso battono un'ora GPS discordante (fix vecchio);
+  luce specchiata/genitori specchiati, luce cancellata o non modificabile,
+  vincoli che sovrascrivono la rotazione (avviso); nord visibile anche senza ora;
+  pannello corretto nei file riaperti; *Read from Photo* legge il file originale;
+  *Reset Guides* non sposta il riferimento.
 - Manifest: tag `Camera`, `Render` (tolto `3D View`, chiesto dal moderatore di
   Blender Extensions all'approvazione della 1.0.0).
 - Nuovo logo (mirino in una cornice): il precedente somigliava a quello di fSpy.
