@@ -6,7 +6,20 @@ Extensions audience) and `README.it.md` (Italian); developer docs
 `docs/PUBLISHING.md`. History: `docs/CHANGELOG.md` (English from 1.1), full Italian history `docs/CHANGELOG.it.md`. Original spec: `FTC – Specifica addon Blender 5.2+.md` (says
 "Camera Match": the final name is **FTC**, package `fit_the_camera`, tab "FTC").
 
-## Status / next session (bookmark 2026-10-14, evening)
+## Status / next session (bookmark 2026-10-14, night)
+- **RESUME HERE**: the user is GUI-testing **1.1.0-alpha.8** on Windows
+  (`dist/fit_the_camera-1.1.0-alpha.8.zip`, checklist `docs/TEST_GUI_1.1.md`).
+  He stopped on the cabin photo (`samples/IMG_20260804_185218650.jpg`):
+  calibrated with Axis 1 +X (roof edge + wall base), Axis 2 +Z (cabin corners),
+  angles ±1.0°, origin on the bottom-left cabin corner, reference 1 m. His
+  findings so far: the map/landmark north was too complex -> replaced by Side
+  (+X -X +Y -Y) + Turn in alpha.8 (expected for this photo: Side -X); Fit HDRI
+  was blocked by his World (Extreme PBR add-on puts the Environment Texture in a
+  node group) -> supported in alpha.7. Next: install alpha.8, Side -X + Turn on
+  the cabin, then Fit HDRI with his World (if the group exposes a rotation input,
+  FTC refuses it: ask for a screenshot of the group's nodes), then the rest of
+  the checklist, then release 1.1.0. He also asked whether the grid step should
+  be labelled (offered, not decided).
 - **1.1 developed (2026-10-14): all phases S1–S4, A1, A2 done, audited, pushed.**
   Build 1.1.0-alpha.8 is in the user's GUI test (`docs/TEST_GUI_1.1.md`, items
   1–16, photos in `samples/`); then release 1.1.0: drop "(1.1, in development)"
