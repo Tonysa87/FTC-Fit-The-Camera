@@ -434,7 +434,7 @@ class FTC_Sun(PropertyGroup):
         name="North",
         translation_context=FTC_CONTEXT,
         description="Show the scene north and the sun direction on the reference plane while calibrating",
-        default=True,
+        default=False,
     )
 
 
@@ -483,6 +483,33 @@ class FTC_Settings(PropertyGroup):
         description="World axis of the third guide pair (follows from the first two)",
         items=AXIS_ITEMS,
         default="+Z",
+        update=_guides_changed,
+    )
+    vp1_lines: IntProperty(
+        name="Lines",
+        translation_context=FTC_CONTEXT,
+        description="Guide lines of vanishing point 1 (2 to 6): more lines average out the placement errors",
+        min=2,
+        max=6,
+        default=2,
+        update=_guides_changed,
+    )
+    vp2_lines: IntProperty(
+        name="Lines",
+        translation_context=FTC_CONTEXT,
+        description="Guide lines of vanishing point 2 (2 to 6): more lines average out the placement errors",
+        min=2,
+        max=6,
+        default=2,
+        update=_guides_changed,
+    )
+    vp3_lines: IntProperty(
+        name="Lines",
+        translation_context=FTC_CONTEXT,
+        description="Guide lines of vanishing point 3 (2 to 6): more lines average out the placement errors",
+        min=2,
+        max=6,
+        default=2,
         update=_guides_changed,
     )
     active_vp: IntProperty(default=0, min=0, max=2, options={"HIDDEN"})

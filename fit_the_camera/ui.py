@@ -65,8 +65,9 @@ def draw_cube_size(layout, settings):
         layout.prop(settings, "cube_custom")
 
 
-def axis_row(layout, settings, index, label):
-    """Axis of a guide group with its flip button; the third axis is derived."""
+def axis_row(layout, settings, index, label, lines=True):
+    """Axis of a guide group with its flip button and its number of lines (- n +);
+    the third axis is derived."""
     row = layout.row(align=True)
     if index == 3:
         split = row.split(factor=0.4)
@@ -77,6 +78,17 @@ def axis_row(layout, settings, index, label):
     else:
         row.prop(settings, f"vp{index}_axis", text=label)
     row.operator("ftc.flip_axis", text="", icon="ARROW_LEFTRIGHT").index = index
+    if not lines:
+        return
+    count = calibrate.line_count(settings, index)
+    sub = row.row(align=True)
+    sub.enabled = count > 2
+    op = sub.operator("ftc.vp_line", text="", icon="REMOVE")
+    op.index, op.remove = index, True
+    row.label(text=str(count))
+    sub = row.row(align=True)
+    sub.enabled = count < calibrate.MAX_LINES
+    sub.operator("ftc.vp_line", text="", icon="ADD").index = index
 
 
 def draw_focal_mode(layout, settings, has_focal):
@@ -210,9 +222,9 @@ class FTC_PT_main(Panel):
             row.prop_enum(settings, "vp_count", "3")
             count = int(settings.vp_count)
             axis_row(col, settings, 1, iface_("Axis 1"))
-            axis_row(col, settings, 2, iface_("Axis 2 Line") if count == 1 else iface_("Axis 2"))
+            axis_row(col, settings, 2, iface_("Axis 2 Line") if count == 1 else iface_("Axis 2"), lines=count > 1)
             if count >= 2:
-                axis_row(col, settings, 3, iface_("Axis 3"))
+                axis_row(col, settings, 3, iface_("Axis 3"), lines=count == 3)
             if count == 2:
                 third = remaining_axis(settings.vp1_axis, settings.vp2_axis)
                 col.prop(settings, "use_third_line", text=iface_("Third Axis Line") + f" ({third})")

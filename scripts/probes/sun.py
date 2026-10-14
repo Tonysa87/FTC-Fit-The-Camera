@@ -25,6 +25,7 @@ ops_sun = importlib.import_module(g["PKG"] + ".ops_sun")
 calibrate = g["calibrate"]
 cam = g["_sun_camera"](g["sun_tiff"]())
 s = cam.data.ftc
+s.sun.show_north = True
 W, H = 1200, 700
 view = draw.View(20.0, 20.0, 1180.0, 20.0 + 1160 * 1080 / 1920, (1920, 1080))
 session = SimpleNamespace(active_vp=0, hover=None, drag_key=None)

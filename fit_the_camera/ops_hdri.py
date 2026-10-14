@@ -338,9 +338,11 @@ def paint(viewer, region):
 
 
 class FTC_OT_fit_hdri(Operator):
-    """Turn the World's HDRI about Z so that its sun takes the direction of the photo's sun: click the sun on
-    the HDRI (FTC proposes the brightest spot), Enter applies"""
-
+    # One line: a docstring's line breaks would reach the tooltip (and miss its translation).
+    bl_description = (
+        "Turn the World's HDRI about Z so that its sun takes the direction of the photo's sun: click the sun on "
+        "the HDRI (FTC proposes the brightest spot), Enter applies"
+    )
     bl_idname = "ftc.fit_hdri"
     bl_label = "Fit HDRI"
     bl_options = {"REGISTER", "UNDO"}

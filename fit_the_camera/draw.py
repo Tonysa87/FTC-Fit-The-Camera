@@ -189,10 +189,9 @@ def pitch_handle_px(solution):
 
 def vanishing_point_px(settings, index):
     """Least-squares vanishing point of guide group ``index`` (1-based), or ``None``."""
-    a1, b1, a2, b2 = (calibrate.to_pixels(settings, calibrate.handle(settings, k)) for k in calibrate.vp_keys(index))
     size = calibrate.image_size(settings)
     try:
-        v = vanishing_point([(a1, b1), (a2, b2)], float(max(size)))
+        v = vanishing_point(calibrate.group_lines(settings, index), float(max(size)))
     except (ValueError, np.linalg.LinAlgError, calibrate.SolverError):
         return None
     if abs(v[2]) < 1e-12:
@@ -580,18 +579,20 @@ def draw_guides(view, settings, solution, session, unit_system):
                 labels[2] = third_axis(labels[0], labels[1])
             for i in range(1, count + 1):
                 color = colors[axis_letter(labels[i - 1])]
-                k = calibrate.vp_keys(i)
+                k = calibrate.group_keys(settings, i)
                 width = GUIDE_WIDTH * (1.6 if session.active_vp == i - 1 else 1.0)
-                segs = [hpos(k[0]), hpos(k[1]), hpos(k[2]), hpos(k[3])]
+                segs = [hpos(key) for key in k]
+                pairs = [(segs[n], segs[n + 1]) for n in range(0, len(segs), 2)]
                 # The first guide carries the axis sign: it gets the arrow. The
                 # third axis follows from the first two: show where it really runs.
                 back = i == 3 and runs_backwards(settings, solution, labels[2], k[0], k[1])
                 segment(segs[0], segs[1], color, width, arrow=i < 3 or solution is not None, arrow_back=back)
-                segment(segs[2], segs[3], color, width)
+                for a, b in pairs[1:]:
+                    segment(a, b, color, width)
                 vp = vanishing_point_px(settings, i)
                 if vp is not None:
                     vpr = view.px_to_region(vp)
-                    for a, b in ((segs[0], segs[1]), (segs[2], segs[3])):
+                    for a, b in pairs:
                         near = b if math.dist(b, vpr) < math.dist(a, vpr) else a
                         d = math.dist(near, vpr)
                         if d > handle_radius():

@@ -287,3 +287,32 @@ def test_refinement_handles_a_far_vanishing_point():
         reference=reference(cam),
     )
     assert_matches(sol, cam)
+
+
+# Extra guides (1.1): more lines per vanishing point, on other edges of the same box.
+EXTRA_EDGES = {
+    "X": [((-2, 0, 1.5), (2, 0, 1.5)), ((-2, -2, 3), (2, -2, 3)), ((-2, 2, 0), (2, 2, 0)), ((-2, 1, 2), (2, 1, 2))],
+    "Y": [((0, -2, 1.5), (0, 2, 1.5)), ((-2, -2, 3), (-2, 2, 3)), ((2, -2, 0), (2, 2, 0)), ((1, -2, 2), (1, 2, 2))],
+}
+
+
+def test_more_lines_average_out_the_noise(camera):
+    """Four lines per vanishing point beat two under the same 2 px noise."""
+    rng = np.random.default_rng(7)
+
+    def lines(axis, count):
+        edges = (EDGES[axis] + EXTRA_EDGES[axis])[:count]
+        return [tuple(tuple(p + rng.normal(0.0, 2.0, 2)) for p in camera.segment(a, b)) for a, b in edges]
+
+    errors = {2: [], 4: []}
+    for _ in range(60):
+        for count in (2, 4):
+            sol = solve_vanishing_points(
+                [lines("X", count), lines("Y", count)],
+                ["+X", "+Y"],
+                camera.image_size,
+                origin=camera.project([0, 0, 0]),
+                reference=reference(camera),
+            )
+            errors[count].append(angle_between(sol.rotation, camera.rotation))
+    assert np.mean(errors[4]) < 0.8 * np.mean(errors[2]), (np.mean(errors[2]), np.mean(errors[4]))
