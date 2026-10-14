@@ -12,8 +12,8 @@ pavimenti. La 1.1 porta nella scena **la luce vera della foto**:
 - **HDRI sul sole** – l'HDRI del World si ruota attorno a Z per avere il suo
   sole nella stessa direzione.
 
-Più tre aggiunte piccole: più di due linee per punto di fuga, import dei
-progetti fSpy, report di calibrazione.
+Più due aggiunte piccole: più di due linee per punto di fuga e report di
+calibrazione.
 
 In una riga, per le note di versione: *"FTC now gets the real sun: the
 light and the HDRI match the photo."*
@@ -189,20 +189,6 @@ raddoppiare la luce diretta.
 - La prima linea del gruppo continua a definire il verso dell'asse.
 - Test: con 4 linee rumorose l'errore deve scendere rispetto a 2.
 
-### Import dei progetti fSpy
-
-- *File › Import › fSpy Project (.fspy)*, oppure un pulsante in *Load
-  Image*.
-- Il file è binario: intestazione, stato in JSON, immagine. **Formato da
-  verificare sul sorgente di fSpy** (GPL-3) prima di scrivere il parser.
-- Si mappano: immagine, modalità 1/2 punti di fuga, linee di controllo, assi,
-  punto principale, distanza di riferimento, focale nota. Il resto produce un
-  avviso.
-- Risultato: nuova camera con foto e guide di FTC, da controllare e
-  applicare. Non si copia la camera calcolata da fSpy: si ricalcola.
-- Test: due o tre progetti `.fspy` reali in `tests/data/`, con il risultato
-  di FTC confrontato con la soluzione salvata da fSpy.
-
 ### Report di calibrazione
 
 - *Export Report* in *Results*: file Markdown o JSON con focale, sensore,
@@ -312,12 +298,13 @@ vivo come nelle altre modalità.
 - **Modelli geomagnetici o fusi orari inclusi**: dati che invecchiano.
   Declinazione e fuso si inseriscono a mano.
 - **Rete**: nessuna, come nella 1.0.
+- **Import dei progetti fSpy** (`.fspy`): tolto su decisione di Antonio
+  (2026-10-14). Non riproporlo.
 
 ## Decisioni aperte
 
 1. Sole: pulsante *New Sun* esplicito, o solo una luce scelta dall'utente?
-2. Import fSpy nella 1.1 o rimandato, se i tempi si allungano.
-3. Orient HDRI: solo Environment Texture equirettangolare, o anche altre
+2. Orient HDRI: solo Environment Texture equirettangolare, o anche altre
    proiezioni? Proposta: solo equirettangolare, che copre quasi tutti gli HDRI.
 
 ## Fasi
@@ -330,7 +317,7 @@ vivo come nelle altre modalità.
 4. **S3 – Sole dall'ombra** e confronto con la bussola.
 5. **S4 – Orient HDRI**: probe `hdri` per le convenzioni, visore, rotazione Z.
 6. **A1 – Linee extra per punto di fuga.**
-7. **A2 – Import fSpy**, **A3 – Report**, changelog in inglese.
+7. **A2 – Report**, changelog in inglese.
 8. **Rilascio 1.1.0**:
    - `pixi run check`, test GUI di Antonio su Windows, release GitHub e
      *Upload new version* su Extensions;
@@ -352,7 +339,5 @@ A sono indipendenti dal sole: se una si allunga, la 1.1 esce senza.
   cap. 7 (DLT) e 6 (fattorizzazione RQ).
 - Zhang (2000), *A flexible new technique for camera calibration*, IEEE
   TPAMI.
-- [fSpy, codice sorgente](https://github.com/stuffmatic/fSpy) (GPL-3), per il
-  formato `.fspy`.
 - EXIF 2.32 / CIPA DC-008: `DateTimeOriginal`, `OffsetTimeOriginal`,
   `GPSDateStamp`, `GPSTimeStamp`, `GPSImgDirection(Ref)`.
