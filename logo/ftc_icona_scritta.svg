@@ -7,27 +7,21 @@
     <path d="M220 184V220H184"/>
     <path d="M72 220H36V184"/>
   </g>
-  <g transform="translate(25.6 -12) scale(0.8)">
-    <g stroke="#8B949E" stroke-width="2.5" stroke-dasharray="5 6">
-      <line x1="88.4" y1="153.2" x2="40" y2="96"/>
-      <line x1="128" y1="135.5" x2="40" y2="96"/>
-      <line x1="167.6" y1="153.2" x2="216" y2="96"/>
-      <line x1="128" y1="135.5" x2="216" y2="96"/>
+  <g transform="translate(25.6 -4) scale(0.8)">
+    <circle cx="128" cy="128" r="46" fill="none" stroke="#E6E8EB" stroke-width="6"/>
+    <g stroke-width="6" stroke-linecap="round">
+      <line x1="76" y1="128" x2="100" y2="128" stroke="#E5484D"/>
+      <line x1="156" y1="128" x2="180" y2="128" stroke="#E5484D"/>
+      <line x1="128" y1="76" x2="128" y2="100" stroke="#6BBF3A"/>
+      <line x1="128" y1="156" x2="128" y2="180" stroke="#6BBF3A"/>
     </g>
-    <polygon points="128,200 88.4,153.2 128,135.5 167.6,153.2" fill="#E6E8EB" fill-opacity="0.12"/>
-    <line x1="128" y1="135.5" x2="88.4" y2="153.2" stroke="#6BBF3A" stroke-width="4" stroke-opacity="0.55"/>
-    <line x1="128" y1="135.5" x2="167.6" y2="153.2" stroke="#E5484D" stroke-width="4" stroke-opacity="0.55"/>
-    <line x1="128" y1="200" x2="88.4" y2="153.2" stroke="#E5484D" stroke-width="6" stroke-linecap="round"/>
-    <line x1="128" y1="200" x2="167.6" y2="153.2" stroke="#6BBF3A" stroke-width="6" stroke-linecap="round"/>
-    <line x1="128" y1="135.5" x2="128" y2="70" stroke="#3B82F6" stroke-width="6" stroke-linecap="round"/>
-    <circle cx="40" cy="96" r="6" fill="#E5484D"/>
-    <circle cx="216" cy="96" r="6" fill="#6BBF3A"/>
-    <g fill="#FFFFFF" stroke="#1E2327" stroke-width="2.5">
-      <circle cx="128" cy="200" r="7"/>
-      <circle cx="88.4" cy="153.2" r="7"/>
-      <circle cx="167.6" cy="153.2" r="7"/>
-      <circle cx="128" cy="135.5" r="7"/>
+    <g stroke-width="3" stroke-dasharray="5 6" stroke-linecap="round">
+      <line x1="190" y1="128" x2="214" y2="128" stroke="#E5484D"/>
+      <line x1="128" y1="66" x2="128" y2="44" stroke="#6BBF3A"/>
     </g>
+    <circle cx="222" cy="128" r="7" fill="#E5484D"/>
+    <circle cx="128" cy="36" r="7" fill="#6BBF3A"/>
+    <circle cx="128" cy="128" r="8" fill="#3B82F6"/>
   </g>
   <path transform="translate(84.38 210)" fill="#E6E8EB" d="M3.04 0V-32.2H23.28V-26.68H9.11V-18.91H22.17V-13.39H9.11V0ZM38.05 0V-26.68H28.67V-32.2H53.51V-26.68H44.12V0ZM72.88 0.64Q66.9 0.64 63.41-2.69Q59.91-6.03 59.91-12.24V-19.96Q59.91-26.17 63.41-29.51Q66.9-32.84 72.88-32.84Q78.82-32.84 82.06-29.6Q85.3-26.36 85.3-20.7V-20.42H79.32V-20.88Q79.32-23.74 77.74-25.58Q76.15-27.42 72.88-27.42Q69.66-27.42 67.82-25.44Q65.98-23.46 65.98-20.06V-12.14Q65.98-8.79 67.82-6.79Q69.66-4.78 72.88-4.78Q76.15-4.78 77.74-6.65Q79.32-8.51 79.32-11.32V-12.14H85.3V-11.5Q85.3-5.84 82.06-2.6Q78.82 0.64 72.88 0.64Z"/>
 </svg>

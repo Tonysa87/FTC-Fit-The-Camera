@@ -12,6 +12,12 @@ Extensions audience) and `README.it.md` (Italian); developer docs
   versions: done in the manifest (Camera, Render), it ships with the next
   upload; no 1.0.1 just for that. READMEs point to Blender Extensions as the
   main install route (zip from Releases as the offline alternative).
+- **New logo (2026-10-14)**: the old icon (VP lines to a corner) was said on
+  Reddit to look like fSpy's; the new one is a crosshair in a frame. `logo/` holds
+  the new set, the old one stays only in the git-ignored `logo/old/`. README and
+  listing images were regenerated from the user's re-rendered scenes
+  (`extensions_listing/FTC_scene1-3_v2.png` + two new viewport screenshots) by
+  `extensions_listing/scripts/scenes.py`.
 - **v1.0.0 released on GitHub** (2026-10-11) after the user's full GUI test
   (`docs/TEST_GUI.md` 1–49) and **submitted to extensions.blender.org the same
   day: status "Awaiting Review"** (developer account TonyS87). Listing: icon,
