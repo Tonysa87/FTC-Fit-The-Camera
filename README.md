@@ -243,7 +243,7 @@ the real ones. *Sun From* picks the source:
   | North | From | When |
   | --- | --- | --- |
   | Compass | the EXIF image direction (magnetic: enter the *Declination*) | iPhones write it, most Android phones don't |
-  | Map | the bearing of a scene axis (+X, +Y, −X, −Y) read on a map along a facade or a street | buildings, streets |
+  | Map | the bearing of a scene axis (+X, +Y, −X, −Y) read on a map along a facade or a street: the way its arrow points in *Calibrate* (a facade runs two ways: the other one is 180° off) | buildings, streets |
   | Landmark | an orange handle (in *Calibrate*) on a distant feature and its bearing from the camera on a map (Google Earth's ruler shows it as *Heading*) | landscapes: an island, a bell tower, a peak |
   | Shadow | a shadow in the photo and the sun of the date and place (see *Shadow* below) | any sharp shadow: the most precise |
 
@@ -287,8 +287,9 @@ ambient light, reflections and the Sun light then agree.
   switches the following off; ticking it again takes over from there.
 - A Mapping behind reroutes is found; Environment Textures showing the same
   image (one for the light, one for the camera) turn together. A vector or a
-  rotation driven by other nodes, an HDRI inside a node group or a World linked
-  from a library are refused with a message.
+  rotation driven by other nodes, or a World linked from a library, are refused
+  with a message. An HDRI inside a node group (as HDRI add-ons build the World)
+  is turned inside the group.
 - HDRI sun and Sun light both give direct light: lower one of them.
 - Equirectangular HDRIs only (nearly all of them); other projections are
   reported.

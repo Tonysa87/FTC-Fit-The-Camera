@@ -28,6 +28,9 @@ release since 0.1, is in [`CHANGELOG.it.md`](CHANGELOG.it.md).
   Measured next to the date and place, the shadow checks them: *Shadow vs Date*
   (elevation), *Shadow vs North*, *Use Shadow North*, and a cross where the
   date's sun would put the shadow's tip.
+- A map bearing counts only once entered (the default 0° no longer passes for
+  a north), and a shadow 180° off the map says the bearing was read the other
+  way along the facade (found in the first GUI test).
 - *Display › North* (off by default) draws the north and the sun direction on
   the ground while calibrating.
 
@@ -37,7 +40,8 @@ release since 0.1, is in [`CHANGELOG.it.md`](CHANGELOG.it.md).
   azimuth of the photo's sun. A viewer over the 3D view shows a reduced copy of
   the HDRI with the brightest spot proposed; click the sun, Enter applies.
 - Only the Z rotation of a Mapping node changes (an existing one is reused, also
-  behind reroutes). The sun's elevation is compared, never changed: over 10°
+  behind reroutes, and inside node groups as HDRI add-ons build them). The
+  sun's elevation is compared, never changed: over 10°
   apart, a warning. *Follow the Sun* keeps the HDRI on the sun when it moves.
 - The equirectangular convention and the rotation sign are checked by Cycles
   renders in the tests.

@@ -226,7 +226,7 @@ quelle vere. *Sole da* sceglie la fonte:
   | Nord | Da | Quando |
   | --- | --- | --- |
   | Bussola | la direzione dell'immagine nell'EXIF (magnetica: inserisci la *Declinazione*) | gli iPhone la scrivono, quasi tutti gli Android no |
-  | Mappa | la direzione di un asse della scena (+X, +Y, −X, −Y) letta su una mappa lungo una facciata o una strada | edifici, strade |
+  | Mappa | la direzione di un asse della scena (+X, +Y, −X, −Y) letta su una mappa lungo una facciata o una strada: il verso della sua freccia in *Calibra* (una facciata ha due versi: l'altro sbaglia di 180°) | edifici, strade |
   | Riferimento | una maniglia arancione (in *Calibra*) su un elemento lontano e la sua direzione dalla camera su una mappa (il righello di Google Earth la chiama *Heading*) | paesaggi: un'isola, un campanile, una cima |
   | Ombra | un'ombra nella foto e il sole di data e luogo (vedi *Ombra* sotto) | qualsiasi ombra netta: il più preciso |
 
@@ -271,8 +271,9 @@ della foto: luce ambiente, riflessi e luce Sole sono così d'accordo.
   spegne l'inseguimento; riattivarlo riparte da lì.
 - Un Mapping dietro dei reroute viene trovato; le Environment Texture con la
   stessa immagine (una per la luce, una per la camera) ruotano insieme. Un
-  vettore o una rotazione che arrivano da altri nodi, un HDRI dentro un gruppo
-  di nodi o un World collegato da libreria vengono rifiutati con un messaggio.
+  vettore o una rotazione che arrivano da altri nodi, o un World collegato da
+  libreria, vengono rifiutati con un messaggio. Un HDRI dentro un gruppo di nodi
+  (come lo costruiscono gli add-on per gli HDRI) viene ruotato dentro il gruppo.
 - Il sole dell'HDRI e la luce Sole danno entrambi luce diretta: abbassa uno dei
   due.
 - Solo HDRI equirettangolari (quasi tutti); le altre proiezioni vengono

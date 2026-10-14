@@ -4,6 +4,10 @@ Storia completa in italiano. Dalla 1.1 il changelog principale è in inglese:
 [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Non rilasciato (1.1)
+- Dal primo test GUI: la direzione da mappa conta solo se inserita (lo 0° di
+  default non passa più per un nord); un'ombra a 180° dalla mappa avvisa che la
+  direzione è stata presa nel verso opposto; *Fit HDRI* entra nei gruppi di nodi
+  (gli add-on per HDRI costruiscono così il World).
 - **Report di calibrazione** (1.1 A2): *Esporta report* in *Risultati*, in
   Markdown o JSON: focale, sensore, campo visivo, posizione e rotazione,
   incertezza, aderenza delle guide, fonte di ogni dato (EXIF o manuale) e sole.

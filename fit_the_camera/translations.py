@@ -167,8 +167,27 @@ _IT = {
         "Da un riferimento lontano nella foto (maniglia Riferimento in Calibra) e dalla sua direzione sulla mappa"
     ),
     "Scene axis whose bearing is read on the map": "Asse della scena di cui si legge la direzione sulla mappa",
-    "Compass bearing of the scene axis, clockwise from true north": (
-        "Direzione dell'asse della scena, in senso orario dal nord geografico"
+    "Compass bearing the scene axis points to, clockwise from true north, read on a map: a facade or a "
+    "street runs two ways, take the one its arrow points to in Calibrate": (
+        "Direzione verso cui punta l'asse della scena, in senso orario dal nord geografico, letta su una mappa: "
+        "una facciata o una strada ha due versi, prendi quello della sua freccia in Calibra"
+    ),
+    "A map bearing was entered (0° is a real north, not a default)": (
+        "È stata inserita una direzione da mappa (0° è un nord vero, non un default)"
+    ),
+    "Map: enter the bearing of the axis, read on a map (where its arrow points)": (
+        "Mappa: inserisci la direzione dell'asse letta su una mappa (dove punta la sua freccia)"
+    ),
+    "The shadow puts the north about 180° off the map: the bearing probably runs the other way along "
+    "the facade or street": (
+        "L'ombra mette il nord a circa 180° dalla mappa: la direzione è probabilmente presa nel verso opposto "
+        "lungo la facciata o la strada"
+    ),
+    "The HDRI's node group is linked from a library: make it local to fit its HDRI": (
+        "Il gruppo di nodi dell'HDRI è collegato da una libreria: rendilo locale per adattarne l'HDRI"
+    ),
+    "The HDRI's node group is used elsewhere too: it turns there as well": (
+        "Il gruppo di nodi dell'HDRI è usato anche altrove: ruota anche lì"
     ),
     "Compass bearing from the camera to the landmark, read on a map, clockwise from true north": (
         "Direzione dalla camera al riferimento, letta su una mappa, in senso orario dal nord geografico"
@@ -330,9 +349,6 @@ _IT = {
     "Sun Point": "Punto del sole",
     "The World is linked from a library: make it local to fit its HDRI": (
         "Il World è collegato da una libreria: rendilo locale per adattarne l'HDRI"
-    ),
-    "The Environment Texture is inside a node group: Fit HDRI needs it in the World's own nodes": (
-        "L'Environment Texture è dentro un gruppo di nodi: Fit HDRI la vuole tra i nodi del World"
     ),
     "The HDRI's vector comes from other nodes (not a Mapping): Fit HDRI cannot turn it": (
         "Il vettore dell'HDRI arriva da altri nodi (non un Mapping): Fit HDRI non può ruotarlo"

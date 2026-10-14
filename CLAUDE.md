@@ -8,7 +8,7 @@ Extensions audience) and `README.it.md` (Italian); developer docs
 
 ## Status / next session (bookmark 2026-10-14, evening)
 - **1.1 developed (2026-10-14): all phases S1–S4, A1, A2 done, audited, pushed.**
-  Build 1.1.0-alpha.6 awaits the user's GUI test (`docs/TEST_GUI_1.1.md`, items
+  Build 1.1.0-alpha.7 is in the user's GUI test (alpha.7 = map bearing must be entered, 180° map warning, Fit HDRI inside node groups) (`docs/TEST_GUI_1.1.md`, items
   1–16, photos in `samples/`); then release 1.1.0: drop "(1.1, in development)"
   from the READMEs, version 1.1.0, CHANGELOG headings, GitHub release, Extensions
   *Upload New Version* (release notes link docs/CHANGELOG.md, now English).

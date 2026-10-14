@@ -1201,6 +1201,7 @@ def sun_needs_time_zone_and_place_and_daylight():
     s = cam.data.ftc
     data = s.camera_data
     assert s.sun.north_source == "MAP", "no compass: the north comes from a map"
+    s.sun.map_bearing = math.radians(90.0)
     assert "Date and time" in ops_sun.evaluate(s).error
     data.hour = 12
     assert data.time_state == "MANUAL"
@@ -1410,6 +1411,11 @@ def shadow_checks_the_date_and_gives_the_north():
     s.sun.map_bearing = math.radians(100.0)
     state = ops_sun.evaluate(s)
     assert abs(state.shadow_north_offset + 10.0) < 0.02, state.shadow_north_offset
+    assert not any("180" in w for w in state.warnings)
+    # The facade read the other way on the map: 180° off, said so.
+    s.sun.map_bearing = math.radians(270.0)
+    assert any("180" in w for w in ops_sun.evaluate(s).warnings)
+    s.sun.map_bearing = math.radians(100.0)
     # Use Shadow North: the light follows the shadow's north; the map and the
     # north correction (a hand match) are ignored.
     assert bpy.ops.ftc.new_sun() == {"FINISHED"}
@@ -1440,7 +1446,8 @@ def synthetic_hdri(u0, v0, size=(512, 256), radius_deg=3.0):
 
 def world_with(image):
     world = bpy.data.worlds.new("hdri world")
-    world.use_nodes = True
+    if world.node_tree is None:
+        world.use_nodes = True
     tree = world.node_tree
     env = tree.nodes.new("ShaderNodeTexEnvironment")
     env.image = image
@@ -1518,11 +1525,62 @@ def fit_hdri_renders_the_sun_where_computed():
 
 
 @test
+def map_bearing_must_be_entered():
+    ops_sun = importlib.import_module(PKG + ".ops_sun")
+    cam = _sun_camera(sun_tiff(direction=None))
+    s = cam.data.ftc
+    assert s.sun.north_source == "MAP" and not s.sun.map_bearing_set
+    state = ops_sun.evaluate(s)
+    assert "Map: enter" in state.error and state.direction is None
+    s.sun.map_bearing = 0.0  # a real 0°: +X to the north
+    assert s.sun.map_bearing_set and ops_sun.evaluate(s).direction is not None
+
+
+@test
+def fit_hdri_inside_a_node_group():
+    """HDRI add-ons wrap the World in a node group: the Mapping goes inside it."""
+    from solver.hdri import image_point
+
+    ops_sun = importlib.import_module(PKG + ".ops_sun")
+    ops_hdri = importlib.import_module(PKG + ".ops_hdri")
+    cam = _sun_camera(sun_tiff())
+    scene = bpy.context.scene
+    s = cam.data.ftc
+    s.sun.north_source = "MAP"
+    s.sun.map_axis, s.sun.map_bearing = "+X", math.radians(90.0)
+    sun = ops_sun.evaluate(s).direction
+    u0, v0 = 0.7, image_point(sun)[1]
+    group = bpy.data.node_groups.new("HDRI Setup", "ShaderNodeTree")
+    group.interface.new_socket("Shader", in_out="OUTPUT", socket_type="NodeSocketShader")
+    env = group.nodes.new("ShaderNodeTexEnvironment")
+    env.image = synthetic_hdri(u0, v0)
+    background = group.nodes.new("ShaderNodeBackground")
+    out = group.nodes.new("NodeGroupOutput")
+    group.links.new(env.outputs["Color"], background.inputs["Color"])
+    group.links.new(background.outputs["Background"], out.inputs[0])
+    world = bpy.data.worlds.new("grouped")
+    if world.node_tree is None:
+        world.use_nodes = True
+    node = world.node_tree.nodes.new("ShaderNodeGroup")
+    node.node_tree = group
+    world_out = next(n for n in world.node_tree.nodes if n.type == "OUTPUT_WORLD")
+    world.node_tree.links.new(node.outputs[0], world_out.inputs["Surface"])
+    scene.world = world
+    found, problem = ops_hdri.environment(world)
+    assert found == env and not problem, problem
+    assert bpy.ops.ftc.fit_hdri(point=(u0, v0)) == {"FINISHED"}
+    mapping = ops_hdri.mapping_of(env)
+    assert mapping is not None and mapping.id_data == group
+    assert center_brightness(scene, sun, "hdri_group") > 0.9
+
+
+@test
 def fit_hdri_needs_an_equirectangular_world():
     ops_hdri = importlib.import_module(PKG + ".ops_hdri")
     cam = _sun_camera(sun_tiff())
     s = cam.data.ftc
     s.sun.north_source = "MAP"
+    s.sun.map_bearing = 0.0  # +X to the north, entered on purpose
     scene = bpy.context.scene
     scene.world = bpy.data.worlds.new("plain")
     assert ops_hdri.environment(scene.world)[0] is None

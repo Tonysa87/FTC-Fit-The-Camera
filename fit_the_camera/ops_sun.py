@@ -43,6 +43,8 @@ SUN_KEYS = {LANDMARK_KEY, *SHADOW_KEYS}
 # Shadow and date/place disagreeing beyond these (degrees) is worth a red value.
 SHADOW_NORTH_ALERT = 5.0
 SHADOW_ELEVATION_ALERT = 2.0
+# Shadow and map north this far apart: the map bearing was read the other way.
+REVERSED_MAP_DEG = 150.0
 
 
 @dataclass
@@ -140,6 +142,8 @@ def scene_north(settings, solution) -> tuple[float | None, str]:
     if source == "SHADOW":
         return None, ""  # needs the sun of the date and place: see evaluate()
     if source == "MAP":
+        if not sun.map_bearing_set and sun.map_bearing == 0.0:
+            return None, "Map: enter the bearing of the axis, read on a map (where its arrow points)"
         bearing = y_bearing(math.degrees(sun.map_bearing), AXIS_VECTORS[sun.map_axis])
         return bearing, ""
     if solution is None:
@@ -240,6 +244,11 @@ def evaluate(settings, solution=None) -> SunState:
     elif shadow_bearing is not None and state.y_bearing is not None:
         state.shadow_north_offset = (shadow_bearing - state.y_bearing + 180.0) % 360.0 - 180.0
         state.shadow_north_spread = azimuth_spread(state.shadow_spread, state.shadow)
+        if sun.north_source == "MAP" and abs(state.shadow_north_offset) > REVERSED_MAP_DEG:
+            state.warnings.append(
+                "The shadow puts the north about 180° off the map: the bearing probably runs the other way along "
+                "the facade or street"
+            )
     if bearing is None:
         state.error = north_error
         return state
