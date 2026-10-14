@@ -399,8 +399,8 @@ class FTC_OT_calibrate(Operator):
                 calibrate.defer_uncertainty = False
                 restore(settings, session.drag_start)
                 set_magnifier(session, context.window, False)
-                session.drag_key = None
-                self.changed(context, cam_obj, reset_pitch=False)
+                key, session.drag_key = session.drag_key, None
+                self.changed(context, cam_obj, reset_pitch=False, key=key)
                 return {"RUNNING_MODAL"}
             return {"RUNNING_MODAL"}
 
@@ -490,6 +490,8 @@ class FTC_OT_calibrate(Operator):
             target.append(snapshot(settings))
             restore(settings, source.pop())
             self.changed(context, cam_obj, reset_pitch=False)
+            # Sun handles may have moved too (the light follows them without Live Update).
+            ops_sun.orient(settings)
 
     def set_axis(self, session, settings, letter):
         """Assign ``letter`` to the active vanishing point, swapping with the one that had it.

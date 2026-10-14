@@ -9,6 +9,7 @@ from solver.common import SolverError
 from solver.sun import (
     Shadow,
     SunPosition,
+    azimuth_spread,
     direction_enu,
     heading,
     julian_day,
@@ -218,3 +219,35 @@ def test_unreadable_shadows_are_errors():
     high = make_camera().project([[tip[0], 0.0, 3.0]])[0]
     with pytest.raises(SolverError):
         shadow_direction(sol, Shadow(shadow.foot, shadow.top, tuple(high), "XZ"))
+
+
+def test_shadow_with_the_origin_above_the_camera():
+    """A calibration on a facade above eye level: the ground is below z = 0."""
+    from synthetic import make_camera
+
+    from solver.common import CameraSolution
+
+    cam = make_camera(position=(-6.9, -9.8, -1.0), pitch=-5.0)
+    sol = CameraSolution(cam.image_size, cam.focal_px, cam.principal_point, cam.rotation, cam.position)
+    sun = direction_enu(130.0, 40.0)
+    foot = np.array([1.0, 2.0, -2.6])  # the real ground, 1.6 m under the camera
+    top = foot + [0.0, 0.0, 1.5]
+    tip = top - 1.5 / sun[2] * sun
+    px = cam.project([foot, top, tip])
+    shadow = Shadow(tuple(px[0]), tuple(px[1]), tuple(px[2]))
+    np.testing.assert_allclose(shadow_direction(sol, shadow), sun, atol=1e-9)
+
+
+def test_wall_tip_below_the_ground_is_an_error():
+    from synthetic import make_camera
+
+    sol, _sun, tip, shadow = _shadow_scene(200.0, 20.0, (0.5, -2.0, 0.0), 1.5, plane="XZ")
+    low = make_camera().project([[tip[0], 0.0, -0.5]])[0]
+    with pytest.raises(SolverError, match="below the ground"):
+        shadow_direction(sol, Shadow(shadow.foot, shadow.top, tuple(low), "XZ"))
+
+
+def test_azimuth_spread_grows_with_the_sun():
+    assert azimuth_spread(2.0, direction_enu(0.0, 0.0)) == pytest.approx(2.0)
+    assert azimuth_spread(2.0, direction_enu(0.0, 60.0)) == pytest.approx(4.0)
+    assert azimuth_spread(2.0, [0.0, 0.0, 1.0]) == math.inf

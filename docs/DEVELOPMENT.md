@@ -19,7 +19,7 @@ fit_the_camera/          # l'estensione (questa cartella diventa lo zip)
     plane.py             # rettangolo noto (omografia, vincoli di Zhang)
     horizon.py           # orizzonte
     convert.py           # soluzione -> camera Blender, focale da mm / 35 mm
-    sun.py               # posizione del sole (NOAA), nord della scena (1.1)
+    sun.py               # posizione del sole (NOAA), nord della scena, sole da un'ombra (1.1)
   exif.py                # parser EXIF in Python puro (JPEG, TIFF, PNG, WebP)
   props.py               # PropertyGroup salvato su ogni Camera (camera.ftc)
   calibrate.py           # impostazioni -> solver -> camera; incertezza; avvisi

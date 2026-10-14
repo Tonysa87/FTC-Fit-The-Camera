@@ -425,7 +425,9 @@ class FTC_PT_main(Panel):
                 wrapped(
                     col, context, iface_("Drag the Landmark handle (Calibrate) onto a distant feature"), icon="INFO"
                 )
-            col.prop(sun, "north_correction")
+            if sun.north_source != "SHADOW":
+                # The shadow measures the north: nothing to correct by eye.
+                col.prop(sun, "north_correction")
             if state.sun is not None:
                 col = body.column(align=True)
                 info_row(col, iface_("Sun Azimuth"), f"{state.sun.azimuth:.1f}°")
@@ -472,7 +474,7 @@ class FTC_PT_main(Panel):
         )
         col = body.column(align=True)
         if state.shadow is not None:
-            spread = f"  ±{state.shadow_spread:.1f}°" if math.isfinite(state.shadow_spread) else ""
+            spread = f"  ±{state.shadow_spread:.1f}°" if math.isfinite(state.shadow_spread) else "  ±?"
             info_row(col, iface_("Shadow Elevation"), f"{ops_sun.elevation_of(state.shadow):.1f}°{spread}")
         elif state.shadow_error and state.error != state.shadow_error:
             box = body.box()
@@ -487,12 +489,13 @@ class FTC_PT_main(Panel):
                 alert=abs(off) > ops_sun.SHADOW_ELEVATION_ALERT,
             )
         if state.shadow_north_offset is not None:
-            off = state.shadow_north_offset
+            spread = state.shadow_north_spread
+            noise = f"  ±{spread:.1f}°" if math.isfinite(spread) else "  ±?"
             info_row(
                 col,
                 iface_("Shadow vs North"),
-                f"{off:+.1f}°",
-                alert=abs(off) > ops_sun.SHADOW_NORTH_ALERT,
+                f"{state.shadow_north_offset:+.1f}°{noise}",
+                alert=ops_sun.north_offset_alert(state),
             )
             row = body.row()
             row.prop_enum(sun, "north_source", "SHADOW", text="Use Shadow North")

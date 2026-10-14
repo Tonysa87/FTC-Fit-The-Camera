@@ -339,6 +339,14 @@ vivo come nelle altre modalità.
 2. Fit HDRI: solo Environment Texture equirettangolare; con altre
    proiezioni il pulsante è disattivato e lo spiega.
 
+## Stato
+
+- S1, S2: fatte (1.1.0-alpha.2, audit incluso).
+- S3: fatta. *Sole da* (Data e luogo / Ombra), *Misura un'ombra*, nord
+  *Ombra* in coda all'enum, punta anche su parete XZ/YZ per l'origine.
+  Riferimento per il vincolo: Kee, O'Brien, Farid (2013), *Exposing Photo
+  Manipulation with Inconsistent Shadows*, ACM TOG 32(4).
+
 ## Fasi
 
 1. **1.0.x** – correzioni dalle segnalazioni degli utenti (Reddit, issue,
@@ -365,6 +373,10 @@ A sono indipendenti dal sole: se una si allunga, la 1.1 esce senza.
   *Astronomical Algorithms*, 1998).
 - Reda, Andreas (2004), *Solar Position Algorithm for Solar Radiation
   Applications*, NREL.
+- Kee, O'Brien, Farid (2013), *Exposing Photo Manipulation with Inconsistent
+  Shadows*, ACM TOG 32(4): retta ombra–oggetto per la sorgente di luce.
+- Cao, Foroosh (2007), *Camera calibration and light source orientation from
+  solar shadows*, CVIU 105(1).
 - Lepetit, Moreno-Noguer, Fua (2009), *EPnP: An Accurate O(n) Solution to the
   PnP Problem*, IJCV.
 - Hartley, Zisserman (2004), *Multiple View Geometry in Computer Vision*,

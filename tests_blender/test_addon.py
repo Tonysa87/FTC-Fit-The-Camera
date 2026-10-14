@@ -1410,8 +1410,10 @@ def shadow_checks_the_date_and_gives_the_north():
     s.sun.map_bearing = math.radians(100.0)
     state = ops_sun.evaluate(s)
     assert abs(state.shadow_north_offset + 10.0) < 0.02, state.shadow_north_offset
-    # Use Shadow North: the light follows the shadow's north, the map is ignored.
+    # Use Shadow North: the light follows the shadow's north; the map and the
+    # north correction (a hand match) are ignored.
     assert bpy.ops.ftc.new_sun() == {"FINISHED"}
+    s.sun.north_correction = math.radians(10.0)
     s.sun.north_source = "SHADOW"
     d = light_dir(s.sun.light)
     assert angle_diff(heading_deg(d), SUN_AZIMUTH) < 0.05

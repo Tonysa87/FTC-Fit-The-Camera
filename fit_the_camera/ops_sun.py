@@ -25,6 +25,7 @@ from .solver.common import SolverError, ray
 from .solver.sun import (
     Shadow,
     SunPosition,
+    azimuth_spread,
     heading,
     scene_direction,
     shadow_direction,
@@ -59,8 +60,10 @@ class SunState:
     shadow: Vector | None = None
     shadow_spread: float = 0.0
     shadow_error: str = ""
-    # Shadow minus date/place: north (degrees, + = clockwise) and elevation.
+    # Shadow minus date/place: north (degrees, the sign of North Correction)
+    # with the spread of the shadow's heading, and elevation.
     shadow_north_offset: float | None = None
+    shadow_north_spread: float = 0.0
     shadow_elevation_offset: float | None = None
 
 
@@ -91,6 +94,12 @@ def measure_shadow(settings, solution, state) -> None:
     state.shadow = Vector((scene_rotation(settings) @ d).tolist())
     if all(math.dist(calibrate.handle(settings, k), calibrate.HANDLE_DEFAULTS[k]) < 1e-6 for k in SHADOW_KEYS):
         state.warnings.append("Place the shadow handles on the photo (Calibrate)")
+
+
+def north_offset_alert(state) -> bool:
+    """Shadow and north disagree beyond the alert and beyond the shadow's noise."""
+    off = state.shadow_north_offset
+    return off is not None and abs(off) > max(SHADOW_NORTH_ALERT, 2.0 * state.shadow_north_spread)
 
 
 def elevation_of(direction) -> float:
@@ -138,7 +147,7 @@ def scene_north(settings, solution) -> tuple[float | None, str]:
     rotation = scene_rotation(settings) @ solution.rotation
     if source == "COMPASS":
         if data.direction_state == "MISSING":
-            return None, "No compass direction in the photo: use Map or Landmark"
+            return None, "No compass direction in the photo: use Map, Landmark or Shadow"
         bearing = data.direction
         if data.direction_ref.upper().startswith("M"):
             bearing += math.degrees(sun.declination)
@@ -223,12 +232,14 @@ def evaluate(settings, solution=None) -> SunState:
         state.shadow_elevation_offset = elevation_of(state.shadow) - state.sun.elevation
     if sun.north_source == "SHADOW":
         if shadow_bearing is None:
-            state.error = state.shadow_error or "The shadow gives no direction: move its handles"
+            state.error = state.shadow_error or "The sun is almost overhead: its shadow gives no north"
             return state
+        # Measured, not estimated: the north correction does not apply.
         bearing = shadow_bearing
-        state.y_bearing = (bearing + correction) % 360.0
+        state.y_bearing = bearing % 360.0
     elif shadow_bearing is not None and state.y_bearing is not None:
         state.shadow_north_offset = (shadow_bearing - state.y_bearing + 180.0) % 360.0 - 180.0
+        state.shadow_north_spread = azimuth_spread(state.shadow_spread, state.shadow)
     if bearing is None:
         state.error = north_error
         return state

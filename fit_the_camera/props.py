@@ -315,8 +315,8 @@ class FTC_Sun(PropertyGroup):
         description="Plane through the origin where the tip of the shadow lies (the foot is always on the ground)",
         items=[
             ("XY", "Ground", "The ground: plane XY through the origin"),
-            ("XZ", "Wall XZ", "The wall XZ through the origin"),
-            ("YZ", "Wall YZ", "The wall YZ through the origin"),
+            ("XZ", "Wall XZ", "The wall XZ through the origin: put the origin where the wall meets the ground"),
+            ("YZ", "Wall YZ", "The wall YZ through the origin: put the origin where the wall meets the ground"),
         ],
         default="XY",
         update=_sun_changed,

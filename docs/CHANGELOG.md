@@ -16,6 +16,15 @@
   vincoli che sovrascrivono la rotazione (avviso); nord visibile anche senza ora;
   pannello corretto nei file riaperti; *Read from Photo* legge il file originale;
   *Reset Guides* non sposta il riferimento.
+- **Sole da un'ombra** (1.1 S3): *Sole da* = *Ombra*: tre maniglie (piede e cima
+  di un oggetto verticale, punta dell'ombra a terra o su una parete per
+  l'origine) danno la direzione del sole con la sua incertezza, senza EXIF.
+  Con *Misura un'ombra* accanto a data e luogo: confronto di elevazione e di
+  nord, *Usa il nord dell'ombra*, crocetta dove il sole della data metterebbe
+  la punta. Audit (alpha.3): il nord dell'ombra ignora la correzione del nord;
+  ombre a terra indipendenti dall'altezza dell'origine; punta su parete sotto il
+  suolo = errore; ± dell'azimut sulla riga *Ombra / nord*; la luce si riallinea
+  dopo Esc/undo anche senza *Live Update*.
 - Manifest: tag `Camera`, `Render` (tolto `3D View`, chiesto dal moderatore di
   Blender Extensions all'approvazione della 1.0.0).
 - Nuovo logo (mirino in una cornice): il precedente somigliava a quello di fSpy.
