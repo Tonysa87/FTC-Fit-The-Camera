@@ -97,7 +97,15 @@ Tre maniglie nell'operatore modale, colore giallo:
 3. **punta dell'ombra** della cima, sul piano di riferimento.
 
 Piede e punta si ricavano con raggio ∩ piano, la cima con il punto della
-normale più vicino al raggio. Queste funzioni esistono già in
+normale più vicino al raggio.
+
+**Punta dell'ombra anche su un muro.** In `samples/IMG_20260804_185218650.jpg`
+(cabina elettrica, sole a ~279°/16°) l'ombra del cartello cade sulla facciata,
+non a terra. Con l'origine nello spigolo muro–marciapiede il pavimento (XY) e
+il muro (XZ o YZ) passano entrambi per l'origine: la punta si interseca con il
+piano scelto per lei (pavimento di default, muro a scelta). È anche la foto di
+prova della S3: GPS da cella (`GPSProcessingMethod` = CELLID, errore di km,
+< 0,05° sul sole), ora UTC dal GPS, nessuna bussola. Queste funzioni esistono già in
 `solver/scale.py` e `solver/vp.py`. Direzione del sole = cima − punta,
 normalizzata. Dà azimut ed elevazione **senza EXIF e senza nord**.
 

@@ -11,6 +11,7 @@ import io
 import math
 import struct
 from dataclasses import dataclass, fields
+from datetime import UTC, datetime, timedelta, timezone
 
 # IFD0 / EXIF / GPS tags used by FTC.
 TAG_MAKE = 0x010F
@@ -18,6 +19,8 @@ TAG_MODEL = 0x0110
 TAG_ORIENTATION = 0x0112
 TAG_EXIF_IFD = 0x8769
 TAG_GPS_IFD = 0x8825
+TAG_DATETIME_ORIGINAL = 0x9003
+TAG_OFFSET_TIME_ORIGINAL = 0x9011
 TAG_FOCAL_LENGTH = 0x920A
 TAG_PIXEL_X = 0xA002
 TAG_PIXEL_Y = 0xA003
@@ -29,7 +32,9 @@ TAG_LENS_MAKE = 0xA433
 TAG_LENS_MODEL = 0xA434
 GPS_LAT_REF, GPS_LAT, GPS_LON_REF, GPS_LON = 0x0001, 0x0002, 0x0003, 0x0004
 GPS_ALT_REF, GPS_ALT = 0x0005, 0x0006
+GPS_TIME = 0x0007
 GPS_DIRECTION_REF, GPS_DIRECTION = 0x0010, 0x0011
+GPS_DATE = 0x001D
 
 # EXIF focal plane resolution unit -> millimetres per unit.
 FOCAL_PLANE_UNITS_MM = {2: 25.4, 3: 10.0, 4: 1.0, 5: 0.001}
@@ -84,6 +89,11 @@ class ExifData:
     gps_altitude: float | None = None
     gps_direction: float | None = None
     gps_direction_ref: str | None = None
+    # Shooting time: the camera clock (local, naive), its UTC offset in minutes
+    # when written, and the GPS time (UTC, aware).
+    datetime_original: datetime | None = None
+    offset_minutes: int | None = None
+    gps_datetime: datetime | None = None
 
     def is_empty(self) -> bool:
         return all(getattr(self, f.name) is None for f in fields(self))
@@ -118,6 +128,58 @@ class ExifData:
             if 1.0 < value < 100.0:
                 return value
         return None
+
+    def capture_time(self) -> CaptureTime | None:
+        """When the photo was taken, from the best source available."""
+        return capture_time(self.datetime_original, self.offset_minutes, self.gps_datetime)
+
+
+# The GPS time and the camera clock agree when they differ by a time zone
+# within this many minutes (phones: a few seconds). Zones are whole or half
+# hours, plus the few at 45 minutes; a stale GPS fix rarely lands on one.
+CLOCK_TOLERANCE_MIN = 1.0
+QUARTER_ZONES_MIN = (345, 525, 765, 825)  # +5:45, +8:45, +12:45, +13:45
+
+
+def _is_zone(minutes: int) -> bool:
+    return -12 * 60 <= minutes <= 14 * 60 and (minutes % 30 == 0 or minutes in QUARTER_ZONES_MIN)
+
+
+@dataclass
+class CaptureTime:
+    """Shooting time. ``utc`` is ``None`` when only the local time is known (no
+    GPS time, no offset): the time zone must then be entered by hand."""
+
+    utc: datetime | None
+    local: datetime | None
+    offset_minutes: int | None  # local - UTC, written or implied by the GPS time
+    source: str  # "GPS", "OFFSET" or "LOCAL"
+    clock_mismatch: bool = False  # GPS time and camera clock disagree
+
+
+def capture_time(local, offset, gps) -> CaptureTime | None:
+    """GPS time first (UTC from the satellites), else the camera clock with its
+    written offset, else the bare local time. Never guesses the zone from the
+    longitude (daylight saving time breaks it)."""
+    if gps is not None:
+        implied, mismatch = offset, False
+        if local is not None:
+            minutes = (local - gps.replace(tzinfo=None)).total_seconds() / 60.0
+            zone = 15 * round(minutes / 15.0)
+            if abs(minutes - zone) <= CLOCK_TOLERANCE_MIN and _is_zone(zone):
+                implied = int(zone)
+                mismatch = offset is not None and offset != implied
+            else:
+                mismatch = True
+        if mismatch or implied is None:
+            return CaptureTime(gps, local, None, "GPS", mismatch)
+        return CaptureTime(gps, (gps + timedelta(minutes=implied)).replace(tzinfo=None), implied, "GPS")
+    if local is None:
+        return None
+    if offset is not None:
+        utc = local.replace(tzinfo=timezone(timedelta(minutes=offset))).astimezone(UTC)
+        return CaptureTime(utc, local, offset, "OFFSET")
+    return CaptureTime(None, local, None, "LOCAL")
 
 
 class _Reader:
@@ -206,6 +268,46 @@ def _dms(value, ref, negative: str) -> float | None:
     return -degrees if isinstance(ref, str) and ref.upper().startswith(negative) else degrees
 
 
+def _datetime(value) -> datetime | None:
+    """EXIF ``YYYY:MM:DD HH:MM:SS`` (blank or garbled fields -> ``None``)."""
+    if not isinstance(value, str):
+        return None
+    try:
+        return datetime.strptime(value.strip()[:19], "%Y:%m:%d %H:%M:%S")
+    except ValueError:
+        return None
+
+
+def _offset(value) -> int | None:
+    """EXIF ``+HH:MM`` / ``-HH:MM`` -> minutes."""
+    if not isinstance(value, str) or len(value) < 6 or value[0] not in "+-" or value[3] != ":":
+        return None
+    try:
+        hours, minutes = int(value[1:3]), int(value[4:6])
+    except ValueError:
+        return None
+    if hours > 14 or minutes > 59:
+        return None
+    total = hours * 60 + minutes
+    return -total if value[0] == "-" else total
+
+
+def _gps_datetime(date, time) -> datetime | None:
+    """GPSDateStamp ``YYYY:MM:DD`` + GPSTimeStamp (h, m, s) -> aware UTC."""
+    if not isinstance(date, str) or not isinstance(time, list) or len(time) != 3:
+        return None
+    if any(not isinstance(v, (int, float)) or not math.isfinite(v) or v < 0 for v in time):
+        return None
+    try:
+        day = datetime.strptime(date.strip()[:10], "%Y:%m:%d")
+    except ValueError:
+        return None
+    h, m, sec = time
+    if h > 24 or m >= 60 or sec >= 61:
+        return None
+    return (day + timedelta(hours=h, minutes=m, seconds=sec)).replace(tzinfo=UTC)
+
+
 # Plausible focal lengths (mm): anything else is a corrupt tag.
 FOCAL_RANGE_MM = (0.5, 5000.0)
 
@@ -258,6 +360,9 @@ def parse_tiff(data: bytes) -> ExifData:
         gps_longitude=_dms(gps.get(GPS_LON), gps.get(GPS_LON_REF), "W"),
         gps_direction=_bearing(gps.get(GPS_DIRECTION)),
         gps_direction_ref=text(gps, GPS_DIRECTION_REF),
+        datetime_original=_datetime(exif.get(TAG_DATETIME_ORIGINAL)),
+        offset_minutes=_offset(exif.get(TAG_OFFSET_TIME_ORIGINAL)),
+        gps_datetime=_gps_datetime(gps.get(GPS_DATE), gps.get(GPS_TIME)),
     )
     alt = gps.get(GPS_ALT)
     if isinstance(alt, (int, float)):
