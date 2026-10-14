@@ -5,21 +5,21 @@ Oct 14, 2026 · @Antonio Sartini
 ## Scopo
 
 La 1.0 copre bene le foto con linee parallele chiare: interni, facciate,
-pavimenti. La 1.1 porta FTC **all'aperto e nel mondo reale**:
+pavimenti. La 1.1 porta nella scena **la luce vera della foto**:
 
-1. **Sole** – una luce solare orientata come quella della foto, dall'EXIF
-   (data, ora, GPS, bussola) o da un'ombra visibile nell'immagine; l'HDRI
-   del World si ruota attorno a Z per avere il suo sole nella stessa
-   direzione.
-2. **Punti noti** – nuova modalità di calibrazione da corrispondenze punto
-   immagine ↔ punto 3D della scena, per le foto senza linee parallele (campi
-   aperti, paesaggi, rovine).
+- **Sole** – una luce solare orientata come quella della foto, dall'EXIF
+  (data, ora, GPS, bussola) o da un'ombra visibile nell'immagine.
+- **HDRI sul sole** – l'HDRI del World si ruota attorno a Z per avere il suo
+  sole nella stessa direzione.
 
 Più tre aggiunte piccole: più di due linee per punto di fuga, import dei
 progetti fSpy, report di calibrazione.
 
-In una riga, per le note di versione: *"FTC now works outdoors: calibrate from
-known points and get the real sun."*
+In una riga, per le note di versione: *"FTC now gets the real sun: the
+light and the HDRI match the photo."*
+
+Una modalità di calibrazione da punti rilevati (PnP) è descritta in
+*Possibili sviluppi*, come non prioritaria.
 
 ## Principi (invariati dalla 1.0)
 
@@ -177,63 +177,7 @@ raddoppiare la luce diretta.
 - EXIF: nuovi campi in `tests/exif_builder.py` (UTC GPS, offset, senza
   offset).
 
-## 2. Modalità "Punti noti" (PnP)
-
-Nuova voce in fondo all'enum delle modalità: **Known Points**.
-
-### Input
-
-Una lista di coppie, ognuna fatta da una **maniglia nell'immagine** e un
-**punto 3D**. Il punto 3D può essere:
-- l'origine di un oggetto (empty, palo, picchetto);
-- un vertice di una mesh, preso dalla selezione in Edit Mode;
-- coordinate scritte a mano.
-
-UI: `UIList` nel pannello con nome, punto 3D, scarto in px e una spunta
-on/off per escludere un punto senza cancellarlo. Pulsanti *Add from
-Selected*, *Add 3D Cursor* e *Remove*. Nell'operatore modale ogni coppia è
-una maniglia con il suo numero; trascinandola il risultato si aggiorna dal
-vivo come nelle altre modalità.
-
-### Solver (`solver/pnp.py`)
-
-| Caso | Minimo | Metodo |
-| --- | --- | --- |
-| Focale nota, punti qualsiasi | 4 | EPnP o DLT su punti normalizzati, poi LM sulla posa (6 parametri) |
-| Focale ignota, punti non complanari | 6 | DLT 3×4 → K, R, t (RQ), poi LM su posa + focale (7 parametri) |
-| Focale ignota, punti complanari | 4 | Omografia + vincoli di Zhang, come `plane.py` |
-
-- Focale "Known + Guides" come nella 1.0: prior gaussiano nel LM
-  (`refine.focal_prior_residual`), stessa logica per decidere quando i punti
-  scavalcano l'EXIF.
-- Punto principale al centro, con l'opzione manuale come nelle altre
-  modalità.
-- **Coordinate grandi** (UTM, coordinate di progetto): il solver lavora in
-  float64 attorno al baricentro dei punti. Avviso se la scena ha coordinate
-  oltre ~10 km dall'origine, dove la precisione float32 di Blender inizia a
-  tremare.
-- Configurazioni degeneri, da segnalare: punti quasi allineati, tutti
-  complanari con focale ignota e vista frontale, meno punti del minimo.
-
-### Uscita
-
-- La camera va **direttamente nelle coordinate della scena**: niente
-  origine, niente scala, niente *Align to Scene* (non servono).
-- Lo **scarto per punto** in px appare nella lista e accanto alla maniglia,
-  in rosso oltre una soglia. È il modo per trovare il punto sbagliato.
-- Incertezza con lo stesso metodo della 1.0 (`calibrate.uncertainty`: ogni
-  maniglia spostata dell'1‰).
-- L'orientamento "FTC" in questa modalità coincide con Global.
-
-### Test
-
-- Sintetici: camera nota, punti proiettati con rumore di 1–2 px; posa entro
-  0,2°, focale entro l'1%, per ognuno dei tre casi.
-- Un outlier di 50 px deve risultare il punto con lo scarto maggiore.
-- Coordinate tipo UTM (x ~ 700000, y ~ 4900000): stesso risultato delle
-  coordinate locali.
-
-## 3. Aggiunte piccole
+## 2. Aggiunte piccole
 
 ### Più di due linee per punto di fuga
 
@@ -275,12 +219,96 @@ vivo come nelle altre modalità.
 `docs/CHANGELOG.md` è in italiano ed è linkato dalle note di versione su
 Extensions. Dalla 1.1 il changelog va in inglese, con l'italiano nella guida.
 
+## Possibili sviluppi (non prioritari)
+
+### Modalità "Punti noti" (PnP)
+
+**Stato: possibile, non prioritaria.** Serve solo quando in campo, oltre
+alla foto, si rilevano (stazione totale, GNSS) punti ben visibili
+nell'immagine: spigoli di edifici, pali, angoli di finestre. Nel
+fotoinserimento tipico si ha solo la foto, quindi resta fuori dalla 1.1. Da
+riprendere se gli utenti la chiedono.
+
+**Flusso d'uso**, per quando servirà:
+1. In campo: foto, più 6–10 punti visibili nella foto misurati con la
+   stazione totale, sparsi nell'immagine e non tutti sulla stessa facciata.
+2. In Blender: i punti entrano come empty con il loro nome. Le coordinate
+   grandi (UTM, di progetto) si traslano vicino a 0,0,0 sottraendo un
+   **offset di scena**, salvato una volta sola.
+3. *Load Image*, modalità *Known Points*: per ogni punto una maniglia sullo
+   spigolo nella foto, con il nome del punto. Ne servono almeno 6, o 4 con la
+   focale nota.
+4. FTC mette la camera nel punto di presa, già in scala, con l'errore in px
+   per ogni punto.
+5. Il progetto entra nella scena **con lo stesso offset** e si trova al posto
+   giusto. Render sopra la foto come nella 1.0.
+6. Facoltativo: FTC aggiunge di nuovo l'offset e restituisce la posizione
+   della camera in coordinate di progetto, per mettere il punto di presa nel
+   CAD con la precisione del rilievo.
+
+Import CSV di rilievo (nome, X, Y, Z, separatore, ordine delle colonne,
+offset): solo insieme a questa modalità.
+
+Nuova voce in fondo all'enum delle modalità: **Known Points**.
+
+#### Input
+
+Una lista di coppie, ognuna fatta da una **maniglia nell'immagine** e un
+**punto 3D**. Il punto 3D può essere:
+- l'origine di un oggetto (empty, palo, picchetto);
+- un vertice di una mesh, preso dalla selezione in Edit Mode;
+- coordinate scritte a mano.
+
+UI: `UIList` nel pannello con nome, punto 3D, scarto in px e una spunta
+on/off per escludere un punto senza cancellarlo. Pulsanti *Add from
+Selected*, *Add 3D Cursor* e *Remove*. Nell'operatore modale ogni coppia è
+una maniglia con il suo numero; trascinandola il risultato si aggiorna dal
+vivo come nelle altre modalità.
+
+#### Solver (`solver/pnp.py`)
+
+| Caso | Minimo | Metodo |
+| --- | --- | --- |
+| Focale nota, punti qualsiasi | 4 | EPnP o DLT su punti normalizzati, poi LM sulla posa (6 parametri) |
+| Focale ignota, punti non complanari | 6 | DLT 3×4 → K, R, t (RQ), poi LM su posa + focale (7 parametri) |
+| Focale ignota, punti complanari | 4 | Omografia + vincoli di Zhang, come `plane.py` |
+
+- Focale "Known + Guides" come nella 1.0: prior gaussiano nel LM
+  (`refine.focal_prior_residual`), stessa logica per decidere quando i punti
+  scavalcano l'EXIF.
+- Punto principale al centro, con l'opzione manuale come nelle altre
+  modalità.
+- **Coordinate grandi** (UTM, coordinate di progetto): il solver lavora in
+  float64 attorno al baricentro dei punti. Avviso se la scena ha coordinate
+  oltre ~10 km dall'origine, dove la precisione float32 di Blender inizia a
+  tremare.
+- Configurazioni degeneri, da segnalare: punti quasi allineati, tutti
+  complanari con focale ignota e vista frontale, meno punti del minimo.
+
+#### Uscita
+
+- La camera va **direttamente nelle coordinate della scena**: niente
+  origine, niente scala, niente *Align to Scene* (non servono).
+- Lo **scarto per punto** in px appare nella lista e accanto alla maniglia,
+  in rosso oltre una soglia. È il modo per trovare il punto sbagliato.
+- Incertezza con lo stesso metodo della 1.0 (`calibrate.uncertainty`: ogni
+  maniglia spostata dell'1‰).
+- L'orientamento "FTC" in questa modalità coincide con Global.
+
+#### Test
+
+- Sintetici: camera nota, punti proiettati con rumore di 1–2 px; posa entro
+  0,2°, focale entro l'1%, per ognuno dei tre casi.
+- Un outlier di 50 px deve risultare il punto con lo scarto maggiore.
+- Coordinate tipo UTM (x ~ 700000, y ~ 4900000): stesso risultato delle
+  coordinate locali.
+
 ## Fuori dalla 1.1
 
 - **Correzione della distorsione dell'obiettivo**: i telefoni consegnano JPEG
   già corretti, e per il resto c'è il compositor. Costo alto, guadagno basso.
 - **Georeferenziazione e CRS** (EPSG, riproiezioni): troppo specialistica.
-  La modalità Punti noti con coordinate di progetto copre il caso.
+  La scena di Blender resta locale attorno a 0,0,0.
 - **Modelli geomagnetici o fusi orari inclusi**: dati che invecchiano.
   Declinazione e fuso si inseriscono a mano.
 - **Rete**: nessuna, come nella 1.0.
@@ -288,10 +316,8 @@ Extensions. Dalla 1.1 il changelog va in inglese, con l'italiano nella guida.
 ## Decisioni aperte
 
 1. Sole: pulsante *New Sun* esplicito, o solo una luce scelta dall'utente?
-2. Punti noti: bastano oggetti, vertici e coordinate a mano, o servono anche
-   punti da un CSV di rilievo? Il CSV può aspettare la 1.2.
-3. Import fSpy nella 1.1 o rimandato, se i tempi si allungano.
-4. Orient HDRI: solo Environment Texture equirettangolare, o anche altre
+2. Import fSpy nella 1.1 o rimandato, se i tempi si allungano.
+3. Orient HDRI: solo Environment Texture equirettangolare, o anche altre
    proiezioni? Proposta: solo equirettangolare, che copre quasi tutti gli HDRI.
 
 ## Fasi
@@ -303,19 +329,16 @@ Extensions. Dalla 1.1 il changelog va in inglese, con l'italiano nella guida.
 3. **S2 – Sole**: sezione *Sun*, sorgente EXIF, luce, freccia del nord.
 4. **S3 – Sole dall'ombra** e confronto con la bussola.
 5. **S4 – Orient HDRI**: probe `hdri` per le convenzioni, visore, rotazione Z.
-6. **P1 – `solver/pnp.py`** con test sintetici dei tre casi.
-7. **P2 – Modalità Punti noti**: lista, maniglie, scarti, incertezza.
-8. **A1 – Linee extra per punto di fuga.**
-9. **A2 – Import fSpy**, **A3 – Report**, changelog in inglese.
-10. **Rilascio 1.1.0**:
+6. **A1 – Linee extra per punto di fuga.**
+7. **A2 – Import fSpy**, **A3 – Report**, changelog in inglese.
+8. **Rilascio 1.1.0**:
    - `pixi run check`, test GUI di Antonio su Windows, release GitHub e
      *Upload new version* su Extensions;
-   - post di aggiornamento su r/blender con un video breve: punti noti su un
-     campo aperto, ombra del CG allineata a quella vera, HDRI che ruota sul sole.
+   - post di aggiornamento su r/blender con un video breve: ombra del CG allineata
+     a quella vera della foto, HDRI che ruota sul sole.
 
-Ogni fase si chiude con `pixi run check` verde e un commit su `main`. Le fasi
-S e P sono indipendenti: se una delle due si blocca, l'altra può uscire da
-sola.
+Ogni fase si chiude con `pixi run check` verde e un commit su `main`. Le aggiunte
+A sono indipendenti dal sole: se una si allunga, la 1.1 esce senza.
 
 ## Riferimenti
 
