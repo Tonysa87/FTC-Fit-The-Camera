@@ -1591,15 +1591,93 @@ def fit_hdri_needs_an_equirectangular_world():
     assert bpy.ops.ftc.fit_hdri(point=(0.35, 0.6)) == {"FINISHED"}
     assert abs(ops_hdri.get_z(ops_hdri.mapping_of(twin)) - ops_hdri.get_z(mine)) < 1e-6
 
-    # Vector or rotation from other nodes: refused, nothing changed.
-    value = tree.nodes.new("ShaderNodeCombineXYZ")
-    tree.links.new(value.outputs[0], mine.inputs["Rotation"])
-    before = ops_hdri.get_z(mine)
+    # A rotation from nodes that cannot be followed back (a sine): refused, nothing changed.
+    combine = tree.nodes.new("ShaderNodeCombineXYZ")
+    sine = tree.nodes.new("ShaderNodeMath")
+    sine.operation = "SINE"
+    tree.links.new(sine.outputs[0], combine.inputs["Z"])
+    tree.links.new(combine.outputs[0], mine.inputs["Rotation"])
+    assert "cannot follow" in ops_hdri.vector_problem(env, scene.world)
+    before = sine.inputs[0].default_value
     try:
         result = bpy.ops.ftc.fit_hdri(point=(0.5, 0.6))
     except RuntimeError:
         result = {"CANCELLED"}
-    assert result == {"CANCELLED"} and ops_hdri.get_z(mine) == before
+    assert result == {"CANCELLED"} and sine.inputs[0].default_value == before
+    # Keyframed: refused too.
+    tree.links.remove(sine.outputs[0].links[0])
+    assert not ops_hdri.vector_problem(env, scene.world)
+    combine.inputs["Z"].keyframe_insert("default_value")
+    assert "keyframed" in ops_hdri.vector_problem(env, scene.world)
+
+
+@test
+def fit_hdri_turns_a_group_rotation_input():
+    """Poly Haven's World: the group's Rotation input (degrees) -> Multiply
+    (to radians) -> Combine XYZ Z -> the Mapping's Rotation. FTC writes the
+    group's input, within its limits."""
+    from solver.hdri import image_point
+
+    ops_sun = importlib.import_module(PKG + ".ops_sun")
+    ops_hdri = importlib.import_module(PKG + ".ops_hdri")
+    cam = _sun_camera(sun_tiff())
+    scene = bpy.context.scene
+    s = cam.data.ftc
+    sun = ops_sun.evaluate(s).direction
+    u0, v0 = 0.7, image_point(sun)[1]
+    group = bpy.data.node_groups.new("Poly Haven HDRI", "ShaderNodeTree")
+    rotation = group.interface.new_socket("Rotation", in_out="INPUT", socket_type="NodeSocketFloat")
+    rotation.min_value, rotation.max_value = 0.0, 360.0
+    group.interface.new_socket("Background", in_out="OUTPUT", socket_type="NodeSocketShader")
+    nodes, links = group.nodes, group.links
+    inputs, out = nodes.new("NodeGroupInput"), nodes.new("NodeGroupOutput")
+    coords, mapping = nodes.new("ShaderNodeTexCoord"), nodes.new("ShaderNodeMapping")
+    env, background = nodes.new("ShaderNodeTexEnvironment"), nodes.new("ShaderNodeBackground")
+    multiply, combine = nodes.new("ShaderNodeMath"), nodes.new("ShaderNodeCombineXYZ")
+    multiply.operation = "MULTIPLY"
+    multiply.inputs[1].default_value = 0.0174533
+    env.image = synthetic_hdri(u0, v0)
+    links.new(inputs.outputs["Rotation"], multiply.inputs[0])
+    links.new(multiply.outputs[0], combine.inputs["Z"])
+    links.new(combine.outputs[0], mapping.inputs["Rotation"])
+    links.new(coords.outputs["Generated"], mapping.inputs["Vector"])
+    links.new(mapping.outputs["Vector"], env.inputs["Vector"])
+    links.new(env.outputs["Color"], background.inputs["Color"])
+    links.new(background.outputs[0], out.inputs[0])
+    world = bpy.data.worlds.new("poly haven")
+    if world.node_tree is None:
+        world.use_nodes = True
+    node = world.node_tree.nodes.new("ShaderNodeGroup")
+    node.node_tree = group
+    world_out = next(n for n in world.node_tree.nodes if n.type == "OUTPUT_WORLD")
+    world.node_tree.links.new(node.outputs[0], world_out.inputs["Surface"])
+    scene.world = world
+
+    assert not ops_hdri.vector_problem(env, world)
+    assert bpy.ops.ftc.fit_hdri(point=(u0, v0)) == {"FINISHED"}
+    assert sum(n.type == "MAPPING" for n in nodes) == 1, "no Mapping added"
+    degrees = node.inputs["Rotation"].default_value
+    assert 0.0 <= degrees <= 360.0 and abs(degrees) > 1.0, degrees
+    assert abs(ops_hdri._wrap(degrees * 0.0174533 - s.sun.hdri_angle)) < 1e-4
+    assert center_brightness(scene, sun, "hdri_poly_haven") > 0.9
+
+    # It follows the sun through the group input; turned by hand there, it stops.
+    s.sun.north_correction = math.radians(25.0)
+    moved = ops_sun.evaluate(s).direction
+    assert node.inputs["Rotation"].default_value != degrees
+    assert center_brightness(scene, moved, "hdri_poly_haven_follows") > 0.9
+    node.inputs["Rotation"].default_value += 10.0
+    s.sun.north_correction = math.radians(20.0)
+    assert not s.sun.hdri_fitted
+
+    # Limits too narrow for the angle: refused.
+    rotation.min_value, rotation.max_value = 0.0, 1.0
+    node.inputs["Rotation"].default_value = 0.5
+    try:
+        result = bpy.ops.ftc.fit_hdri(point=(u0, v0))
+    except RuntimeError:
+        result = {"CANCELLED"}
+    assert result == {"CANCELLED"}
 
 
 @test

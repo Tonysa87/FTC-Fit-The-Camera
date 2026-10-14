@@ -271,10 +271,16 @@ della foto: luce ambiente, riflessi e luce Sole sono così d'accordo.
   nord* o l'ora lo ruotano insieme alla luce. Ruotare a mano il suo Mapping
   spegne l'inseguimento; riattivarlo riparte da lì.
 - Un Mapping dietro dei reroute viene trovato; le Environment Texture con la
-  stessa immagine (una per la luce, una per la camera) ruotano insieme. Un
-  vettore o una rotazione che arrivano da altri nodi, o un World collegato da
-  libreria, vengono rifiutati con un messaggio. Un HDRI dentro un gruppo di nodi
-  (come lo costruiscono gli add-on per gli HDRI) viene ruotato dentro il gruppo.
+  stessa immagine (una per la luce, una per la camera) ruotano insieme. Un HDRI
+  dentro un gruppo di nodi (come lo costruiscono gli add-on per gli HDRI) viene
+  ruotato dentro il gruppo.
+- Se la rotazione del Mapping arriva da altri nodi, FTC la ripercorre all'indietro
+  e scrive il valore all'origine: l'input *Rotation* di un gruppo (Poly Haven:
+  gradi → Multiply → Combine XYZ), un nodo Value, attraverso reroute, Combine
+  XYZ, Math / Vector Math somma, sottrazione, moltiplicazione, divisione,
+  radianti/gradi, e gruppi annidati. Nodi non invertibili (un seno, una
+  texture...), keyframe o driver sul valore, un vettore da altri nodi o un World
+  collegato da libreria vengono rifiutati con un messaggio.
 - Il sole dell'HDRI e la luce Sole danno entrambi luce diretta: abbassa uno dei
   due.
 - Solo HDRI equirettangolari (quasi tutti); le altre proiezioni vengono

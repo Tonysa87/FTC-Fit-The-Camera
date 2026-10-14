@@ -14,6 +14,11 @@ Storia completa in italiano. Dalla 1.1 il changelog principale è in inglese:
 - Dal test GUI della alpha.8: **Alza** (*Raise*) corregge a occhio l'elevazione
   del sole di data e ora, quando le ombre della CG vengono più corte o più lunghe
   che nella foto (cabina: lato −Y, Ruota −16°, ombra del cartello troppo corta).
+- Dal test GUI della alpha.9: *Fit HDRI* ripercorre all'indietro una rotazione
+  del Mapping che arriva da altri nodi e scrive il valore all'origine: l'input
+  *Rotation* del gruppo di Poly Haven (gradi → Multiply → Combine XYZ), nodi
+  Value, Math / Vector Math lineari, gruppi annidati; rispetta min / max
+  dell'input.
 - **Report di calibrazione** (1.1 A2): *Esporta report* in *Risultati*, in
   Markdown o JSON: focale, sensore, campo visivo, posizione e rotazione,
   incertezza, aderenza delle guide, fonte di ogni dato (EXIF o manuale) e sole.

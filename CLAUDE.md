@@ -7,16 +7,18 @@ Extensions audience) and `README.it.md` (Italian); developer docs
 "Camera Match": the final name is **FTC**, package `fit_the_camera`, tab "FTC").
 
 ## Status / next session (bookmark 2026-10-14, night)
-- **RESUME HERE**: the user is GUI-testing **1.1.0-alpha.9** on Windows
-  (`dist/fit_the_camera-1.1.0-alpha.9.zip`, checklist `docs/TEST_GUI_1.1.md`).
+- **RESUME HERE**: the user is GUI-testing **1.1.0-alpha.10** on Windows
+  (`dist/fit_the_camera-1.1.0-alpha.10.zip`, checklist `docs/TEST_GUI_1.1.md`).
   Cabin photo (`samples/IMG_20260804_185218650.jpg`) DONE: Side **-Y** (not -X:
   +Y runs into the wall), Turn -16°, **Raise** -3.5° (16.0° -> 12.5°) -> the CG
   sign shadow matches the photo ("PERFETTO"). Raise (`sun.elevation_correction`,
   `ops_sun.raised`, clamped 0..90°) was added in alpha.9 on his request: the
-  date's sun gave a too-short shadow. Open: **Fit HDRI** refuses his Extreme PBR
-  World ("rotation of the HDRI's Mapping comes from other nodes"): waiting for a
-  screenshot of the nodes inside the group (probably a Group Input / Combine XYZ
-  feeding the Mapping's Rotation: follow it and write the group input). Then the
+  date's sun gave a too-short shadow. alpha.10: **Fit HDRI** follows a linked
+  Mapping rotation back to its source and writes it there
+  (`ops_hdri.rotation_control`: reroutes, Combine XYZ, Value, linear Math /
+  Vector Math, group inputs/outputs, min/max respected): his Poly Haven World
+  (group input Rotation in degrees -> Multiply 0.0175 -> Combine XYZ Z ->
+  Mapping) is the case to verify in the GUI (checklist item 12). Then the
   rest of the checklist, then release 1.1.0. He also asked whether the grid step
   should be labelled (offered, not decided).
 - **1.1 developed (2026-10-14): all phases S1–S4, A1, A2 done, audited, pushed.**

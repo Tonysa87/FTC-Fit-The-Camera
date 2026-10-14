@@ -7,6 +7,7 @@ changed; the sun's elevation in the HDRI is compared, never changed.
 from __future__ import annotations
 
 import math
+from dataclasses import dataclass
 
 import bpy
 import gpu
@@ -27,9 +28,10 @@ ELEVATION_WARNING = 10.0
 VIEWER_MARGIN = 40.0
 
 
-def _environments(tree, start, found, seen) -> None:
+def _environments(tree, start, found, seen, path=()) -> None:
     """Environment Textures upstream of the nodes ``start`` of ``tree``, inside
-    node groups too (from their active Group Output)."""
+    node groups too (from their active Group Output), each with the group nodes
+    that lead to it (outermost first)."""
     stack = list(start)
     while stack:
         node = stack.pop()
@@ -37,15 +39,35 @@ def _environments(tree, start, found, seen) -> None:
             continue
         seen.add(node.as_pointer())
         if node.type == "TEX_ENVIRONMENT":
-            found.append(node)
+            found.append((node, path))
         elif node.type == "GROUP" and node.node_tree is not None:
-            inner = node.node_tree
-            outputs = [n for n in inner.nodes if n.type == "GROUP_OUTPUT" and n.is_active_output]
-            _environments(inner, outputs, found, seen)
+            output = _group_output(node.node_tree)
+            if output is not None:
+                _environments(node.node_tree, [output], found, seen, path + (node,))
         for socket in node.inputs:
             for link in socket.links:
                 if link.is_valid and not link.is_muted:
                     stack.append(link.from_node)
+
+
+def _group_output(tree):
+    return next((n for n in tree.nodes if n.type == "GROUP_OUTPUT" and n.is_active_output), None)
+
+
+def _found(world) -> list:
+    """(Environment Texture, group path) pairs reaching the World output."""
+    tree = world.node_tree
+    output = next((n for n in tree.nodes if n.type == "OUTPUT_WORLD" and n.is_active_output), None)
+    found = []
+    _environments(tree, [output] if output is not None else [], found, set())
+    return found
+
+
+def group_path(world, env) -> tuple:
+    """Group nodes leading from the World's tree to ``env`` (outermost first)."""
+    if world is None or world.node_tree is None:
+        return ()
+    return next((path for node, path in _found(world) if node == env), ())
 
 
 def environment(world):
@@ -57,9 +79,7 @@ def environment(world):
     if not world.is_editable:
         return None, "The World is linked from a library: make it local to fit its HDRI"
     tree = world.node_tree
-    output = next((n for n in tree.nodes if n.type == "OUTPUT_WORLD" and n.is_active_output), None)
-    found = []
-    _environments(tree, [output] if output is not None else [], found, set())
+    found = [node for node, _path in _found(world)]
     if not found:
         return None, "No Environment Texture reaches the World output"
     node = sorted(found, key=lambda n: (n.id_data != tree, n.name))[0]
@@ -101,16 +121,189 @@ def mapping_of(env):
     return node if node is not None and node.type == "MAPPING" else None
 
 
-def vector_problem(env) -> str:
+LIMITED = "The HDRI's rotation input cannot take the angle (its min / max): widen them or Fit HDRI cannot turn it"
+UNFOLLOWED = "The rotation of the HDRI's Mapping comes from nodes FTC cannot follow back: Fit HDRI cannot turn it"
+ANIMATED = "The rotation of the HDRI is keyframed or driven: Fit HDRI cannot turn it"
+
+
+@dataclass
+class Control:
+    """The value that sets one component of a Mapping's rotation, found by
+    following its links back (a group's input, a Value node, a Combine XYZ
+    field...): rotation = scale * value + offset."""
+
+    socket: object
+    component: int | None  # index in a vector socket, None for a float one
+    scale: float = 1.0
+    offset: float = 0.0
+    limits: tuple[float, float] | None = None  # a group input's min / max
+
+    def value(self) -> float:
+        v = self.socket.default_value
+        return float(v[self.component] if self.component is not None else v)
+
+    def get(self) -> float:
+        return self.scale * self.value() + self.offset
+
+    def set(self, rotation: float) -> None:
+        """Write the value giving ``rotation`` (radians, any turn of it: the one
+        closest to the current value that fits the input's limits)."""
+        value = (rotation - self.offset) / self.scale
+        turn = abs(2.0 * math.pi / self.scale)
+        value += round((self.value() - value) / turn) * turn
+        if self.limits is not None:
+            lo, hi = self.limits
+            while value > hi and value - turn >= lo:
+                value -= turn
+            while value < lo and value + turn <= hi:
+                value += turn
+            if not lo - 1e-6 <= value <= hi + 1e-6:
+                # Blender may store it anyway, but the input says it is out of range.
+                raise ValueError(LIMITED)
+        if self.component is None:
+            self.socket.default_value = value
+        else:
+            v = list(self.socket.default_value)
+            v[self.component] = value
+            self.socket.default_value = v
+        if abs(_wrap(self.get() - rotation)) > 1e-4:
+            raise ValueError(LIMITED)
+
+
+# Math operations that are a line in their linked input x (the other one a
+# constant k): rotation = a * x + b in terms of k, for x first or second.
+def _math_line(op: str, k: float, x_first: bool):
+    if op == "ADD":
+        return 1.0, k
+    if op == "SUBTRACT":
+        return (1.0, -k) if x_first else (-1.0, k)
+    if op == "MULTIPLY":
+        return k, 0.0
+    if op == "DIVIDE" and x_first and k != 0.0:
+        return 1.0 / k, 0.0
+    return None
+
+
+def _source(socket):
+    """(output socket, node) feeding ``socket`` through reroutes; ``None`` when
+    unlinked or muted (the socket's own value counts)."""
+    while socket.links:
+        link = socket.links[0]
+        if not link.is_valid or link.is_muted:
+            return None
+        if link.from_node.type == "REROUTE":
+            socket = link.from_node.inputs[0]
+            continue
+        return link.from_socket, link.from_node
+    return None
+
+
+def _interface_limits(tree, identifier):
+    for item in tree.interface.items_tree:
+        if getattr(item, "identifier", None) == identifier and hasattr(item, "min_value"):
+            return float(item.min_value), float(item.max_value)
+    return None
+
+
+def _animated(socket) -> bool:
+    from . import calibrate
+
+    try:
+        path = socket.path_from_id("default_value")
+    except (TypeError, ValueError):
+        return False
+    return calibrate._animated(socket.id_data, {path})
+
+
+def rotation_control(mapping, path=(), component: int = 2):
+    """The Control of ``mapping``'s rotation ``component`` (Z by default), or
+    the reason why there is none. ``path``: the group nodes leading to the
+    Mapping's tree (outermost first), to step out through a Group Input."""
+    socket, comp = mapping.inputs["Rotation"], component
+    scale, offset, limits = 1.0, 0.0, None
+    path = tuple(path)
+    for _step in range(64):
+        source = _source(socket)
+        if source is None:
+            if _animated(socket):
+                return ANIMATED
+            if socket.type != ("VECTOR" if comp is not None else "VALUE"):
+                return UNFOLLOWED
+            return Control(socket, comp, scale, offset, limits)
+        out, node = source
+        if out.type != ("VECTOR" if comp is not None else "VALUE"):
+            return UNFOLLOWED  # a conversion between a vector and a number
+        limits = None
+        kind = node.type
+        if kind == "COMBXYZ" and comp is not None:
+            socket, comp = node.inputs[comp], None
+        elif kind == "VALUE" and comp is None:
+            if _animated(out):
+                return ANIMATED
+            return Control(out, None, scale, offset)
+        elif kind == "MATH" and comp is None and not node.use_clamp:
+            a, b = node.inputs[0], node.inputs[1]
+            x_first = a.is_linked or not b.is_linked
+            x, k = (a, b) if x_first else (b, a)
+            if node.operation in ("RADIANS", "DEGREES"):
+                line, x = (math.radians(1.0) if node.operation == "RADIANS" else math.degrees(1.0), 0.0), a
+            else:
+                line = _math_line(node.operation, float(k.default_value), x_first)
+                if line is None or k.is_linked:
+                    return UNFOLLOWED
+            offset += scale * line[1]
+            scale *= line[0]
+            socket = x
+        elif kind == "VECT_MATH" and comp is not None and node.operation in ("ADD", "SUBTRACT", "MULTIPLY", "SCALE"):
+            a, b = node.inputs[0], node.inputs[1]
+            if node.operation == "SCALE":
+                k = node.inputs["Scale"]
+                if k.is_linked:
+                    return UNFOLLOWED
+                line = (float(k.default_value), 0.0)
+                x = a
+            else:
+                x_first = a.is_linked or not b.is_linked
+                x, k = (a, b) if x_first else (b, a)
+                if k.is_linked:
+                    return UNFOLLOWED
+                line = _math_line(node.operation, float(k.default_value[comp]), x_first)
+                if line is None:
+                    return UNFOLLOWED
+            offset += scale * line[1]
+            scale *= line[0]
+            socket = x
+        elif kind == "GROUP_INPUT" and path:
+            outer = path[-1]
+            socket = next((s for s in outer.inputs if s.identifier == out.identifier), None)
+            if socket is None:
+                return UNFOLLOWED
+            limits = _interface_limits(outer.node_tree, out.identifier) if comp is None else None
+            path = path[:-1]
+            if socket.is_linked:
+                limits = None
+        elif kind == "GROUP" and node.node_tree is not None:
+            inner = _group_output(node.node_tree)
+            socket = next((s for s in inner.inputs if s.identifier == out.identifier), None) if inner else None
+            if socket is None:
+                return UNFOLLOWED
+            path = path + (node,)
+        else:
+            return UNFOLLOWED
+        if abs(scale) < 1e-12:
+            return UNFOLLOWED
+    return UNFOLLOWED
+
+
+def vector_problem(env, world=None) -> str:
     """Why FTC cannot turn ``env``'s HDRI about Z; empty when it can."""
     node = _upstream(env.inputs["Vector"])
     if node is None or node.type == "TEX_COORD":
         return ""
     if node.type != "MAPPING":
         return "The HDRI's vector comes from other nodes (not a Mapping): Fit HDRI cannot turn it"
-    if node.inputs["Rotation"].is_linked:
-        return "The rotation of the HDRI's Mapping comes from other nodes: Fit HDRI cannot turn it"
-    return ""
+    control = rotation_control(node, group_path(world, env))
+    return control if isinstance(control, str) else ""
 
 
 def ensure_mapping(tree, env):
@@ -136,31 +329,40 @@ def ensure_mapping(tree, env):
     return mapping
 
 
-def get_z(mapping) -> float:
-    """Z turn of ``mapping`` as a Point/Vector rotation (Texture type: inverse)."""
-    z = mapping.inputs["Rotation"].default_value[2]
+def get_z(mapping, path=()) -> float:
+    """Z turn of ``mapping`` as a Point/Vector rotation (Texture type: inverse),
+    read where it comes from; ``nan`` when it cannot be followed."""
+    control = rotation_control(mapping, path)
+    if isinstance(control, str):
+        return math.nan
+    z = control.get()
     return -z if mapping.vector_type == "TEXTURE" else z
 
 
-def set_z(mapping, angle: float) -> None:
+def set_z(mapping, angle: float, path=()) -> None:
     """Set the Z turn of ``mapping`` for a Point/Vector-type rotation ``angle``
-    (a Texture-type mapping applies the inverse)."""
+    (a Texture-type mapping applies the inverse), where it comes from: the
+    Mapping's own field or the value feeding it (a group's input...)."""
     if mapping.vector_type == "TEXTURE":
         angle = -angle
-    rotation = mapping.inputs["Rotation"]
-    euler = list(rotation.default_value)
-    euler[2] = angle
-    rotation.default_value = euler
+    control = rotation_control(mapping, path)
+    if isinstance(control, str):
+        raise ValueError(control)
+    control.set(angle)
 
 
-def tilted(mapping) -> bool:
-    """X/Y rotation or a mirrored / uneven X-Y scale: the sun is matched about Z only."""
-    rot = mapping.inputs["Rotation"].default_value
+def tilted(mapping, path=()) -> bool:
+    """X/Y rotation or a mirrored / uneven X-Y scale: the sun is matched about Z
+    only. An X/Y rotation that cannot be followed back counts as tilted."""
+    for axis in (0, 1):
+        control = rotation_control(mapping, path, axis)
+        if isinstance(control, str) or abs(control.get()) > 1e-6:
+            return True
     scale = mapping.inputs["Scale"]
     if scale.is_linked:
         return True
     sx, sy = scale.default_value[0], scale.default_value[1]
-    return abs(rot[0]) > 1e-6 or abs(rot[1]) > 1e-6 or sx <= 0.0 or sy <= 0.0 or abs(sx - sy) > 1e-6 * abs(sx)
+    return sx <= 0.0 or sy <= 0.0 or abs(sx - sy) > 1e-6 * abs(sx)
 
 
 def _wrap(angle: float) -> float:
@@ -212,14 +414,15 @@ def fit(settings, scene, uv, state=None):
         raise ValueError(problem)
     nodes = same_image(env)
     for node in nodes:
-        if why := vector_problem(node):
+        if why := vector_problem(node, world):
             raise ValueError(why)
     angle = z_rotation(uv[0], state.direction)
     warning = problem
+    path = group_path(world, env)
     for node in nodes:
         mapping = ensure_mapping(node.id_data, node)
-        set_z(mapping, angle)
-        if tilted(mapping):
+        set_z(mapping, angle, path)
+        if tilted(mapping, path):
             warning = "The HDRI's Mapping has an X or Y rotation or scale: its sun is matched about Z only, check it"
     sun_elevation = math.degrees(math.asin(max(-1.0, min(1.0, state.direction.z))))
     return angle, elevation(uv[1]) - sun_elevation, warning
@@ -231,13 +434,15 @@ def follow(settings, scene, state, *, force=False) -> None:
     sun = settings.sun
     if not sun.hdri_fitted or scene is None or state is None or state.direction is None:
         return
-    env, _problem = environment(scene.world)
-    if env is None or env.image.name != sun.hdri_image or vector_problem(env):
+    world = scene.world
+    env, _problem = environment(world)
+    if env is None or env.image.name != sun.hdri_image or vector_problem(env, world):
         return
     mapping = mapping_of(env)
     if mapping is None:
         return
-    current = get_z(mapping)
+    path = group_path(world, env)
+    current = get_z(mapping, path)
     if not force and abs(_wrap(current - sun.hdri_angle)) > 1e-4:
         sun.hdri_fitted = False  # the user took over
         return
@@ -245,8 +450,12 @@ def follow(settings, scene, state, *, force=False) -> None:
     if abs(_wrap(angle - current)) > 1e-7:
         for node in same_image(env):
             other = mapping_of(node)
-            if other is not None and not vector_problem(node):
-                set_z(other, angle)
+            if other is not None and not vector_problem(node, world):
+                try:
+                    set_z(other, angle, path)
+                except ValueError:  # beyond the rotation input's limits
+                    sun.hdri_fitted = False
+                    return
     sun.hdri_angle = angle
 
 
