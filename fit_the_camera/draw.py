@@ -512,19 +512,21 @@ def _shadow(view, solution, settings):
     sun_mark(view.px_to_region(px))
 
 
-def sun_mark(c, size=5.0, *, label_left=False) -> None:
+def sun_mark(c, size=5.0, *, label_left=False, label=True) -> None:
     """The sun of Fit Sun (date, place, Turn, Raise) wherever it is compared with
     something measured: a white × labelled "Fit Sun" (on its left when the
     right side has another label)."""
     s = ui_scale()
     r = size * s
     lines([(c[0] - r, c[1] - r), (c[0] + r, c[1] + r), (c[0] - r, c[1] + r), (c[0] + r, c[1] - r)], WHITE, 1.0)
-    label = "Fit Sun"
+    if not label:
+        return
+    name = "Fit Sun"
     x = c[0] + r + 4.0 * s
     if label_left:
         blf.size(0, 10.0 * s)
-        x = c[0] - r - 4.0 * s - blf.dimensions(0, label)[0]
-    text((x, c[1] - 4.0 * s), label, WHITE, 10.0)
+        x = c[0] - r - 4.0 * s - blf.dimensions(0, name)[0]
+    text((x, c[1] - 4.0 * s), name, WHITE, 10.0)
 
 
 def axis_letter(label: str) -> str:
@@ -702,11 +704,9 @@ def draw_guides(view, settings, solution, session, unit_system):
                 diamond_outline(pos, handle_radius(hovered) + 2.0 * s, HORIZON_COLOR)
 
         res = settings.results
-        if shadow_only:
-            pass
-        elif not res.valid and res.error:
+        if not res.valid and res.error:
             text((view.x0 + 10 * s, view.y1 - 22 * s), res.error, ERROR_COLOR, 13.0)
-        elif res.warnings:
+        elif res.warnings and not shadow_only:
             chars = max(30, int((view.x1 - view.x0 - 20 * s) / (6.5 * s)))
             wrapped = [w for line in res.warnings.splitlines() for w in textwrap.wrap(line, chars)]
             for i, line in enumerate(wrapped):

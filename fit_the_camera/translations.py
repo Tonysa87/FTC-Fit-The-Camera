@@ -238,8 +238,8 @@ _IT = {
     "the shadow tip is below the ground: put it on the ground, or the origin on the wall's foot": (
         "la punta dell'ombra è sotto il suolo: mettila a terra, o l'origine al piede della parete"
     ),
-    "From a shadow in the photo (shadow handles in Calibrate) and the sun of the date and place": (
-        "Da un'ombra nella foto (maniglie dell'ombra in Calibra) e dal sole di data e luogo"
+    "From a shadow in the photo (shadow handles in Calibrate Shadow) and the sun of the date and place": (
+        "Da un'ombra nella foto (maniglie dell'ombra in Calibra ombra) e dal sole di data e luogo"
     ),
     "Calibrate Shadow: orange handles on the foot and the top of something vertical, and on the tip of "
     "its shadow": (
@@ -268,7 +268,9 @@ _IT = {
     "Calibrate the camera first: the shadow is measured through it": (
         "Calibra prima la camera: l'ombra si misura attraverso di lei"
     ),
-    "Place the shadow handles on the photo (Calibrate)": "Metti le maniglie dell'ombra sulla foto (Calibra)",
+    "Place the shadow handles on the photo (Calibrate Shadow)": (
+        "Metti le maniglie dell'ombra sulla foto (Calibra ombra)"
+    ),
     "The sun is almost overhead: its shadow gives no north": "Il sole è quasi allo zenit: la sua ombra non dà il nord",
     "the foot of the object is beyond the horizon: put it on the ground": (
         "il piede dell'oggetto è oltre l'orizzonte: mettilo a terra"
@@ -425,7 +427,45 @@ _IT = {
         "Mostra le maniglie dell'ombra (piede e cima di qualcosa di verticale, punta della sua ombra) per "
         "verificare il nord e l'altezza del sole: la × segna dove il sole di Fit Sun mette la punta dell'ombra"
     ),
-    "×: the tip by the Fit Sun sun (Turn, Raise)": "×: la punta data dal sole di Fit Sun (Ruota, Alza)",
+    "×: the tip by the Fit Sun sun ({}, Raise)": "×: la punta data dal sole di Fit Sun ({}, Alza)",
+    "×: the tip by the Fit Sun sun (Raise)": "×: la punta data dal sole di Fit Sun (Alza)",
+    "No shadow handles in use: choose Sun From Shadow, North Shadow or Check with a Shadow": (
+        "Nessuna maniglia dell'ombra in uso: scegli Sole da Ombra, Nord Ombra o Verifica con un'ombra"
+    ),
+    "The rotation of the HDRI is in a node group linked from a library: make it local to fit its HDRI": (
+        "La rotazione dell'HDRI è in un gruppo di nodi collegato da libreria: rendilo locale per adattare l'HDRI"
+    ),
+    "The HDRI's Mapping node is muted: unmute it or remove it": (
+        "Il nodo Mapping dell'HDRI è disattivato (mute): riattivalo o rimuovilo"
+    ),
+    "The HDRI's node group is used several times: only this instance's rotation input turns": (
+        "Il gruppo di nodi dell'HDRI è usato più volte: ruota solo l'input di rotazione di questa istanza"
+    ),
+    "Show the cube of known size on the reference plane, to check the scale by eye "
+    "(known rectangle and horizon)": (
+        "Mostra il cubo di dimensione nota sul piano di riferimento, per verificare la scala a occhio "
+        "(rettangolo noto e orizzonte)"
+    ),
+    "Direction of the reference distance: along the reference plane both ends lie on the plane, "
+    "anywhere on it; along its normal it is a height above the first end": (
+        "Direzione della distanza di riferimento: lungo il piano di riferimento entrambi gli estremi stanno sul "
+        "piano, in qualsiasi punto; lungo la sua normale è un'altezza sopra il primo estremo"
+    ),
+    "Real length of the rectangle's first side (corner 1 to 2), along the "
+    "reference plane's first axis: X on XY and XZ, Y on YZ": (
+        "Lunghezza reale del primo lato del rettangolo (dall'angolo 1 al 2), lungo il primo asse del piano di "
+        "riferimento: X su XY e XZ, Y su YZ"
+    ),
+    "Real length of the rectangle's second side (corner 2 to 3), along the "
+    "reference plane's second axis: Y on XY, Z on XZ and YZ": (
+        "Lunghezza reale del secondo lato del rettangolo (dall'angolo 2 al 3), lungo il secondo asse del piano "
+        "di riferimento: Y su XY, Z su XZ e YZ"
+    ),
+    "With two vanishing points, add one line along the third axis (e.g. a vertical edge): it joins "
+    "the calibration and keeps that axis on the image": (
+        "Con due punti di fuga, aggiunge una linea lungo il terzo asse (es. uno spigolo verticale): entra nella "
+        "calibrazione e tiene quell'asse sull'immagine"
+    ),
     "×: where the Fit Sun sun puts the shadow tip; Raise moves it along the shadow": (
         "×: dove il sole di Fit Sun mette la punta dell'ombra; Alza la sposta lungo l'ombra"
     ),

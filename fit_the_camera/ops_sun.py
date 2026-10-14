@@ -43,6 +43,8 @@ SUN_KEYS = set(SHADOW_KEYS)
 # Shadow and date/place disagreeing beyond these (degrees) is worth a red value.
 SHADOW_NORTH_ALERT = 5.0
 SHADOW_ELEVATION_ALERT = 2.0
+# Raise never takes the sun lower than this (degrees).
+MIN_RAISED_ELEVATION = 0.5
 
 
 @dataclass
@@ -102,7 +104,7 @@ def measure_shadow(settings, solution, state) -> None:
         return
     state.shadow = Vector((scene_rotation(settings) @ d).tolist())
     if all(math.dist(calibrate.handle(settings, k), calibrate.HANDLE_DEFAULTS[k]) < 1e-6 for k in SHADOW_KEYS):
-        state.warnings.append("Place the shadow handles on the photo (Calibrate)")
+        state.warnings.append("Place the shadow handles on the photo (Calibrate Shadow)")
 
 
 def north_offset_alert(state) -> bool:
@@ -242,9 +244,10 @@ def evaluate(settings, solution=None) -> SunState:
 
 
 def raised(position: SunPosition, sun) -> SunPosition:
-    """The date's sun with the Elevation Correction, kept between the horizon and the zenith."""
+    """The date's sun with the Elevation Correction, kept between just above the
+    horizon (a horizontal light casts no shadow at all) and the zenith."""
     elevation = position.elevation + math.degrees(sun.elevation_correction)
-    return SunPosition(position.azimuth, min(90.0, max(0.0, elevation)))
+    return SunPosition(position.azimuth, min(90.0, max(MIN_RAISED_ELEVATION, elevation)))
 
 
 def north_vector(y_bear: float) -> Vector:

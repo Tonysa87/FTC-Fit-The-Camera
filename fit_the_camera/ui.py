@@ -444,9 +444,12 @@ class FTC_PT_main(Panel):
                 col = body.column(align=True)
                 info_row(col, iface_("Sun Azimuth"), f"{state.sun.azimuth:.1f}°")
                 elevation = f"{state.sun.elevation:.1f}°"
+                alert = state.sun.elevation <= 0
                 if sun.elevation_correction and state.sun.above_horizon:
-                    elevation += f" → {ops_sun.raised(state.sun, sun).elevation:.1f}°"
-                info_row(col, iface_("Sun Elevation"), elevation, alert=state.sun.elevation <= 0)
+                    used = ops_sun.raised(state.sun, sun).elevation
+                    elevation += f" → {used:.1f}°"
+                    alert = used <= ops_sun.MIN_RAISED_ELEVATION
+                info_row(col, iface_("Sun Elevation"), elevation, alert=alert)
 
         self.draw_shadow(context, body, sun, state)
 
@@ -560,7 +563,8 @@ class FTC_PT_main(Panel):
                 col,
                 iface_("Shadow vs Date"),
                 iface_("{:+.1f}° elevation").format(off),
-                alert=abs(off) > ops_sun.SHADOW_ELEVATION_ALERT,
+                # Red until Raise makes up for it (the value stays against the date).
+                alert=abs(off - math.degrees(sun.elevation_correction)) > ops_sun.SHADOW_ELEVATION_ALERT,
             )
         if state.shadow_north_offset is not None:
             spread = state.shadow_north_spread
