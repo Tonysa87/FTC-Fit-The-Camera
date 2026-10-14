@@ -48,7 +48,8 @@ docs/CHANGELOG.it.md     # storia completa in italiano
 docs/DEVELOPMENT.md      # questo file
 docs/PUBLISHING.md       # pubblicazione su extensions.blender.org
 docs/SPEC_1.1.md         # specifica della versione 1.1
-docs/TEST_GUI.md         # checklist del test a mano in Blender (da fare: 1.0.0)
+docs/TEST_GUI.md         # checklist del test a mano in Blender (1.0.0, fatta)
+docs/TEST_GUI_1.1.md     # checklist del test a mano della 1.1
 ```
 
 ## Convenzioni

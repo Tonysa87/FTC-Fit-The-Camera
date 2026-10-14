@@ -58,7 +58,7 @@ The rest of this page explains every option.
 
 ## Features
 
-- **Vanishing points**: 1, 2 or 3, two to six guide lines per axis (1.1), with the axis and
+- **Vanishing points**: 1, 2 or 3, two to six guide lines per axis (six: 1.1, in development), with the axis and
   direction of each group (X, Y, Z, ±).
 - **Known rectangle**: the four corners of a rectangle of known size, lying on the reference plane (XY, XZ or YZ).
 - **Horizon**: the horizon line, the camera height and the heading.
@@ -106,7 +106,8 @@ Without the online extensions (offline, or a specific version):
 
 The extension only reads the image file you load (and its EXIF metadata) and,
 from 1.1, writes the calibration reports you export. It does not use the
-network.
+network. Reports contain the latitude and longitude of the shot only when Fit Sun
+is used.
 
 ## The panel, step by step
 
@@ -127,7 +128,7 @@ Open the sidebar of the 3D viewport (N) and the **FTC** tab.
    guides onto edges of the image that are parallel in the real world.
    Shift = fine, with a ×4 magnifier on the handle, Ctrl = snap, 1/2/3 = axis,
    F = flip the direction, H = straighten the horizon, Ctrl+Z / Ctrl+Shift+Z = undo / redo, Enter = apply,
-   Esc / right click = exit. The **− n +** buttons next to an axis (1.1) add a
+   Esc / right click = exit. The **− n +** buttons next to an axis (1.1, in development) add a
    guide line between its first two, up to six, or remove the last: more lines
    on long edges average out the placement errors. With *Live Update* (default) the camera follows the
    guides while you drag; Enter or **Apply** writes it and ends the session.
@@ -137,19 +138,21 @@ Open the sidebar of the 3D viewport (N) and the **FTC** tab.
 4. **Align to Scene** – place the calibrated plane (XY, XZ or YZ) on the 3D
    cursor, on the active face (Edit Mode) or on the active object.
 5. **Results** – focal length, field of view, camera height, angles, uncertainty
-   and guide fit, with warnings. **Export Report** (1.1) saves them, with the
+   and guide fit, with warnings. **Export Report** (1.1, in development) saves them, with the
    source of every input and the sun, as Markdown or JSON.
 6. **Render** – see below.
-7. **Tools › FTC Orientation** – makes the "FTC" transform orientation the viewport's:
+7. **Fit Sun** (1.1, in development) – a Sun light and the World HDRI turned
+   like the sun of the photo: see below.
+8. **Tools › FTC Orientation** – makes the "FTC" transform orientation the viewport's:
      the photo's calibrated axes in the scene (created on Apply and by Align to
      Scene). Blender's gizmo, G/R/S with X/Y/Z and snapping then follow the photo
      also after aligning it to a face or the cursor. Click again for Global.
 
 | Mode | Input | Notes |
 | --- | --- | --- |
-| 1 vanishing point | 2 guides for axis 1 + a line along axis 2 | needs the focal length |
-| 2 vanishing points | 2 guides per axis | optional *Third Axis Line* |
-| 3 vanishing points | 2 guides per axis | principal point at the centre, by hand or solved |
+| 1 vanishing point | 2–6 guides for axis 1 + a line along axis 2 | needs the focal length |
+| 2 vanishing points | 2–6 guides per axis | optional *Third Axis Line* |
+| 3 vanishing points | 2–6 guides per axis | principal point at the centre, by hand or solved |
 | Known rectangle | 4 corners, real length of the two sides | on XY, XZ or YZ |
 | Horizon | horizon line, camera height, heading | needs the focal length |
 
@@ -242,6 +245,7 @@ the real ones. *Sun From* picks the source:
   | Compass | the EXIF image direction (magnetic: enter the *Declination*) | iPhones write it, most Android phones don't |
   | Map | the bearing of a scene axis (+X, +Y, −X, −Y) read on a map along a facade or a street | buildings, streets |
   | Landmark | an orange handle (in *Calibrate*) on a distant feature and its bearing from the camera on a map (Google Earth's ruler shows it as *Heading*) | landscapes: an island, a bell tower, a peak |
+  | Shadow | a shadow in the photo and the sun of the date and place (see *Shadow* below) | any sharp shadow: the most precise |
 
   *North Correction* turns the north and the sun together about the vertical:
   phone compasses are often 5–15° off, so turn it until the CG shadows match the
@@ -257,7 +261,7 @@ the real ones. *Sun From* picks the source:
   *Shadow vs Date* (elevation: a wrong time or calibration) and *Shadow vs North*
   (the compass, map or landmark error); *Use Shadow North* takes the north from
   the shadow. A white cross marks where the date's sun would put the tip.
-- **The light**: pick a Sun light or press *New Sun*. FTC only sets its
+- **The light**: pick a Sun light, or press the sun icon next to *Light* (*New Sun*). FTC only sets its
   rotation: strength, colour and angle stay yours. It follows the camera on
   *Apply* and while calibrating. A deleted or linked light, or constraints and
   keyframes that override the rotation, are reported.

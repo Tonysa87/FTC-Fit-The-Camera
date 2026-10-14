@@ -71,6 +71,10 @@ Senza le estensioni online (offline, o per una versione precisa):
 3. Interfaccia in italiano: *Preferences › Interface › Translation*, lingua
    Italiano.
 
+L'estensione legge solo l'immagine che carichi (e i suoi metadati EXIF) e, dalla
+1.1, scrive i report di calibrazione che esporti. Non usa la rete. I report
+contengono latitudine e longitudine dello scatto solo se usi *Fit Sun*.
+
 ## Il pannello, passo per passo
 
 Sidebar del viewport (N) › tab **FTC**.
@@ -98,7 +102,7 @@ Sidebar del viewport (N) › tab **FTC**.
    camera la foto si muove con la camera: il risultato si vede dagli oggetti
    della scena o dalla posizione della camera.
    Accanto a ogni asse un pulsante ne inverte il verso, e i pulsanti **− n +**
-   (1.1) aggiungono una linea guida tra le prime due, fino a sei, o tolgono
+   (1.1, in sviluppo) aggiungono una linea guida tra le prime due, fino a sei, o tolgono
    l'ultima: più linee su spigoli lunghi mediano gli errori di posizionamento.
    **Focale**: *Nota + guide* (default: parte dalla focale di Camera Data e le guide
    la correggono per quanto la misurano; se è sconosciuta la risolvono), *Solo
@@ -108,14 +112,16 @@ Sidebar del viewport (N) › tab **FTC**.
    faccia attiva (Edit Mode) o sull'oggetto attivo; Ruota 90° / Inverti.
 5. **Results** – focale, FOV, altezza, angoli, **incertezza** (focale ± %,
    orientamento ± °) e **aderenza guide** (scarto massimo); avvisi in giallo/rosso.
-   **Export Report** (1.1) li salva, con la fonte di ogni dato e il sole, in
+   **Esporta report** (*Export Report*, 1.1, in sviluppo) li salva, con la fonte di ogni dato e il sole, in
    Markdown o JSON.
 6. **Render** – **Prepare Render** prepara la scena per renderizzare la CG sopra la
    foto (vedi sotto); **Object Roles** elenca gli oggetti della scena: per ognuno
    si attiva *Shadow Catcher* o *Holdout*, oppure si assegnano ai selezionati con
    *Set Role of Selected*. Cambiano solo le impostazioni degli oggetti, non viene
    creato nulla.
-7. **Tools › FTC Orientation** – rende l'orientamento "FTC" quello del viewport: gli
+7. **Fit Sun** (1.1, in sviluppo) – una luce Sole e l'HDRI del World orientati
+   come il sole della foto: vedi sotto.
+8. **Tools › FTC Orientation** – rende l'orientamento "FTC" quello del viewport: gli
      assi calibrati della foto nella scena (creato da *Apply* e da *Align to
      Scene*). Gizmo di Blender, G/R/S con X/Y/Z e snapping seguono la foto anche
      dopo averla allineata a una faccia o al cursore. Ricliccato torna a Global.
@@ -124,9 +130,9 @@ Sidebar del viewport (N) › tab **FTC**.
 
 | Modalità | Input | Note |
 | --- | --- | --- |
-| Punti di fuga 1 | 2 guide per l'asse 1 + una linea lungo l'asse 2 | richiede la focale |
-| Punti di fuga 2 | 2 guide per asse | opzioni: focale, *Linea terzo asse* |
-| Punti di fuga 3 | 2 guide per asse | punto principale al centro (default), manuale o *Risolvi* (ortocentro, instabile) |
+| Punti di fuga 1 | 2–6 guide per l'asse 1 + una linea lungo l'asse 2 | richiede la focale |
+| Punti di fuga 2 | 2–6 guide per asse | opzioni: focale, *Linea terzo asse* |
+| Punti di fuga 3 | 2–6 guide per asse | punto principale al centro (default), manuale o *Risolvi* (ortocentro, instabile) |
 | Rettangolo noto | 4 angoli, lunghezza reale dei due lati | su XY, XZ o YZ; focale come sopra |
 | Orizzonte | linea d'orizzonte, altezza camera, yaw | richiede la focale |
 
@@ -222,6 +228,7 @@ quelle vere. *Sole da* sceglie la fonte:
   | Bussola | la direzione dell'immagine nell'EXIF (magnetica: inserisci la *Declinazione*) | gli iPhone la scrivono, quasi tutti gli Android no |
   | Mappa | la direzione di un asse della scena (+X, +Y, −X, −Y) letta su una mappa lungo una facciata o una strada | edifici, strade |
   | Riferimento | una maniglia arancione (in *Calibra*) su un elemento lontano e la sua direzione dalla camera su una mappa (il righello di Google Earth la chiama *Heading*) | paesaggi: un'isola, un campanile, una cima |
+  | Ombra | un'ombra nella foto e il sole di data e luogo (vedi *Ombra* sotto) | qualsiasi ombra netta: il più preciso |
 
   *Correzione del nord* ruota nord e sole insieme attorno alla verticale: le
   bussole dei telefoni sbagliano spesso di 5–15°, quindi regolala finché le ombre
@@ -237,7 +244,7 @@ quelle vere. *Sole da* sceglie la fonte:
   o calibrazione sbagliate) e *Ombra / nord* (l'errore di bussola, mappa o
   riferimento); *Usa il nord dell'ombra* prende il nord dall'ombra. Una crocetta
   bianca segna dove il sole della data metterebbe la punta.
-- **La luce**: scegli una luce Sole o premi *Nuovo sole*. FTC ne imposta solo la
+- **La luce**: scegli una luce Sole, o premi l'icona del sole accanto a *Luce* (*Nuovo sole*). FTC ne imposta solo la
   rotazione: intensità, colore e angolo restano tuoi. Segue la camera con
   *Applica* e durante la calibrazione. Una luce cancellata o collegata, o vincoli
   e keyframe che ne sovrascrivono la rotazione, vengono segnalati.
