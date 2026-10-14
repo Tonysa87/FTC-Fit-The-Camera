@@ -253,7 +253,9 @@ the real ones. *Sun From* picks the source:
   lowers the sun by eye until the CG shadows are as long as in the photo (it makes
   up for small calibration or clock errors; the panel shows the date's elevation
   → the one used).
-- **Shadow**: in *Calibrate* three orange handles go on the **foot** and the
+- **Shadow**: **Calibrate Shadow** (in the Fit Sun section) shows only three
+  orange handles, without the calibration guides and without touching the
+  camera (they are also in *Calibrate*). They go on the **foot** and the
   **top** of something vertical (a pole, a post, a door jamb) and on the **tip of
   its shadow**. The foot is on the ground; the tip on the ground or on a wall
   through the origin (*Shadow On*: put the origin at the foot of that wall). The

@@ -19,7 +19,10 @@ Storia completa in italiano. Dalla 1.1 il changelog principale è in inglese:
   *Rotation* del gruppo di Poly Haven (gradi → Multiply → Combine XYZ), nodi
   Value, Math / Vector Math lineari, gruppi annidati; rispetta min / max
   dell'input. Il visore di Fit HDRI occupa metà vista e ha la lente con
-  **Shift** (×4 sul mouse, come per le maniglie), su una copia a 2048 px.
+  **Shift** (×4 sul mouse, come per le maniglie, mirino a colori invertiti per
+  vederlo sul sole bianco), su una copia a 2048 px. **Calibra ombra** (sezione
+  Fit Sun): una sessione con le sole maniglie dell'ombra, senza guide e senza
+  toccare la camera.
 - **Report di calibrazione** (1.1 A2): *Esporta report* in *Risultati*, in
   Markdown o JSON: focale, sensore, campo visivo, posizione e rotazione,
   incertezza, aderenza delle guide, fonte di ogni dato (EXIF o manuale) e sole.

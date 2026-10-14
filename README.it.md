@@ -236,7 +236,9 @@ quelle vere. *Sole da* sceglie la fonte:
   abbassa il sole a occhio finché le ombre della CG sono lunghe come nella foto
   (compensa piccoli errori di calibrazione o di orologio; il pannello mostra
   l'elevazione della data → quella usata).
-- **Ombra**: in *Calibra* tre maniglie arancioni vanno sul **piede** e sulla
+- **Ombra**: **Calibra ombra** (nella sezione Fit Sun) mostra solo tre maniglie
+  arancioni, senza le guide di calibrazione e senza toccare la camera (ci sono
+  anche in *Calibra*). Vanno sul **piede** e sulla
   **cima** di qualcosa di verticale (un palo, un montante, uno stipite) e sulla
   **punta della sua ombra**. Il piede sta a terra; la punta a terra o su una
   parete per l'origine (*Ombra su*: metti l'origine al piede di quella parete).

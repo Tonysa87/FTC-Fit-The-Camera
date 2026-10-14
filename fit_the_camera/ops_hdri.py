@@ -637,7 +637,10 @@ def _lens(viewer, s) -> None:
     cx, cy = centre
     hair = [(cx - arm, cy), (cx - gap, cy), (cx + gap, cy), (cx + arm, cy)]
     hair += [(cx, cy - arm), (cx, cy - gap), (cx, cy + gap), (cx, cy + arm)]
-    draw.lines(hair, draw.WHITE, 1.0)
+    # Inverted pixels (a negative): seen on the white sun as on the dark sky.
+    gpu.state.blend_set("INVERT")
+    draw.lines(hair, draw.WHITE, 1.5)
+    gpu.state.blend_set("ALPHA")
 
 
 class FTC_OT_fit_hdri(Operator):

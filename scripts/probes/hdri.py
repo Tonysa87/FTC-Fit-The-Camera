@@ -62,3 +62,6 @@ viewer.magnify = True
 snapshot("hdri_lens")
 print("viewer rect", viewer.rect)
 print("elevation of the pick", (viewer.pick[1] - 0.5) * 180.0, "computed sun", 35.0, math.pi)
+# The cross hair right on the white sun: drawn inverted, it stays visible.
+viewer.mouse = viewer.to_region(viewer.proposal)
+snapshot("hdri_lens_on_sun")

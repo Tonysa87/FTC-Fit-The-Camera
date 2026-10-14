@@ -1196,6 +1196,72 @@ def sun_from_exif_time_place_and_compass():
 
 
 @test
+def calibrate_shadow_leaves_the_camera_alone():
+    """Calibrate Shadow: only the shadow handles are shown and picked, the
+    calibration shortcuts are off and the camera is never written."""
+    import gpu
+
+    draw = importlib.import_module(PKG + ".draw")
+    ops_modal = importlib.import_module(PKG + ".ops_modal")
+    ops_sun = importlib.import_module(PKG + ".ops_sun")
+    cam = _sun_camera(sun_tiff())
+    s = cam.data.ftc
+    s.sun.source = "SHADOW"
+    s.live = True
+    fake = SimpleNamespace(as_pointer=lambda: 0)
+    session = ops_modal.Session(cam, fake, fake, shadow_only=True)
+    ops_modal.FTC_OT_calibrate._session = session
+    try:
+        assert ops_modal.FTC_OT_calibrate.running(shadow=True) and not ops_modal.FTC_OT_calibrate.running(shadow=False)
+        assert draw.session_keys(s, session) == list(ops_sun.SHADOW_KEYS)
+        assert ops_modal.session_camera(session) == cam and calibrate.session_camera is None
+        view = draw.View(0.0, 0.0, 1920.0, 1080.0, (1920, 1080))
+        solution = calibrate.cached_solution(cam.data)
+        at = view.to_region(draw.handle_co(s, solution, "vp1_1a"))
+        assert ops_modal.FTC_OT_calibrate.pick(None, s, view, at) is None, "guides are not picked"
+        at = view.to_region(draw.handle_co(s, solution, "shadow_tip"))
+        assert ops_modal.FTC_OT_calibrate.pick(None, s, view, at) == "shadow_tip"
+
+        # A guide moved meanwhile (from the panel or a script): Enter does not write the camera.
+        before = cam.matrix_world.copy()
+        with calibrate.suspended():
+            co = calibrate.handle(s, "vp1_1a")
+            calibrate.set_handle(s, "vp1_1a", (co[0] + 0.05, co[1]))
+        ops_modal.FTC_OT_calibrate.changed(None, bpy.context, cam, key=None)
+        report = SimpleNamespace(report=lambda *args: None)
+        ops_modal.FTC_OT_calibrate.finish(report, bpy.context, apply=True)
+        assert not ops_modal.FTC_OT_calibrate.running()
+        assert all(abs(a - b) < 1e-9 for ra, rb in zip(cam.matrix_world, before) for a, b in zip(ra, rb))
+    finally:
+        ops_modal.end_session()
+
+    # The overlay draws the shadow alone.
+    try:
+        gpu.init()
+    except Exception as exc:
+        print(f"SKIP  shadow overlay drawing: {exc}")
+        return
+    session = SimpleNamespace(active_vp=0, hover=None, drag_key=None, shadow_only=True)
+    width, height = 400, 300
+    view = draw.View(20.0, 20.0, 380.0, 222.5, (1920, 1080))
+    offscreen = gpu.types.GPUOffScreen(width, height)
+    try:
+        with offscreen.bind():
+            fb = gpu.state.active_framebuffer_get()
+            fb.clear(color=(0.0, 0.0, 0.0, 0.0))
+            with gpu.matrix.push_pop(), gpu.matrix.push_pop_projection():
+                gpu.matrix.load_identity()
+                gpu.matrix.load_projection_matrix(
+                    Matrix(((2 / width, 0, 0, -1), (0, 2 / height, 0, -1), (0, 0, 1, 0), (0, 0, 0, 1)))
+                )
+                draw.draw_guides(view, s, calibrate.refresh(cam.data), session, "METRIC")
+            pixels = np.asarray(fb.read_color(0, 0, width, height, 4, 0, "UBYTE").to_list(), dtype=np.uint8)
+        assert int((pixels[..., 3] > 0).sum()) > 100
+    finally:
+        offscreen.free()
+
+
+@test
 def sun_needs_time_zone_and_place_and_daylight():
     ops_sun = importlib.import_module(PKG + ".ops_sun")
     fresh_scene()

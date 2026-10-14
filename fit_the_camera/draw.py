@@ -550,10 +550,20 @@ def draw_overlay(session):
         draw_lens(view, settings, solution, session, unit_system)
 
 
+def session_keys(settings, session) -> list[str]:
+    """Handles shown (and picked) in ``session``: only the shadow's in Calibrate Shadow."""
+    keys = calibrate.active_handle_keys(settings)
+    if getattr(session, "shadow_only", False):
+        keys = [k for k in keys if k in ops_sun.SHADOW_KEYS]
+    return keys
+
+
 def draw_guides(view, settings, solution, session, unit_system):
     """Draw the whole overlay for ``settings`` into the current framebuffer."""
     colors = axis_colors()
     s = ui_scale()
+    # Calibrate Shadow: the shadow and its handles over the grid, horizon and origin.
+    shadow_only = getattr(session, "shadow_only", False)
 
     gpu.state.blend_set("ALPHA")
     try:
@@ -562,17 +572,20 @@ def draw_guides(view, settings, solution, session, unit_system):
                 with clipped_to(view):
                     _grid(view, solution, settings.grid_opacity, calibrate.reference_plane(settings))
             _horizon(view, solution)
-            with clipped_to(view):
-                _cube(view, solution, settings, unit_system)
+            if not shadow_only:
+                with clipped_to(view):
+                    _cube(view, solution, settings, unit_system)
 
-        frozen = settings.freeze
-        keys = calibrate.active_handle_keys(settings)
+        frozen = settings.freeze and not shadow_only
+        keys = session_keys(settings, session)
         labels = [settings.vp1_axis, settings.vp2_axis, settings.vp3_axis]
 
         def hpos(key):
             return view.to_region(handle_co(settings, solution, key))
 
-        if settings.mode == "VP":
+        if shadow_only:
+            pass
+        elif settings.mode == "VP":
             count = int(settings.vp_count)
             third_line = count == 2 and settings.use_third_line
             if count == 3 or third_line:
@@ -633,7 +646,7 @@ def draw_guides(view, settings, solution, session, unit_system):
             if ops_sun.shadow_in_use(settings):
                 _shadow(view, solution, settings)
 
-        if solution is not None and settings.mode == "VP" and int(settings.vp_count) == 3:
+        if solution is not None and not shadow_only and settings.mode == "VP" and int(settings.vp_count) == 3:
             pp = view.px_to_region(solution.principal_point)
             lines(
                 [(pp[0] - 8 * s, pp[1]), (pp[0] + 8 * s, pp[1]), (pp[0], pp[1] - 8 * s), (pp[0], pp[1] + 8 * s)],
@@ -668,7 +681,7 @@ def draw_guides(view, settings, solution, session, unit_system):
                 first=key == "rect_0",
             )
 
-        if solution is not None:
+        if solution is not None and not shadow_only:
             ph = pitch_handle_px(solution)
             if ph is not None:
                 pos = view.px_to_region(ph)
@@ -676,7 +689,9 @@ def draw_guides(view, settings, solution, session, unit_system):
                 diamond_outline(pos, handle_radius(hovered) + 2.0 * s, HORIZON_COLOR)
 
         res = settings.results
-        if not res.valid and res.error:
+        if shadow_only:
+            pass
+        elif not res.valid and res.error:
             text((view.x0 + 10 * s, view.y1 - 22 * s), res.error, ERROR_COLOR, 13.0)
         elif res.warnings:
             chars = max(30, int((view.x1 - view.x0 - 20 * s) / (6.5 * s)))

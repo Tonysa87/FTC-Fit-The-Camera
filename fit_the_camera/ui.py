@@ -265,7 +265,7 @@ class FTC_PT_main(Panel):
                 col.label(text="Needs the focal length (Camera Data)", icon="ERROR")
 
         body.separator()
-        running = FTC_OT_calibrate.running()
+        running = FTC_OT_calibrate.running(shadow=False)
         row = body.row(align=True)
         row.scale_y = 1.4
         row.operator(
@@ -521,11 +521,21 @@ class FTC_PT_main(Panel):
         row = body.row(align=True)
         row.use_property_split = False
         row.prop(sun, "shadow_plane", expand=True)
+        running = FTC_OT_calibrate.running(shadow=True)
+        row = body.row(align=True)
+        row.scale_y = 1.2
+        row.operator(
+            "ftc.calibrate",
+            text=iface_("Stop Calibrating") if running else iface_("Calibrate Shadow"),
+            icon="PAUSE" if running else "PLAY",
+            depress=running,
+        ).shadow = True
         wrapped(
             body,
             context,
             iface_(
-                "Calibrate: orange handles on the foot and the top of something vertical, and on the tip of its shadow"
+                "Calibrate Shadow: orange handles on the foot and the top of something vertical, and on the tip of "
+                "its shadow"
             ),
             icon="INFO",
         )
