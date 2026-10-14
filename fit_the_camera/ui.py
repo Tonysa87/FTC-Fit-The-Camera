@@ -419,29 +419,26 @@ class FTC_PT_main(Panel):
             body.operator("ftc.read_photo_time", icon="FILE_REFRESH")
 
             body.separator()
+            north = ops_sun.north_source(settings)
             row = body.row(align=True)
             row.use_property_split = False
-            row.prop(sun, "north_source", expand=True)
+            sub = row.row(align=True)
+            sub.enabled = data.direction_state != "MISSING"
+            sub.prop_enum(sun, "north_source", "COMPASS")
+            row.prop_enum(sun, "north_source", "SIDE")
+            row.prop_enum(sun, "north_source", "SHADOW")
             col = body.column()
-            if sun.north_source == "COMPASS":
-                # Without a compass the error box below says what to do.
-                if data.direction_state != "MISSING":
-                    row = field(col, data, "direction", data.direction_state)
-                    if data.direction_ref:
-                        row.label(text=data.direction_ref)
-                    if data.direction_ref.upper().startswith("M"):
-                        col.prop(sun, "declination")
-            elif sun.north_source == "MAP":
-                col.prop(sun, "map_axis")
-                col.prop(sun, "map_bearing")
-            elif sun.north_source == "LANDMARK":
-                col.prop(sun, "landmark_bearing")
-                wrapped(
-                    col, context, iface_("Drag the Landmark handle (Calibrate) onto a distant feature"), icon="INFO"
-                )
-            if sun.north_source != "SHADOW":
-                # The shadow measures the north: nothing to correct by eye.
+            if north == "COMPASS":
+                row = field(col, data, "direction", data.direction_state)
+                if data.direction_ref:
+                    row.label(text=data.direction_ref)
+                if data.direction_ref.upper().startswith("M"):
+                    col.prop(sun, "declination")
                 col.prop(sun, "north_correction")
+            elif north == "SIDE":
+                row = col.row(align=True)
+                row.prop(sun, "sun_side", expand=True)
+                col.prop(sun, "north_correction", text=iface_("Turn", "FTC"))
             if state.sun is not None:
                 col = body.column(align=True)
                 info_row(col, iface_("Sun Azimuth"), f"{state.sun.azimuth:.1f}°")
@@ -506,13 +503,16 @@ class FTC_PT_main(Panel):
                 )
 
     def draw_shadow(self, context, body, sun, state):
-        """Shadow handles: the sun itself (Shadow), or a check of the date and place."""
-        body.separator()
-        needed = sun.source == "SHADOW" or sun.north_source == "SHADOW"
-        if not needed:
-            body.prop(sun, "use_shadow")
-        if not (needed or sun.use_shadow):
+        """Shadow handles: the sun itself (Sun From Shadow), the north (North
+        Shadow), or a check of the compass."""
+        north = ops_sun.north_source(sun.id_data.ftc)
+        if sun.source == "TIME" and north == "SIDE":
             return
+        body.separator()
+        if sun.source == "TIME" and north == "COMPASS":
+            body.prop(sun, "use_shadow")
+            if not sun.use_shadow:
+                return
         row = body.row(align=True)
         row.use_property_split = False
         row.prop(sun, "shadow_plane", expand=True)
@@ -545,12 +545,10 @@ class FTC_PT_main(Panel):
             noise = f"  ±{spread:.1f}°" if math.isfinite(spread) else "  ±?"
             info_row(
                 col,
-                iface_("Shadow vs North"),
+                iface_("Shadow vs Compass"),
                 f"{state.shadow_north_offset:+.1f}°{noise}",
                 alert=ops_sun.north_offset_alert(state),
             )
-            row = body.row()
-            row.prop_enum(sun, "north_source", "SHADOW", text="Use Shadow North")
 
     def draw_tools(self, context, layout):
         header, body = layout.panel("ftc_tools", default_closed=False)

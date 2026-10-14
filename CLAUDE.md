@@ -8,7 +8,7 @@ Extensions audience) and `README.it.md` (Italian); developer docs
 
 ## Status / next session (bookmark 2026-10-14, evening)
 - **1.1 developed (2026-10-14): all phases S1–S4, A1, A2 done, audited, pushed.**
-  Build 1.1.0-alpha.7 is in the user's GUI test (alpha.7 = map bearing must be entered, 180° map warning, Fit HDRI inside node groups) (`docs/TEST_GUI_1.1.md`, items
+  Build 1.1.0-alpha.8 is in the user's GUI test (`docs/TEST_GUI_1.1.md`, items
   1–16, photos in `samples/`); then release 1.1.0: drop "(1.1, in development)"
   from the READMEs, version 1.1.0, CHANGELOG headings, GitHub release, Extensions
   *Upload New Version* (release notes link docs/CHANGELOG.md, now English).
@@ -16,8 +16,12 @@ Extensions audience) and `README.it.md` (Italian); developer docs
   phase develop -> audit -> docs -> commit + push.
   - **Fit Sun** (`ops_sun.py`, `FTC_Sun` on `settings.sun`): `sun.source` TIME
     (EXIF time/place: `exif.capture_time()`, NOAA `solver/sun.py` < 0.013° vs SPA)
-    or SHADOW (`solver/sun.shadow_*`); north COMPASS / MAP / LANDMARK / SHADOW
-    (appended) + `north_correction` (ignored for SHADOW). Light via `orient()`
+    or SHADOW (`solver/sun.shadow_*`); north COMPASS (auto) / SIDE (`sun_side`
+    +X -X +Y -Y the sun comes from + `north_correction` as *Turn*; default -Y) /
+    SHADOW. **The user wants NO map measuring** (Google Earth bearings, landmark
+    handle were removed after his first GUI test as too complex): keep the north
+    simple (axis flips, a turn by eye). MAP/LANDMARK enum items stay (index
+    rule) and read as SIDE (`ops_sun.north_source`). Light via `orient()`
     (matrix_basis, parent space, scale sign); follows in `apply_solution`.
     No compass is the NORM on Android. Names *Fit Sun* / *Fit HDRI* (user's
     choice, never translated); shadow is a source inside Fit Sun (user OK'd).

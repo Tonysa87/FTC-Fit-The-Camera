@@ -54,8 +54,6 @@ HANDLE_DEFAULTS = {
     "rect_3": (0.34, 0.45),
     "hz_a": (0.80, 0.55),
     "hz_b": (0.20, 0.55),
-    # Distant landmark of known compass bearing (north from a landmark, Sun).
-    "landmark": (0.50, 0.60),
     # Shadow (Sun): foot and top of a vertical object, tip of its shadow.
     "shadow_foot": (0.40, 0.25),
     "shadow_top": (0.40, 0.45),
@@ -317,9 +315,8 @@ def active_handle_keys(settings) -> list[str]:
     if settings.pp_mode == "MANUAL":
         keys.append("pp")
     sun = settings.sun
-    if sun.source == "TIME" and sun.north_source == "LANDMARK":
-        keys.append("landmark")
-    if sun.source == "SHADOW" or sun.use_shadow or sun.north_source == "SHADOW":
+    shadow = sun.north_source == "SHADOW" or (sun.north_source == "COMPASS" and sun.use_shadow)
+    if sun.source == "SHADOW" or shadow:
         keys += ["shadow_foot", "shadow_top", "shadow_tip"]
     return keys
 
@@ -515,7 +512,7 @@ def solve(settings, overrides: dict | None = None, distance: float | None = None
 
 
 # Handles that only place or scale the result, not its orientation or focal length.
-POSE_ONLY_KEYS = {"origin", "ref_a", "ref_b", "cube_base", "cube_top", "pp", "landmark"}
+POSE_ONLY_KEYS = {"origin", "ref_a", "ref_b", "cube_base", "cube_top", "pp"}
 POSE_ONLY_KEYS |= {"shadow_foot", "shadow_top", "shadow_tip"}
 # Assumed placement error of a handle, as a fraction of the long image side.
 PLACEMENT_ERROR = 1e-3
@@ -848,7 +845,7 @@ def apply_solution(cam_obj, solution: CameraSolution) -> None:
     cam.shift_x = bc.shift_x
     cam.shift_y = bc.shift_y
     cam_obj.matrix_world = alignment_matrix(settings) @ Matrix(bc.matrix_world.tolist())
-    # The Sun light follows the camera's north (compass, landmark).
+    # The Sun light follows the camera (its compass north, the shadow).
     from . import ops_sun
 
     ops_sun.orient(settings, solution)

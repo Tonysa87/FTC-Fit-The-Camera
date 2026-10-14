@@ -4,10 +4,13 @@ Storia completa in italiano. Dalla 1.1 il changelog principale è in inglese:
 [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Non rilasciato (1.1)
-- Dal primo test GUI: la direzione da mappa conta solo se inserita (lo 0° di
-  default non passa più per un nord); un'ombra a 180° dalla mappa avvisa che la
-  direzione è stata presa nel verso opposto; *Fit HDRI* entra nei gruppi di nodi
-  (gli add-on per HDRI costruiscono così il World).
+- Dal primo test GUI (semplificazione chiesta da Antonio): *Mappa* e
+  *Riferimento* tolti (misurare direzioni su Google Earth era troppo complesso).
+  Il nord ora è **Bussola** (automatica), **Lato** (asse della scena da cui
+  arriva il sole, +X −X +Y −Y, più *Ruota* a occhio; il default senza bussola,
+  −Y) o **Ombra** (il nord dall'ombra si applica scegliendo *Ombra*, senza *Usa
+  il nord dell'ombra*). *Fit HDRI* entra nei gruppi di nodi (gli add-on per HDRI
+  costruiscono così il World).
 - **Report di calibrazione** (1.1 A2): *Esporta report* in *Risultati*, in
   Markdown o JSON: focale, sensore, campo visivo, posizione e rotazione,
   incertezza, aderenza delle guide, fonte di ogni dato (EXIF o manuale) e sole.

@@ -360,6 +360,13 @@ vivo come nelle altre modalità.
   validatore accetta al massimo 64 caratteri, senza punto finale);
   `docs/CHANGELOG.md` in inglese, storia italiana in `docs/CHANGELOG.it.md`.
 
+- **Semplificazione dopo il primo test GUI** (decisione di Antonio,
+  2026-10-14): niente misure su mappe. *Map* e *Landmark* tolti (le voci
+  dell'enum restano, lette come *Side*); nuovo nord **Side**: l'asse della
+  scena da cui arriva il sole (+X −X +Y −Y, scelti come assi della scena) più
+  *Turn* a occhio, default −Y senza bussola. Il nord dall'ombra si sceglie
+  direttamente (*North = Shadow*); con la bussola resta *Check with a Shadow*.
+
 ## Fasi
 
 1. **1.0.x** – correzioni dalle segnalazioni degli utenti (Reddit, issue,

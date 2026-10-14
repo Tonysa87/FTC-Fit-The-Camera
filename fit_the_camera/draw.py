@@ -652,11 +652,6 @@ def draw_guides(view, settings, solution, session, unit_system):
                 color = colors[settings.ref_axis]
             elif key.startswith("cube"):
                 color = colors[plane_axes(calibrate.reference_plane(settings))[2]]
-            elif key == "landmark":
-                color = SUN_COLOR
-                pos = hpos(key)
-                bearing = f"{math.degrees(settings.sun.landmark_bearing):.1f}°"
-                text((pos[0] + 10 * s, pos[1] + 10 * s), bearing, color)
             elif key in ops_sun.SHADOW_KEYS:
                 color = SUN_COLOR
             elif key.startswith("hz"):

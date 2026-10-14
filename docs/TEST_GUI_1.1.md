@@ -16,16 +16,14 @@ Zip: `\\wsl.localhost\Ubuntu-24.04\home\tony\Projects\FTC\dist\fit_the_camera-<v
 2. **Cabina** (`IMG_20260804_185218650.jpg`): Load Image, sezione **Fit Sun**:
    *Sun From* = *Date and Place*; data 4/8/2026, ora 18:52:19, fuso +2, tutti
    con l'icona EXIF; latitudine/longitudine EXIF. Sole: azimut ~278,6°,
-   elevazione ~16,0°. Nord su *Map* (nessuna bussola).
-3. Calibra sulla facciata, *Map*: scegli l'asse lungo la facciata e la sua
-   direzione letta su una mappa. **New Sun**: compare *FTC Sun*. *Prepare Render*,
-   un cubo davanti al muro: la sua ombra va come quella del cartello. Ritocca con
-   *North Correction*: la luce ruota.
+   elevazione ~16,0°. *North* su **Side** (nessuna bussola: *Compass* è
+   disattivato), lato −Y.
+3. Calibra sulla facciata. **New Sun** (icona del sole accanto a *Light*).
+   Nella foto l'ombra del cartello va verso destra: il sole arriva da sinistra,
+   cioè da **−X**. Premi −X: la luce si gira subito. Affina con **Turn**
+   guardando le ombre della CG (un cubo davanti al muro, *Prepare Render*).
 4. **Lago** (`IMG_20250630_152535968_HDR.jpg`): sole ~238,7° / 56,3°. Modalità
-   *Horizon*, nord *Landmark*: in *Calibrate* trascina la maniglia arancione
-   sulla punta dell'isola, inserisci la sua direzione (Google Earth, righello,
-   *Heading*). Prima di spostarla compare l'avviso "Metti la maniglia
-   Riferimento…".
+   *Horizon*, *Side*: scegli il lato da cui arriva la luce nella foto e ruota.
 5. **Ponte levatoio** (`IMG_20230108_110414.jpg`): l'ora letta deve essere
    11:04:13 (orologio della fotocamera, non l'ora GPS di 22 s prima). Sole
    ~162,2° / 21,9°.
@@ -39,10 +37,9 @@ Zip: `\\wsl.localhost\Ubuntu-24.04\home\tony\Projects\FTC\dist\fit_the_camera-<v
    arancioni: piede e cima di un montante della ringhiera, punta della sua
    ombra sul ponte. Il pannello dà *Shadow Elevation* con ±; la luce segue
    mentre trascini.
-9. Torna a *Date and Place* con **Measure Shadow**: righe *Shadow vs Date* e
-   *Shadow vs North* (con ±), la crocetta bianca dove il sole della data
-   metterebbe la punta. **Use Shadow North**: la *North Correction* sparisce, la
-   luce va sull'ombra.
+9. Torna a *Date and Place* e scegli *North* = **Shadow**: stesse maniglie, il
+   nord viene dall'ombra; *Shadow vs Date* confronta l'elevazione e la crocetta
+   bianca segna dove il sole della data metterebbe la punta.
 10. **Cabina**: ombra del cartello sul muro: *Shadow On* = parete (XZ o YZ),
     origine nello spigolo muro–marciapiede.
 
@@ -67,7 +64,8 @@ Zip: `\\wsl.localhost\Ubuntu-24.04\home\tony\Projects\FTC\dist\fit_the_camera-<v
 15. *Results* › **Export Report**: Markdown e JSON (il formato cambia
     l'estensione). Apri il .md: tabelle leggibili, sezione *Sun* se usata.
 16. Interfaccia in italiano: *Fit Sun* e *Fit HDRI* restano in inglese; "Data",
-    "Ora", "Sole da", tooltip di *Fit HDRI* e dei pulsanti − / + tradotti.
+    "Ora", "Sole da", "Lato", "Ruota", tooltip di *Fit HDRI* e dei pulsanti − / +
+    tradotti.
 
 ## Da riportare
 Comportamenti strani, errori in console (Window › Toggle System Console),

@@ -144,7 +144,7 @@ data = s.camera_data
 for sun_from, use_shadow, source, ref, has_light, time_state, offset_state, place, direction in itertools.product(
     ("TIME", "SHADOW"),
     (False, True),
-    ("COMPASS", "MAP", "LANDMARK", "SHADOW"),
+    ("COMPASS", "SIDE", "SHADOW", "MAP"),
     ("", "T", "M"),
     (True, False),
     ("MISSING", "EXIF", "MANUAL"),

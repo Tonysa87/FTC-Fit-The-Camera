@@ -156,32 +156,8 @@ _IT = {
     "Sun light that FTC turns towards the sun of the photo (only its rotation is changed)": (
         "Luce Sole che FTC orienta verso il sole della foto (cambia solo la rotazione)"
     ),
-    "How the north of the scene is found": "Come si trova il nord della scena",
     "From the compass direction of the photo (EXIF), rarely written by Android phones": (
         "Dalla direzione della bussola nella foto (EXIF), che i telefoni Android scrivono di rado"
-    ),
-    "From the compass bearing of a scene axis, read on a map along a facade or a street": (
-        "Dalla direzione di un asse della scena, letta su una mappa lungo una facciata o una strada"
-    ),
-    "From a distant landmark in the photo (Landmark handle in Calibrate) and its bearing on a map": (
-        "Da un riferimento lontano nella foto (maniglia Riferimento in Calibra) e dalla sua direzione sulla mappa"
-    ),
-    "Scene axis whose bearing is read on the map": "Asse della scena di cui si legge la direzione sulla mappa",
-    "Compass bearing the scene axis points to, clockwise from true north, read on a map: a facade or a "
-    "street runs two ways, take the one its arrow points to in Calibrate": (
-        "Direzione verso cui punta l'asse della scena, in senso orario dal nord geografico, letta su una mappa: "
-        "una facciata o una strada ha due versi, prendi quello della sua freccia in Calibra"
-    ),
-    "A map bearing was entered (0° is a real north, not a default)": (
-        "È stata inserita una direzione da mappa (0° è un nord vero, non un default)"
-    ),
-    "Map: enter the bearing of the axis, read on a map (where its arrow points)": (
-        "Mappa: inserisci la direzione dell'asse letta su una mappa (dove punta la sua freccia)"
-    ),
-    "The shadow puts the north about 180° off the map: the bearing probably runs the other way along "
-    "the facade or street": (
-        "L'ombra mette il nord a circa 180° dalla mappa: la direzione è probabilmente presa nel verso opposto "
-        "lungo la facciata o la strada"
     ),
     "The HDRI's node group is linked from a library: make it local to fit its HDRI": (
         "Il gruppo di nodi dell'HDRI è collegato da una libreria: rendilo locale per adattarne l'HDRI"
@@ -189,27 +165,13 @@ _IT = {
     "The HDRI's node group is used elsewhere too: it turns there as well": (
         "Il gruppo di nodi dell'HDRI è usato anche altrove: ruota anche lì"
     ),
-    "Compass bearing from the camera to the landmark, read on a map, clockwise from true north": (
-        "Direzione dalla camera al riferimento, letta su una mappa, in senso orario dal nord geografico"
-    ),
     "Magnetic declination at the place, east positive: added to a magnetic compass direction "
     "(look it up for the place and year)": (
         "Declinazione magnetica del luogo, positiva a est: si somma a una direzione di bussola magnetica "
         "(cercala per il luogo e l'anno)"
     ),
-    "Turns the scene north, and the sun with it, about the vertical: phone compasses are often "
-    "5-15° off; adjust it until the CG shadows match the photo": (
-        "Ruota il nord della scena, e il sole con lui, attorno alla verticale: le bussole dei telefoni "
-        "sbagliano spesso di 5-15°; regolala finché le ombre del CG coincidono con la foto"
-    ),
     "Show the scene north and the sun direction on the ground through the origin while calibrating": (
         "Mostra il nord della scena e la direzione del sole sul suolo per l'origine durante la calibrazione"
-    ),
-    "No compass direction in the photo: use Map, Landmark or Shadow": (
-        "Nessuna bussola nella foto: usa Mappa, Riferimento o Ombra"
-    ),
-    "Drag the Landmark handle (Calibrate) onto a distant feature": (
-        "Trascina la maniglia Riferimento (Calibra) su un elemento lontano"
     ),
     "Sun Azimuth": "Azimut del sole",
     "Sun Elevation": "Elevazione del sole",
@@ -224,9 +186,6 @@ _IT = {
     ),
     "The camera looks steeply up or down: its compass is unreliable, check the north": (
         "La camera guarda molto in alto o in basso: la sua bussola è inaffidabile, controlla il nord"
-    ),
-    "Place the Landmark handle on the landmark (Calibrate)": (
-        "Metti la maniglia Riferimento sul riferimento (Calibra)"
     ),
     "The light is in no scene (deleted?): pick another one or add a New Sun": (
         "La luce non è in nessuna scena (cancellata?): scegline un'altra o aggiungi un Nuovo sole"
@@ -258,9 +217,6 @@ _IT = {
     "The camera looks straight up or down: no north from its compass": (
         "La camera guarda dritta in alto o in basso: la bussola non dà il nord"
     ),
-    "The landmark is straight above or below the camera: move it": (
-        "Il riferimento è dritto sopra o sotto la camera: spostalo"
-    ),
     # Fit Sun: shadow
     "Where the direction of the sun comes from": "Da dove arriva la direzione del sole",
     "Computed from the date, time and place of the shot, with the scene north": (
@@ -268,11 +224,6 @@ _IT = {
     ),
     "Measured on a shadow in the photo: no date, place or north needed": (
         "Misurata su un'ombra nella foto: non servono data, luogo né nord"
-    ),
-    "Show the shadow handles (foot and top of something vertical, tip of its shadow) to check the sun "
-    "of the date and place, and the north": (
-        "Mostra le maniglie dell'ombra (piede e cima di qualcosa di verticale, punta della sua ombra) per "
-        "verificare il sole di data e luogo, e il nord"
     ),
     "Plane through the origin where the tip of the shadow lies (the foot is always on the ground)": (
         "Piano per l'origine su cui sta la punta dell'ombra (il piede è sempre a terra)"
@@ -296,8 +247,6 @@ _IT = {
     "Shadow Elevation": "Elevazione dall'ombra",
     "Shadow vs Date": "Ombra / data",
     "{:+.1f}° elevation": "{:+.1f}° di elevazione",
-    "Shadow vs North": "Ombra / nord",
-    "Use Shadow North": "Usa il nord dell'ombra",
     "Calibrate the camera first: the shadow is measured through it": (
         "Calibra prima la camera: l'ombra si misura attraverso di lei"
     ),
@@ -417,6 +366,34 @@ _IT = {
     "A readable page (.md)": "Una pagina leggibile (.md)",
     "Data for other programs (.json)": "Dati per altri programmi (.json)",
     "Report saved: {}": "Report salvato: {}",
+    # Fit Sun: side
+    "How the sun is placed around the scene (its height comes from the date)": (
+        "Come si colloca il sole attorno alla scena (l'altezza viene dalla data)"
+    ),
+    "Replaced by Side": "Sostituito da Lato",
+    "Pick the scene axis the sun comes from, then turn it by eye until the CG shadows match the photo": (
+        "Scegli l'asse della scena da cui arriva il sole, poi ruotalo a occhio finché le ombre della CG "
+        "coincidono con la foto"
+    ),
+    "Scene axis the sun comes from: the shadows in the photo fall the other way (-Y is usually behind the camera)": (
+        "Asse della scena da cui arriva il sole: le ombre nella foto cadono dalla parte opposta "
+        "(-Y di solito è dietro la camera)"
+    ),
+    "The sun comes from the +X side": "Il sole arriva dal lato +X",
+    "The sun comes from the -X side": "Il sole arriva dal lato -X",
+    "The sun comes from the +Y side": "Il sole arriva dal lato +Y",
+    "The sun comes from the -Y side": "Il sole arriva dal lato -Y",
+    "Turns the sun about the vertical (with the compass: the scene north): adjust it until the CG "
+    "shadows match the photo; phone compasses are often 5-15° off": (
+        "Ruota il sole attorno alla verticale (con la bussola: il nord della scena): regolala finché le ombre "
+        "della CG coincidono con la foto; le bussole dei telefoni sbagliano spesso di 5-15°"
+    ),
+    "No compass direction in the photo: use Side or Shadow": "Nessuna bussola nella foto: usa Lato o Ombra",
+    "Shadow vs Compass": "Ombra / bussola",
+    "Show the shadow handles (foot and top of something vertical, tip of its shadow) to check the compass": (
+        "Mostra le maniglie dell'ombra (piede e cima di qualcosa di verticale, punta della sua ombra) per "
+        "verificare la bussola"
+    ),
     # FTC orientation
     "FTC Orientation": "Orientamento FTC",
     "No 3D view to create the orientation from": "Nessuna vista 3D da cui creare l'orientamento",
@@ -444,23 +421,20 @@ _IT_FTC = {
     "Light": "Luce",
     "North": "Nord",
     "Compass": "Bussola",
-    "Map": "Mappa",
-    "Landmark": "Riferimento",
-    "Axis": "Asse",
-    "Bearing": "Direzione",
-    "Landmark Bearing": "Direzione del riferimento",
     "Declination": "Declinazione",
     "North Correction": "Correzione del nord",
     "Sun": "Sole",
+    "Side": "Lato",
+    "Sun From Axis": "Sole dall'asse",
+    "Turn": "Ruota",
+    "Check with a Shadow": "Verifica con un'ombra",
     "Sun From": "Sole da",
     "Date and Place": "Data e luogo",
     "Shadow": "Ombra",
-    "Measure Shadow": "Misura un'ombra",
     "Shadow On": "Ombra su",
     "Ground": "Suolo",
     "Wall XZ": "Parete XZ",
     "Wall YZ": "Parete YZ",
-    "Use Shadow North": "Usa il nord dell'ombra",
     "Follow the Sun": "Segui il sole",
     "Lines": "Linee",
 }

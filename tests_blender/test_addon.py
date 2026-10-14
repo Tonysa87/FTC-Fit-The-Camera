@@ -1156,22 +1156,17 @@ def sun_from_exif_time_place_and_compass():
     view = cam.matrix_world.to_3x3() @ Vector((0.0, 0.0, -1.0))
     assert angle_diff(heading_deg(d) - heading_deg(view), SUN_AZIMUTH - 200.0) < 0.05
 
-    # Map: +X points east, so +Y is north and the scene is east-north-up.
-    s.sun.north_source = "MAP"
-    s.sun.map_axis = "+X"
-    s.sun.map_bearing = math.radians(90.0)
-    assert angle_diff(heading_deg(light_dir(light)), SUN_AZIMUTH) < 0.05
-    s.sun.map_axis = "-Y"
-    s.sun.map_bearing = math.radians(180.0)
-    assert angle_diff(heading_deg(light_dir(light)), SUN_AZIMUTH) < 0.05
-
-    # Landmark on the principal point: its ray is the view, same as the compass.
-    s.sun.north_source = "LANDMARK"
-    assert "landmark" in calibrate.active_handle_keys(s)
-    assert "landmark" not in calibrate.calibrate_keys(s)
-    calibrate.set_handle(s, "landmark", (0.5, 0.5))
-    s.sun.landmark_bearing = math.radians(200.0)
-    assert angle_diff(heading_deg(light_dir(light)) - heading_deg(view), SUN_AZIMUTH - 200.0) < 0.05
+    # Side: the sun comes from the chosen scene axis, at the date's height.
+    s.sun.north_source = "SIDE"
+    for side, heading in (("+X", 90.0), ("-X", 270.0), ("+Y", 0.0), ("-Y", 180.0)):
+        s.sun.sun_side = side
+        assert angle_diff(heading_deg(light_dir(light)), heading) < 0.05, side
+        assert abs(math.degrees(math.asin(light_dir(light).z)) - SUN_ELEVATION) < 0.05
+    # Turn: counter-clockwise seen from above.
+    s.sun.sun_side = "-X"
+    s.sun.north_correction = math.radians(10.0)
+    assert angle_diff(heading_deg(light_dir(light)), 260.0) < 0.05
+    s.sun.north_correction = 0.0
 
     # The north correction turns the sun about Z; the light stays where it is.
     light.location = (1.0, 2.0, 3.0)
@@ -1200,8 +1195,7 @@ def sun_needs_time_zone_and_place_and_daylight():
     cam = load(write_photo("nosun.jpg", (1200, 800), camera_tiff()))
     s = cam.data.ftc
     data = s.camera_data
-    assert s.sun.north_source == "MAP", "no compass: the north comes from a map"
-    s.sun.map_bearing = math.radians(90.0)
+    assert s.sun.north_source == "SIDE" and s.sun.sun_side == "-Y", "no compass: the sun's side, by default -Y"
     assert "Date and time" in ops_sun.evaluate(s).error
     data.hour = 12
     assert data.time_state == "MANUAL"
@@ -1292,32 +1286,22 @@ def sun_light_mirrored_parented_or_gone():
 
 
 @test
-def sun_north_without_time_and_landmark_checks():
+def sun_side_without_compass_and_handles():
     ops_sun = importlib.import_module(PKG + ".ops_sun")
-    fresh_scene()
-    cam = load(write_photo("north.jpg", (1200, 800), camera_tiff()))
+    cam = _sun_camera(sun_tiff(direction=None))
     s = cam.data.ftc
-    s.sun.north_source = "MAP"
-    s.sun.map_bearing = math.radians(90.0)
+    assert s.sun.north_source == "SIDE"
     state = ops_sun.evaluate(s)
-    assert state.error and angle_diff(state.y_bearing, 0.0) < 1e-4, "the N arrow needs no time"
-    # Landmark never placed: warned.
-    cam = _sun_camera(sun_tiff())
-    s = cam.data.ftc
-    s.sun.north_source = "LANDMARK"
-    assert any("Landmark handle" in w for w in ops_sun.evaluate(s).warnings)
-    calibrate.set_handle(s, "landmark", (0.3, 0.55))
-    assert not any("Landmark handle" in w for w in ops_sun.evaluate(s).warnings)
-    # Reset Guides keeps it on its landmark.
-    assert bpy.ops.ftc.reset() == {"FINISHED"}
-    assert (
-        calibrate.handle(s, "landmark") == (0.3, 0.55)
-        or max(abs(a - b) for a, b in zip(calibrate.handle(s, "landmark"), (0.3, 0.55))) < 1e-6
-    )
-    # A new photo without compass keeps a north chosen by hand.
+    assert not state.error and angle_diff(heading_deg(state.direction), 180.0) < 0.05, "from -Y"
+    assert "shadow_foot" not in calibrate.active_handle_keys(s), "Side needs no handles"
+    # 1.1 development files: Map and Landmark read as Side.
+    s.sun.north_source = "MAP"
+    assert ops_sun.north_source(s) == "SIDE" and ops_sun.evaluate(s).direction is not None
+    # A new photo without compass keeps the north chosen by hand.
+    s.sun.north_source = "SHADOW"
     load_op = bpy.ops.ftc.load_image(filepath=write_photo("again.jpg", (1200, 800), camera_tiff()), camera=cam.name)
     assert load_op == {"FINISHED"}
-    assert s.sun.north_source == "LANDMARK"
+    assert s.sun.north_source == "SHADOW"
 
 
 @test
@@ -1398,28 +1382,21 @@ def shadow_checks_the_date_and_gives_the_north():
     ops_sun = importlib.import_module(PKG + ".ops_sun")
     cam = _sun_camera(sun_tiff())
     s = cam.data.ftc
-    # +X east: +Y is north, so the scene is east-north-up.
-    s.sun.north_source = "MAP"
-    s.sun.map_axis, s.sun.map_bearing = "+X", math.radians(90.0)
+    assert s.sun.north_source == "COMPASS"
     s.sun.use_shadow = True
-    # A high sun (65°) casts short shadows: a tall pole keeps the measure sharp.
+    assert "shadow_foot" in calibrate.active_handle_keys(s), "checking the compass"
+    # The shadow of the true sun (east-north-up scene). A high sun (65°) casts
+    # short shadows: a tall pole keeps the measure sharp.
     set_shadow(s, direction_enu(SUN_AZIMUTH, SUN_ELEVATION), foot=(0.0, 1.0, 0.0), height=4.0)
     state = ops_sun.evaluate(s)
     assert state.shadow_spread < 2.0, state.shadow_spread
-    assert abs(state.shadow_north_offset) < 0.02 and abs(state.shadow_elevation_offset) < 0.02, state
-    # A map read 10° wrong: the shadow says so.
-    s.sun.map_bearing = math.radians(100.0)
-    state = ops_sun.evaluate(s)
-    assert abs(state.shadow_north_offset + 10.0) < 0.02, state.shadow_north_offset
-    assert not any("180" in w for w in state.warnings)
-    # The facade read the other way on the map: 180° off, said so.
-    s.sun.map_bearing = math.radians(270.0)
-    assert any("180" in w for w in ops_sun.evaluate(s).warnings)
-    s.sun.map_bearing = math.radians(100.0)
-    # Use Shadow North: the light follows the shadow's north; the map and the
-    # north correction (a hand match) are ignored.
-    assert bpy.ops.ftc.new_sun() == {"FINISHED"}
+    assert abs(state.shadow_elevation_offset) < 0.02, state
+    first = state.shadow_north_offset
+    # Turning the compass north by 10° shows in Shadow vs Compass.
     s.sun.north_correction = math.radians(10.0)
+    assert angle_diff(ops_sun.evaluate(s).shadow_north_offset, first - 10.0) < 0.02
+    # North from the shadow: the light follows the shadow, the turn is ignored.
+    assert bpy.ops.ftc.new_sun() == {"FINISHED"}
     s.sun.north_source = "SHADOW"
     d = light_dir(s.sun.light)
     assert angle_diff(heading_deg(d), SUN_AZIMUTH) < 0.05
@@ -1488,10 +1465,11 @@ def fit_hdri_renders_the_sun_where_computed():
     cam = _sun_camera(sun_tiff())
     scene = bpy.context.scene
     s = cam.data.ftc
-    s.sun.north_source = "MAP"
-    s.sun.map_axis, s.sun.map_bearing = "+X", math.radians(90.0)
     sun = ops_sun.evaluate(s).direction
-    u0, v0 = 0.2, image_point(sun)[1]
+    # The HDRI's sun a quarter turn from the photo's: the right turn is 90°,
+    # the opposite one misses by 180°.
+    u0 = (0.5 - (math.atan2(sun.y, sun.x) + math.pi / 2) / (2 * math.pi)) % 1.0
+    v0 = image_point(sun)[1]
     world, env = world_with(synthetic_hdri(u0, v0))
     assert bpy.ops.ftc.fit_hdri(point=(u0, v0)) == {"FINISHED"}
     mapping = env.inputs["Vector"].links[0].from_node
@@ -1525,18 +1503,6 @@ def fit_hdri_renders_the_sun_where_computed():
 
 
 @test
-def map_bearing_must_be_entered():
-    ops_sun = importlib.import_module(PKG + ".ops_sun")
-    cam = _sun_camera(sun_tiff(direction=None))
-    s = cam.data.ftc
-    assert s.sun.north_source == "MAP" and not s.sun.map_bearing_set
-    state = ops_sun.evaluate(s)
-    assert "Map: enter" in state.error and state.direction is None
-    s.sun.map_bearing = 0.0  # a real 0°: +X to the north
-    assert s.sun.map_bearing_set and ops_sun.evaluate(s).direction is not None
-
-
-@test
 def fit_hdri_inside_a_node_group():
     """HDRI add-ons wrap the World in a node group: the Mapping goes inside it."""
     from solver.hdri import image_point
@@ -1546,8 +1512,6 @@ def fit_hdri_inside_a_node_group():
     cam = _sun_camera(sun_tiff())
     scene = bpy.context.scene
     s = cam.data.ftc
-    s.sun.north_source = "MAP"
-    s.sun.map_axis, s.sun.map_bearing = "+X", math.radians(90.0)
     sun = ops_sun.evaluate(s).direction
     u0, v0 = 0.7, image_point(sun)[1]
     group = bpy.data.node_groups.new("HDRI Setup", "ShaderNodeTree")
@@ -1579,8 +1543,6 @@ def fit_hdri_needs_an_equirectangular_world():
     ops_hdri = importlib.import_module(PKG + ".ops_hdri")
     cam = _sun_camera(sun_tiff())
     s = cam.data.ftc
-    s.sun.north_source = "MAP"
-    s.sun.map_bearing = 0.0  # +X to the north, entered on purpose
     scene = bpy.context.scene
     scene.world = bpy.data.worlds.new("plain")
     assert ops_hdri.environment(scene.world)[0] is None
@@ -1691,8 +1653,6 @@ def export_report_json_and_markdown():
     assert bpy.ops.ftc.export_report(filepath=path, format="JSON") == {"FINISHED"}
     with open(os.path.join(SCRATCH, "private.json"), encoding="utf-8") as f:
         assert "sun" not in json.load(f)
-    s.sun.north_source = "MAP"
-    s.sun.map_axis, s.sun.map_bearing = "+X", math.radians(90.0)
     assert bpy.ops.ftc.new_sun() == {"FINISHED"}
     path = os.path.join(SCRATCH, "report.json")
     assert bpy.ops.ftc.export_report(filepath=path, format="JSON") == {"FINISHED"}

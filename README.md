@@ -85,9 +85,9 @@ The rest of this page explains every option.
 - **Calibration report** (1.1, in development): Markdown or JSON, with the
   source of every input.
 - **Fit Sun** (1.1, in development): a Sun light turned like the sun of the
-  photo, from the EXIF date, time and GPS (or entered by hand), with the north
-  from the compass, a map, a distant landmark or a shadow; or measured on a
-  shadow in the photo alone. **Fit HDRI** turns the World HDRI about Z onto
+  photo, from the EXIF date, time and GPS (or entered by hand), placed by the
+  compass, by the scene axis it comes from (turned by eye) or by a shadow; or
+  measured on a shadow in the photo alone. **Fit HDRI** turns the World HDRI about Z onto
   that sun.
 - Interface in English and Italian.
 
@@ -238,29 +238,27 @@ the real ones. *Sun From* picks the source:
 - **The sun**: NOAA's equations, within 0.013° of NREL's SPA, as seen (with the
   atmospheric refraction). Below the horizon (a night shot, a wrong time) is an
   error and the light is left alone.
-- **North of the scene**, the one thing the photo may not tell:
+- **Where the sun stands around the scene** (*North*), the one thing the photo
+  may not tell:
 
-  | North | From | When |
+  | North | How | When |
   | --- | --- | --- |
-  | Compass | the EXIF image direction (magnetic: enter the *Declination*) | iPhones write it, most Android phones don't |
-  | Map | the bearing of a scene axis (+X, +Y, −X, −Y) read on a map along a facade or a street: the way its arrow points in *Calibrate* (a facade runs two ways: the other one is 180° off) | buildings, streets |
-  | Landmark | an orange handle (in *Calibrate*) on a distant feature and its bearing from the camera on a map (Google Earth's ruler shows it as *Heading*) | landscapes: an island, a bell tower, a peak |
-  | Shadow | a shadow in the photo and the sun of the date and place (see *Shadow* below) | any sharp shadow: the most precise |
+  | Compass | automatic, from the EXIF image direction (magnetic: enter the *Declination*) | iPhones write it, most Android phones don't |
+  | Side | pick the scene axis the sun comes from (**+X −X +Y −Y**: the shadows in the photo fall the other way), then **Turn** it by eye until the CG shadows match | any photo; the default without a compass (−Y, usually behind the camera) |
+  | Shadow | from a shadow in the photo (below) | any sharp shadow: the most precise |
 
-  *North Correction* turns the north and the sun together about the vertical:
-  phone compasses are often 5–15° off, so turn it until the CG shadows match the
-  photo. A camera looking steeply up or down makes the compass unreliable
-  (warning).
+  With the compass, *North Correction* turns the north and the sun together:
+  phone compasses are often 5–15° off. A camera looking steeply up or down makes
+  the compass unreliable (warning).
 - **Shadow**: in *Calibrate* three orange handles go on the **foot** and the
   **top** of something vertical (a pole, a post, a door jamb) and on the **tip of
   its shadow**. The foot is on the ground; the tip on the ground or on a wall
   through the origin (*Shadow On*: put the origin at the foot of that wall). The
   sun lies along the line from the tip through the top. The panel gives its
   elevation with a ± from the handles: a long shadow measures better than a
-  short one. With *Measure Shadow* next to *Date and Place* it checks them:
-  *Shadow vs Date* (elevation: a wrong time or calibration) and *Shadow vs North*
-  (the compass, map or landmark error); *Use Shadow North* takes the north from
-  the shadow. A white cross marks where the date's sun would put the tip.
+  short one, and *Shadow vs Date* checks the time and the calibration. With the
+  compass, *Check with a Shadow* shows *Shadow vs Compass*. A white cross marks
+  where the date's sun would put the tip.
 - **The light**: pick a Sun light, or press the sun icon next to *Light* (*New Sun*). FTC only sets its
   rotation: strength, colour and angle stay yours. It follows the camera on
   *Apply* and while calibrating. A deleted or linked light, or constraints and

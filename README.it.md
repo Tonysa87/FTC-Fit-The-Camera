@@ -221,29 +221,27 @@ quelle vere. *Sole da* sceglie la fonte:
 - **Il sole**: equazioni NOAA, entro 0,013° dallo SPA del NREL, come si vede
   (con la rifrazione atmosferica). Sotto l'orizzonte (foto notturna, ora
   sbagliata) è un errore e la luce non viene toccata.
-- **Nord della scena**, l'unico dato che la foto può non dire:
+- **Dove sta il sole attorno alla scena** (*Nord*), l'unico dato che la foto
+  può non dire:
 
-  | Nord | Da | Quando |
+  | Nord | Come | Quando |
   | --- | --- | --- |
-  | Bussola | la direzione dell'immagine nell'EXIF (magnetica: inserisci la *Declinazione*) | gli iPhone la scrivono, quasi tutti gli Android no |
-  | Mappa | la direzione di un asse della scena (+X, +Y, −X, −Y) letta su una mappa lungo una facciata o una strada: il verso della sua freccia in *Calibra* (una facciata ha due versi: l'altro sbaglia di 180°) | edifici, strade |
-  | Riferimento | una maniglia arancione (in *Calibra*) su un elemento lontano e la sua direzione dalla camera su una mappa (il righello di Google Earth la chiama *Heading*) | paesaggi: un'isola, un campanile, una cima |
-  | Ombra | un'ombra nella foto e il sole di data e luogo (vedi *Ombra* sotto) | qualsiasi ombra netta: il più preciso |
+  | Bussola | automatico, dalla direzione dell'immagine nell'EXIF (magnetica: inserisci la *Declinazione*) | gli iPhone la scrivono, quasi tutti gli Android no |
+  | Lato | scegli l'asse della scena da cui arriva il sole (**+X −X +Y −Y**: le ombre nella foto cadono dalla parte opposta), poi **Ruota** a occhio finché le ombre della CG coincidono | qualsiasi foto; il default senza bussola (−Y, di solito dietro la camera) |
+  | Ombra | da un'ombra nella foto (sotto) | qualsiasi ombra netta: il più preciso |
 
-  *Correzione del nord* ruota nord e sole insieme attorno alla verticale: le
-  bussole dei telefoni sbagliano spesso di 5–15°, quindi regolala finché le ombre
-  della CG coincidono con la foto. Una camera molto inclinata in alto o in basso
-  rende la bussola inaffidabile (avviso).
+  Con la bussola, *Correzione del nord* ruota nord e sole insieme: le bussole
+  dei telefoni sbagliano spesso di 5–15°. Una camera molto inclinata in alto o in
+  basso rende la bussola inaffidabile (avviso).
 - **Ombra**: in *Calibra* tre maniglie arancioni vanno sul **piede** e sulla
   **cima** di qualcosa di verticale (un palo, un montante, uno stipite) e sulla
   **punta della sua ombra**. Il piede sta a terra; la punta a terra o su una
   parete per l'origine (*Ombra su*: metti l'origine al piede di quella parete).
   Il sole sta sulla retta dalla punta alla cima. Il pannello dà la sua elevazione
-  con un ± dalle maniglie: un'ombra lunga misura meglio di una corta. Con *Misura
-  un'ombra* accanto a *Data e luogo* le verifica: *Ombra / data* (elevazione: ora
-  o calibrazione sbagliate) e *Ombra / nord* (l'errore di bussola, mappa o
-  riferimento); *Usa il nord dell'ombra* prende il nord dall'ombra. Una crocetta
-  bianca segna dove il sole della data metterebbe la punta.
+  con un ± dalle maniglie: un'ombra lunga misura meglio di una corta, e *Ombra /
+  data* verifica ora e calibrazione. Con la bussola, *Verifica con un'ombra*
+  mostra *Ombra / bussola*. Una crocetta bianca segna dove il sole della data
+  metterebbe la punta.
 - **La luce**: scegli una luce Sole, o premi l'icona del sole accanto a *Luce* (*Nuovo sole*). FTC ne imposta solo la
   rotazione: intensità, colore e angolo restano tuoi. Segue la camera con
   *Applica* e durante la calibrazione. Una luce cancellata o collegata, o vincoli

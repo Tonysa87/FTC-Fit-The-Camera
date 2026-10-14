@@ -17,20 +17,18 @@ release since 0.1, is in [`CHANGELOG.it.md`](CHANGELOG.it.md).
   phones write the time of the last fix. A complete camera clock (time and
   offset) wins over a GPS time that disagrees. The time zone is never guessed
   from the longitude. The sun uses NOAA's equations, within 0.013° of NREL's SPA.
-- **North of the scene** from the EXIF **compass** (magnetic declination by
-  hand), from a **map** bearing of a scene axis, or from a distant **landmark**
-  (a handle in *Calibrate* and its bearing on a map). *North Correction* turns
-  the north and the sun by eye. Most Android phones write no compass, so the map
-  and the landmark are first-class.
+- **Where the sun stands around the scene**: from the EXIF **compass**
+  (automatic; magnetic declination by hand), from the **side** it comes from
+  (pick the scene axis +X −X +Y −Y, then *Turn* it by eye; the default without a
+  compass), or from a **shadow**. Most Android phones write no compass: no map
+  or measuring is needed (an early map/landmark design was dropped after the
+  first GUI test as too complex).
 - **Sun from a shadow**: three handles on the foot and top of something vertical
   and on the tip of its shadow, on the ground or on a wall through the origin.
   They give the sun with no EXIF, date or north, with a ± from the handles.
-  Measured next to the date and place, the shadow checks them: *Shadow vs Date*
-  (elevation), *Shadow vs North*, *Use Shadow North*, and a cross where the
-  date's sun would put the shadow's tip.
-- A map bearing counts only once entered (the default 0° no longer passes for
-  a north), and a shadow 180° off the map says the bearing was read the other
-  way along the facade (found in the first GUI test).
+  Next to the date and place it gives the north (*North* = *Shadow*) and checks
+  the date (*Shadow vs Date*); with the compass, *Check with a Shadow* shows
+  *Shadow vs Compass*. A cross marks where the date's sun would put the tip.
 - *Display › North* (off by default) draws the north and the sun direction on
   the ground while calibrating.
 
