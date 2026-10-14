@@ -7,8 +7,8 @@ Extensions audience) and `README.it.md` (Italian); developer docs
 "Camera Match": the final name is **FTC**, package `fit_the_camera`, tab "FTC").
 
 ## Status / next session (bookmark 2026-10-14, night)
-- **RESUME HERE**: the user is GUI-testing **1.1.0-alpha.13** on Windows
-  (`dist/fit_the_camera-1.1.0-alpha.13.zip`, checklist `docs/TEST_GUI_1.1.md`).
+- **RESUME HERE**: the user is GUI-testing **1.1.0-alpha.14** on Windows
+  (`dist/fit_the_camera-1.1.0-alpha.14.zip`, checklist `docs/TEST_GUI_1.1.md`).
   Cabin photo (`samples/IMG_20260804_185218650.jpg`) DONE: Side **-Y** (not -X:
   +Y runs into the wall), Turn -16°, **Raise** -3.5° (16.0° -> 12.5°) -> the CG
   sign shadow matches the photo ("PERFETTO"). Raise (`sun.elevation_correction`,
@@ -32,7 +32,12 @@ Extensions audience) and `README.it.md` (Italian); developer docs
   it meets a measure (shadow tip in the view, sun in the HDRI viewer), hints in
   panel/header; *Check with a Shadow* (`use_shadow`) also with Side (*Shadow vs
   Turn* = the Turn to add; *Shadow vs Date* = the Raise that matches). The
-  grey + is the principal point. Then the
+  grey + is the principal point. alpha.14 = general audit of alpha.9–13
+  (3 parallel reviewers; fixes in the commit "Audit of alpha.9-13") + GitHub
+  docs: READMEs (typical Fit Sun session), detailed v1.1 in
+  `docs/CHANGELOG.md` (Highlights … "Shaped by the GUI tests"). The user said
+  "per me potremmo esserci": next is the 1.1.0 release when he says go (also
+  update the git-ignored `extensions_listing/description.md`). Then the
   rest of the checklist, then release 1.1.0. He also asked whether the grid step
   should be labelled (offered, not decided).
 - **1.1 developed (2026-10-14): all phases S1–S4, A1, A2 done, audited, pushed.**

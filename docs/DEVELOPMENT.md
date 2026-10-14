@@ -69,6 +69,22 @@ docs/TEST_GUI_1.1.md     # checklist del test a mano della 1.1
   cresce in senso orario visto dall'alto, v = 0,5 orizzonte; il Mapping (tipo
   Point/Vector) ruota il vettore di lettura: la direzione d del mondo mostra
   l'HDRI in Rz(angolo)·d. Verificato da render Cycles nei test Blender.
+  Una rotazione del Mapping collegata ad altri nodi si ripercorre all'indietro
+  con `ops_hdri.rotation_control` fino a un `Control` (socket da scrivere,
+  rotazione = scala·valore + offset, min/max dell'input del gruppo): reroute,
+  Combine XYZ, Value, Math / Vector Math lineari, Group Input (si esce verso il
+  nodo gruppo del percorso, `group_path`), Group in mezzo (si entra nel suo
+  Group Output). `fit()` controlla tutti i `Control.target` prima di scrivere.
+- Sole calcolato (1.1): ovunque si confronta con una misura è la × bianca
+  `draw.sun_mark` con l'etichetta "Fit Sun" (punta dell'ombra nella vista,
+  sole nel visore HDRI). `sun.elevation_correction` (Alza) entra solo in
+  `ops_sun.raised` → `state.direction`; `shadow_elevation_offset` resta
+  rispetto alla data (= l'Alza che combacia).
+- Calibra ombra: `ftc.calibrate(shadow=True)` → `Session.shadow_only`; mostra e
+  prende solo `draw.session_keys`, non imposta `calibrate.session_camera` (la
+  camera non viene mai scritta). Ogni operatore modale ricorda la sua sessione
+  (`_own`): se un'altra la sostituisce, il vecchio modal si ferma senza
+  chiuderla.
 - Piano di riferimento: XY (pavimento), XZ (parete rivolta a −Y), YZ (parete
   rivolta a +X), y locale verso l'alto sulle pareti.
 - Sensore = lato lungo del sensore intero; la parte coperta dall'immagine si

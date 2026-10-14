@@ -5,68 +5,156 @@ release since 0.1, is in [`CHANGELOG.it.md`](CHANGELOG.it.md).
 
 ## Unreleased (1.1)
 
-*FTC now gets the real sun: the light and the HDRI match the photo.*
+*FTC now gets the real sun: the light, the shadows and the HDRI match the photo.*
+
+### Highlights
+
+- **Fit Sun**: a Sun light turned like the sun of the photo, from the EXIF date,
+  time and GPS or from a shadow in the photo, with no map or compass needed.
+- **Fine-tuning on a real shadow**: a white × shows where the computed sun puts
+  the tip of a shadow of the photo; *Turn* and *Raise* bring it onto the real
+  tip, and the panel gives the exact values.
+- **Calibrate Shadow**: a session for the shadow handles alone, without the
+  calibration guides and without touching the camera.
+- **Fit HDRI**: the World HDRI turned about Z onto the same sun, with a viewer
+  to pick its sun and a Shift magnifier; it also works through the node groups
+  that HDRI add-ons build (Poly Haven's *Rotation* input included).
+- **Up to six guide lines per vanishing point** and an **Export Report**
+  (Markdown / JSON) of the calibration.
 
 ### Fit Sun
 
-- New **Fit Sun** section after *Render*. A Sun light is turned like the sun of
-  the photo; its strength, colour and angle stay yours (*New Sun* adds one).
-- **Sun from the date and place**: the shooting time and place are read from
-  the EXIF, or entered by hand. The GPS time is UTC; when the camera clock agrees
-  with it, the clock gives the instant and the GPS only the time zone, since
-  phones write the time of the last fix. A complete camera clock (time and
-  offset) wins over a GPS time that disagrees. The time zone is never guessed
-  from the longitude. The sun uses NOAA's equations, within 0.013° of NREL's SPA.
-- **Where the sun stands around the scene**: from the EXIF **compass**
-  (automatic; magnetic declination by hand), from the **side** it comes from
-  (pick the scene axis +X −X +Y −Y, then *Turn* it by eye; the default without a
-  compass), or from a **shadow**. Most Android phones write no compass: no map
-  or measuring is needed (an early map/landmark design was dropped after the
-  first GUI test as too complex). **Calibrate Shadow** places only the shadow
-  handles (no guides, the camera untouched). The white × labelled *Fit Sun*
-  is the computed sun everywhere (shadow tip in the camera view, sun in the
-  HDRI viewer); *Check with a Shadow* also works with *Side* (*Shadow vs
-  Turn*). **Raise** lifts or lowers the date's sun by
-  eye when the CG shadows come out shorter or longer than in the photo.
-- **Sun from a shadow**: three handles on the foot and top of something vertical
-  and on the tip of its shadow, on the ground or on a wall through the origin.
-  They give the sun with no EXIF, date or north, with a ± from the handles.
-  Next to the date and place it gives the north (*North* = *Shadow*) and checks
-  the date (*Shadow vs Date*); with the compass, *Check with a Shadow* shows
-  *Shadow vs Compass*. A cross marks where the date's sun would put the tip.
+New section after *Render*. It only sets the **rotation** of a Sun light:
+strength, colour and angle stay yours. *New Sun* (the sun icon next to *Light*)
+adds one; the light follows the camera on *Apply* and while calibrating. A
+deleted or linked light, or keyframes, drivers and constraints that override its
+rotation, are reported.
+
+**Sun From** picks the source:
+
+- **Date and Place**: the sun of the shooting time and place. The calibration
+  already knows the vertical, so the height of the sun (the length of the
+  shadows) is right whatever the north.
+- **Shadow**: the sun measured on a shadow in the photo, with no date, place or
+  north: any photo with a sharp shadow, also without EXIF.
+
+**Date, time and place**
+
+- Read from the EXIF (✓ next to every value read), or entered by hand; *Read
+  from Photo* reads them again.
+- Phones write the time of their last GPS fix: when the camera clock agrees with
+  the GPS time (UTC), the clock gives the instant and the GPS only the time zone.
+  A complete camera clock (time and offset) wins over a GPS time that disagrees;
+  a warning says which one is used.
+- The time zone is never guessed from the longitude (daylight saving time would
+  break it). The nearest town is close enough for the place (100 km ≈ 1° on the
+  sun).
+- The sun uses NOAA's equations with atmospheric refraction, within 0.013° of
+  NREL's SPA. A sun below the horizon (a night shot, a wrong time) is an error
+  and the light is left alone.
+
+**North: where the sun stands around the scene**
+
+| North | How |
+| --- | --- |
+| Compass | automatic, from the EXIF image direction (magnetic: enter the *Declination*); *North Correction* turns it, since phone compasses are often 5–15° off |
+| Side | the scene axis the sun comes from (**+X −X +Y −Y**: the shadows of the photo fall the other way), then *Turn* by eye; the default without a compass (−Y, usually behind the camera) |
+| Shadow | from a shadow in the photo: the most precise |
+
+Most Android phones write no compass, so no map, landmark or bearing measuring is
+needed: an early design with map bearings and a landmark handle was dropped after
+the first GUI test as too complex. A camera looking steeply up or down makes the
+compass unreliable (warning).
+
+**Fine-tuning on a shadow of the photo**
+
+- **Raise** lifts or lowers the date's sun by eye when the CG shadows come out
+  shorter or longer than the real ones. It makes up for small calibration or
+  clock errors; the panel shows *Sun Elevation* as "date → used" (16.0° →
+  12.5°), and the sun is never taken below 0.5° (alert).
+- **Check with a Shadow** (with the compass or a side) shows three orange
+  handles: the **foot** and the **top** of something vertical (a pole, a post,
+  a sign) and the **tip of its shadow**, on the ground or on a wall through the
+  origin (*Shadow On*).
+- **Calibrate Shadow** places them in a session of their own: only those three
+  handles, no guides, no cube, the camera never written; Shift magnifier, Ctrl
+  snap and Ctrl+Z work as in *Calibrate*. Clicking *Calibrate* meanwhile
+  switches to the full calibration, and back. The handles are also in
+  *Calibrate*.
+- The white **× "Fit Sun"** marks where the computed sun (date, place, *Turn* /
+  *North Correction*, *Raise*) puts the shadow's tip. On the tip handle, the sun
+  is right: *Turn* moves it sideways, *Raise* along the shadow. Hints in the
+  panel and in the session header say so.
+- The panel also gives the numbers: *Shadow vs Turn* / *Shadow vs Compass* is the
+  turn to add, *Shadow vs Date* the Raise that matches (red until Raise reaches
+  it). *Shadow Elevation* comes with a ± from the handles: a long shadow
+  measures better than a short one.
+- With *North* = *Shadow* the north comes from the shadow and only *Raise*
+  remains; with *Sun From* = *Shadow* the shadow gives everything.
 - *Display › North* (off by default) draws the north and the sun direction on
   the ground while calibrating.
 
 ### Fit HDRI
 
-- Turns the World's equirectangular HDRI about Z so that its sun has the
-  azimuth of the photo's sun. A viewer over the 3D view shows a reduced copy of
-  the HDRI with the brightest spot proposed; click the sun, Enter applies.
-- Only the Z rotation of a Mapping node changes (an existing one is reused, also
-  behind reroutes, and inside node groups as HDRI add-ons build them). The
-  sun's elevation is compared, never changed: over 10°
-  apart, a warning. *Follow the Sun* keeps the HDRI on the sun when it moves.
-- The viewer takes half the view and has a **Shift** magnifier (×4 on the
-  mouse, as for the calibration handles, with an inverted cross hair that
-  shows on the white sun), on a 2048 px copy of the HDRI.
-- A rotation fed by other nodes is followed back to its value and written
-  there: a group's *Rotation* input (Poly Haven's World: degrees → Multiply →
-  Combine XYZ), Value nodes, linear Math / Vector Math, nested groups; the
-  input's min / max are respected.
-- The equirectangular convention and the rotation sign are checked by Cycles
-  renders in the tests.
+With an equirectangular HDRI in the World (an *Environment Texture*), **Fit
+HDRI** turns it about Z so that its sun comes from the same side as the photo's:
+ambient light, reflections and the Sun light then agree.
+
+- **Viewer**: half the 3D view, over a 2048 px copy of the HDRI. FTC proposes the
+  brightest spot (thin white ring, found on the luminance with the sun's disc
+  averaged across the seam); click the sun if it is wrong (bright clouds,
+  reflections, a hidden sun). The orange ring is your pick with its elevation;
+  **Enter** applies, **Esc** cancels.
+- **Shift magnifier**: ×4 on the mouse, as for the calibration handles, with
+  the horizon and the marks magnified and a cross hair in inverted colours
+  that shows on the white sun too.
+- The white **× "Fit Sun"** is where the photo's sun lands, in the column of the
+  orange ring: their vertical gap is the elevation difference. The elevation is
+  never changed, only compared (warning beyond 10°): an HDRI whose sun lies near
+  the × gives shadows of the right length.
+- **Only the Z rotation changes**: an existing Mapping is reused (its X, Y and
+  location stay), also behind reroutes; otherwise *Texture Coordinate ›
+  Mapping* is inserted. Environment Textures showing the same image (one for the
+  light, one for the camera) turn together. Texture-type Mappings get the
+  inverse turn.
+- **Follow the Sun**: the HDRI keeps turning with the sun (a new side or north,
+  *Turn*, the time, a new calibration) with no new click; turning it by hand
+  switches the following off, ticking it takes over again.
+- **Node groups**: an HDRI inside a node group (as HDRI add-ons build the World)
+  is found and turned inside the group.
+- **A rotation fed by other nodes is followed back** to the value that sets it,
+  and that value is written: a group's *Rotation* input (Poly Haven's World:
+  degrees → Multiply → Combine XYZ → Mapping), Value nodes, reroutes, Combine
+  XYZ, Math and Vector Math add / subtract / multiply / divide / scale and
+  radians / degrees, groups in the middle and nested groups. The input's min /
+  max are respected (the turn of the angle that fits is chosen).
+- Every value is checked **before anything is written**: a refusal leaves the
+  World as it was. Refused with a message: nodes that cannot be followed back (a
+  sine, a texture, a muted node), keyframes or drivers on the way, a muted
+  Mapping, a vector from other nodes, a World or group linked from a library,
+  non-equirectangular projections. A group used twice in the World warns that
+  only one instance turns.
+- The equirectangular convention, the rotation sign and the group chains are
+  checked by Cycles renders in the tests.
 
 ### Calibration
 
 - **Up to six guide lines per vanishing point**: the − n + buttons next to each
-  axis. A new line starts between the first two and aims at their meeting point.
-  1.0 files keep two lines.
+  axis. A new line starts between the first two and aims at their meeting
+  point; the session's undo restores the number of lines. 1.0 files keep two.
 - **Export Report** in *Results*: Markdown or JSON with focal length, sensor,
-  field of view, camera position and rotation, uncertainty, guide fit, the
-  source of every input (EXIF or manual) and the sun. The manifest's file
-  permission now says so.
-- Tooltips: one-line descriptions, and the dynamic ones are translated (a line
-  break in a tooltip lost its Italian translation).
+  field of view, camera position and rotation, uncertainty, guide fit and the
+  source of every input (EXIF or manual). The sun block (time, place, north,
+  Turn, Raise, the light's elevation) is written only when Fit Sun is used, so
+  a photo's GPS position does not end up in a report by accident. The
+  manifest's file permission says so.
+
+### Interface
+
+- Every new control has a tooltip and an Italian translation; dynamic tooltips
+  are translated too (a line break in a tooltip lost its translation), and five
+  1.0 property descriptions got their missing Italian.
+- *Fit Sun* and *Fit HDRI* keep their English names in the Italian interface.
 
 ### Other
 
@@ -74,6 +162,19 @@ release since 0.1, is in [`CHANGELOG.it.md`](CHANGELOG.it.md).
   the Blender Extensions moderator).
 - New logo (a crosshair in a frame); README credits to fSpy, Perspective
   Plotter and the papers FTC relies on.
+
+### Shaped by the GUI tests
+
+The 1.1 test builds were tried on real photos; these changes came from them:
+
+- Map bearings and a landmark handle for the north → replaced by *Side* + *Turn*.
+- CG shadows shorter than the photo's on a sunset shot → *Raise*.
+- The shadow handles mixed with the calibration guides → *Calibrate Shadow*.
+- An unexplained white cross → the labelled × "Fit Sun" with hints.
+- HDRI worlds built by add-ons (Extreme PBR, Poly Haven) → node groups and
+  rotation chains.
+- A full-screen HDRI viewer → half size with a Shift magnifier and a cross hair
+  visible on the sun.
 
 ## 1.0.0 – 2026-10-11
 

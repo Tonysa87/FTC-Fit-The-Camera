@@ -211,6 +211,24 @@ quelle vere. *Sole da* sceglie la fonte:
 - **Ombra**: il sole misurato su un'ombra nella foto, senza data, luogo né nord
   (qualsiasi foto con un'ombra netta, anche senza EXIF).
 
+Una sessione tipica su una foto del telefono (data, ora e GPS nell'EXIF, niente
+bussola):
+
+1. Calibra la camera e *Applica*. In **Fit Sun**, *Sole da* = *Data e luogo*:
+   data, ora e luogo arrivano dalla foto (✓ = EXIF).
+2. *Nord* = **Lato**: scegli l'asse della scena da cui arriva il sole (le ombre
+   della foto cadono dalla parte opposta). Premi l'icona del sole accanto a
+   *Luce* (*Nuovo sole*).
+3. Spunta **Verifica con un'ombra**, premi **Calibra ombra** e metti le tre
+   maniglie arancioni su un palo, un paletto o un cartello e sulla punta della
+   sua ombra.
+4. Una **× bianca "Fit Sun"** mostra dove il sole calcolato mette quella punta.
+   Portala sulla maniglia della punta: **Ruota** la sposta di lato, **Alza**
+   lungo l'ombra (oppure leggi i numeri: *Ombra / Ruota* è la Ruota da
+   aggiungere, *Ombra / data* l'Alza che combacia). Invio.
+5. *Prepara render* e renderizza: le ombre della CG cadono come quelle vere.
+   **Fit HDRI** ruota l'HDRI del World sullo stesso sole.
+
 - **Quando e dove**: data, ora, fuso UTC, latitudine e longitudine dello scatto,
   lette dall'EXIF. L'ora GPS è UTC; se l'orologio della fotocamera concorda,
   l'istante viene dall'orologio e dal GPS solo il fuso (i telefoni scrivono l'ora
@@ -275,16 +293,20 @@ della foto: luce ambiente, riflessi e luce Sole sono così d'accordo.
   punto più luminoso (anello bianco sottile); l'anello arancione è il punto
   scelto: se la proposta è sbagliata (nuvole luminose, riflessi, sole coperto)
   clicca il sole. Tieni **Shift** per una lente ×4 sul mouse, come per le
-  maniglie di calibrazione. **Invio** applica, **Esc** annulla. La croce bianca
-  è dove cade il sole della foto, nella stessa colonna: la sua altezza rispetto
-  al sole dell'HDRI.
+  maniglie di calibrazione (il mirino è a colori invertiti, così si vede anche
+  sul sole bianco). **Invio** applica, **Esc** annulla. La **× bianca "Fit
+  Sun"** è dove cade il sole della foto, nella stessa colonna dell'anello
+  arancione: la distanza in verticale è la differenza di elevazione. Un HDRI
+  col sole vicino alla × dà ombre della lunghezza giusta.
 - Cambia solo la rotazione Z di un nodo *Mapping*: se c'è già viene usato (X, Y
   e posizione restano), altrimenti viene inserito *Texture Coordinate › Mapping*.
   L'elevazione del sole non viene mai cambiata, solo confrontata: oltre 10° di
   differenza le ombre non avranno la stessa lunghezza (avviso).
-- Poi l'HDRI segue il sole (*Segui il sole*): un nuovo nord, la *Correzione del
-  nord* o l'ora lo ruotano insieme alla luce. Ruotare a mano il suo Mapping
-  spegne l'inseguimento; riattivarlo riparte da lì.
+- Poi l'HDRI segue il sole (*Segui il sole*): un nuovo lato o nord, *Ruota* /
+  *Correzione del nord*, l'ora o una nuova calibrazione lo ruotano insieme alla
+  luce, senza ricliccare il sole. *Alza* non lo ruota (cambia solo il confronto
+  delle elevazioni). Ruotare a mano l'HDRI (il suo Mapping, o il valore che FTC
+  scrive, sotto) spegne l'inseguimento; riattivarlo riparte da lì.
 - Un Mapping dietro dei reroute viene trovato; le Environment Texture con la
   stessa immagine (una per la luce, una per la camera) ruotano insieme. Un HDRI
   dentro un gruppo di nodi (come lo costruiscono gli add-on per gli HDRI) viene
@@ -293,9 +315,13 @@ della foto: luce ambiente, riflessi e luce Sole sono così d'accordo.
   e scrive il valore all'origine: l'input *Rotation* di un gruppo (Poly Haven:
   gradi → Multiply → Combine XYZ), un nodo Value, attraverso reroute, Combine
   XYZ, Math / Vector Math somma, sottrazione, moltiplicazione, divisione,
-  radianti/gradi, e gruppi annidati. Nodi non invertibili (un seno, una
-  texture...), keyframe o driver sul valore, un vettore da altri nodi o un World
-  collegato da libreria vengono rifiutati con un messaggio.
+  radianti/gradi, e gruppi annidati. Min / max dell'input sono rispettati (si
+  sceglie il giro che ci sta). Ogni valore viene controllato prima di scrivere:
+  un rifiuto lascia il World com'era. Nodi non invertibili (un seno, una
+  texture, un nodo disattivato...), keyframe o driver lungo il percorso, un
+  Mapping disattivato, un vettore da altri nodi, o un World o un gruppo
+  collegati da libreria vengono rifiutati con un messaggio. Un gruppo usato due
+  volte nel World: ruota solo l'istanza sul percorso verso l'uscita (avviso).
 - Il sole dell'HDRI e la luce Sole danno entrambi luce diretta: abbassa uno dei
   due.
 - Solo HDRI equirettangolari (quasi tutti); le altre proiezioni vengono

@@ -26,6 +26,15 @@ Storia completa in italiano. Dalla 1.1 il changelog principale è in inglese:
   calcolato (punta dell'ombra nella vista camera, sole nel visore HDRI), con
   suggerimenti nel pannello e nell'intestazione; *Verifica con un'ombra* anche
   con *Lato* (*Ombra / Ruota*).
+- Audit della alpha.14: in Calibra ombra il Ctrl+Z che riporta indietro le guide
+  ricalcola; passare da Calibra a Calibra ombra non lascia il vecchio modal
+  attivo (in un'altra finestra chiudeva la nuova sessione); la sessione si
+  chiude se le maniglie dell'ombra vengono spente. Fit HDRI controlla ogni
+  valore prima di scrivere (un rifiuto lascia il World com'era), rifiuta nodi
+  disattivati, costanti con keyframe e gruppi da libreria, avvisa se il gruppo è
+  usato due volte; la lente si chiude bene e lascia passare la navigazione da
+  trackpad. Alza non porta il sole sotto 0,5°; *Ombra / data* è rossa solo oltre
+  l'Alza impostato; il report scrive l'elevazione usata dalla luce e il lato.
 - **Report di calibrazione** (1.1 A2): *Esporta report* in *Risultati*, in
   Markdown o JSON: focale, sensore, campo visivo, posizione e rotazione,
   incertezza, aderenza delle guide, fonte di ogni dato (EXIF o manuale) e sole.

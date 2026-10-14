@@ -87,8 +87,10 @@ The rest of this page explains every option.
 - **Fit Sun** (1.1, in development): a Sun light turned like the sun of the
   photo, from the EXIF date, time and GPS (or entered by hand), placed by the
   compass, by the scene axis it comes from (turned by eye) or by a shadow; or
-  measured on a shadow in the photo alone. **Fit HDRI** turns the World HDRI about Z onto
-  that sun.
+  measured on a shadow in the photo alone. *Turn* and *Raise* fine-tune it on a
+  shadow of the photo, with a white × showing where the computed sun puts the
+  shadow's tip. **Fit HDRI** turns the World HDRI about Z onto that sun, also
+  through node groups such as Poly Haven's.
 - Interface in English and Italian.
 
 ## Install
@@ -228,6 +230,21 @@ the real ones. *Sun From* picks the source:
 - **Shadow**: the sun measured on a shadow in the photo, with no date, place or
   north (any photo with a sharp shadow, also without EXIF).
 
+A typical session on a phone photo (date, time and GPS in the EXIF, no compass):
+
+1. Calibrate the camera and *Apply*. In **Fit Sun**, *Sun From* = *Date and
+   Place*: the date, time and place come from the photo (✓ = EXIF).
+2. *North* = **Side**: pick the scene axis the sun comes from (the shadows of
+   the photo fall the other way). Press the sun icon next to *Light* (*New Sun*).
+3. Tick **Check with a Shadow**, press **Calibrate Shadow** and put the three
+   orange handles on a pole, a post or a sign and on the tip of its shadow.
+4. A white **× "Fit Sun"** shows where the computed sun puts that tip. Bring it
+   onto the tip handle: **Turn** moves it sideways, **Raise** along the shadow
+   (or read the numbers: *Shadow vs Turn* is the Turn to add, *Shadow vs Date*
+   the Raise that matches). Enter.
+5. *Prepare Render* and render: the CG shadows fall like the real ones.
+   **Fit HDRI** turns the World HDRI onto the same sun.
+
 - **When and where**: date, time, UTC offset, latitude and longitude of the shot,
   read from the EXIF. The GPS time is UTC; when the camera clock agrees with it,
   the clock gives the instant and the GPS only the time zone (phones write the
@@ -293,15 +310,21 @@ ambient light, reflections and the Sun light then agree.
   the brightest spot (thin white ring); the orange ring is the point you pick:
   click the sun if the proposal is wrong (bright clouds, reflections, a hidden
   sun). Hold **Shift** for a ×4 magnifier on the mouse, as for the calibration
-  handles. **Enter** applies, **Esc** cancels. The white cross is where the
-  photo's sun lands, in the same column: its height against the HDRI's sun.
+  handles (its cross hair is drawn in inverted colours, so it shows on the
+  white sun too). **Enter** applies, **Esc** cancels. The white **× "Fit Sun"**
+  is where the photo's sun lands, in the same column as the orange ring: their
+  vertical gap is the elevation difference. An HDRI whose sun lies near the ×
+  gives shadows of the right length.
 - Only the Z rotation of a *Mapping* node changes: an existing one is reused
   (its X, Y and location stay), otherwise *Texture Coordinate › Mapping* is
   inserted. The sun's elevation is never changed, only compared: more than 10°
   apart means the shadows will not have the same length (warning).
-- The HDRI then follows the sun (*Follow the Sun*): a new north, *North
-  Correction* or time turns it with the light. Turning its Mapping by hand
-  switches the following off; ticking it again takes over from there.
+- The HDRI then follows the sun (*Follow the Sun*): a new side or north,
+  *Turn* / *North Correction*, the time or a new calibration turn it with the
+  light, with no new click on its sun. *Raise* does not turn it (only its
+  elevation comparison changes). Turning the HDRI by hand (its Mapping, or the
+  value FTC writes, below) switches the following off; ticking it again takes
+  over from there.
 - A Mapping behind reroutes is found; Environment Textures showing the same
   image (one for the light, one for the camera) turn together. An HDRI inside a
   node group (as HDRI add-ons build the World) is turned inside the group.
@@ -309,9 +332,13 @@ ambient light, reflections and the Sun light then agree.
   writes the value at the start: a group's *Rotation* input (Poly Haven: degrees
   → Multiply → Combine XYZ), a Value node, through reroutes, Combine XYZ,
   Math / Vector Math add, subtract, multiply, divide, radians/degrees, and nested
-  groups. Nodes that cannot be followed back (a sine, a texture...), keyframes
-  or drivers on the value, a vector from other nodes or a World linked from a
-  library are refused with a message.
+  groups. The input's min / max are respected (the turn that fits is chosen).
+  Every value is checked before anything is written: a refusal leaves the World
+  as it was. Nodes that cannot be followed back (a sine, a texture, a muted
+  node...), keyframes or drivers on the way, a muted Mapping, a vector from
+  other nodes, or a World or group linked from a library are refused with a
+  message. A group used twice in the World: only the instance on the way to
+  the output turns (warning).
 - HDRI sun and Sun light both give direct light: lower one of them.
 - Equirectangular HDRIs only (nearly all of them); other projections are
   reported.
