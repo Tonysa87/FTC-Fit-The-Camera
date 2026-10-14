@@ -48,12 +48,18 @@ STATUS_KEYS = (
     "LMB drag: move  Shift: fine + magnifier  Ctrl: snap  1/2/3: axis  F: flip  H: straighten  "
     "Ctrl+Z / Ctrl+Shift+Z: undo/redo  Enter: apply  Esc/RMB: exit"
 )
+SHADOW_STATUS_KEYS = (
+    "Foot, top, shadow tip  |  LMB drag: move  Shift: fine + magnifier  Ctrl: snap  "
+    "Ctrl+Z / Ctrl+Shift+Z: undo/redo  Enter/Esc/RMB: done"
+)
 
 
 class Session:
     """State of the running calibration, shared with the draw callback."""
 
-    def __init__(self, camera, area, region):
+    def __init__(self, camera, area, region, shadow_only=False):
+        # Calibrate Shadow: only the shadow handles, the camera left alone.
+        self.shadow_only = shadow_only
         self.camera_name = camera.name
         self.camera_ptr = camera.as_pointer()
         self.area_ptr = area.as_pointer()
@@ -100,7 +106,7 @@ def restore(settings, snap: dict) -> None:
 def session_camera(session):
     """The session's camera object, followed through a rename; ``None`` if gone."""
     obj = draw.session_camera(session)
-    if obj is not None:
+    if obj is not None and not session.shadow_only:
         calibrate.session_camera = obj.name
     return obj
 
@@ -215,6 +221,12 @@ class FTC_OT_calibrate(Operator):
     bl_label = "Calibrate"
     bl_options = {"REGISTER", "UNDO"}
 
+    shadow: BoolProperty(
+        name="Shadow Only",
+        description="Only the shadow handles of Fit Sun: the guides are hidden and the camera is not changed",
+        options={"SKIP_SAVE", "HIDDEN"},
+    )
+
     _session: Session | None = None
 
     @classmethod
@@ -225,12 +237,21 @@ class FTC_OT_calibrate(Operator):
         return cam is not None and cam.data.ftc.image is not None
 
     @classmethod
-    def running(cls) -> bool:
-        return cls._session is not None
+    def running(cls, shadow: bool | None = None) -> bool:
+        """A session runs (of that kind, when ``shadow`` is given)."""
+        session = cls._session
+        return session is not None and (shadow is None or session.shadow_only == shadow)
 
     @classmethod
     def description(cls, context, properties):
-        if cls._session is not None:
+        if properties.shadow:
+            if cls.running(shadow=True):
+                return tip_("End placing the shadow handles")
+            return tip_(
+                "Place the shadow handles in the camera view: the foot and the top of something vertical, the tip "
+                "of its shadow. The calibration guides are hidden and the camera is not changed"
+            )
+        if cls.running(shadow=False):
             return tip_("End the calibration session, keeping the guides")
         return tip_(
             "Edit the calibration guides in the camera view: drag the handles onto lines of the image. "
@@ -242,10 +263,14 @@ class FTC_OT_calibrate(Operator):
         if session is not None and not area_exists(session):
             # Left over by a modal handler Blender dropped (window closed).
             end_session()
-        elif session is not None:
+        elif session is not None and session.shadow_only == self.shadow:
             # A second click on Calibrate ends the running session.
             session.stop_requested = True
             return {"CANCELLED"}
+        elif session is not None:
+            # The other kind of session: switch (its modal handler sees no
+            # session at its next event and stops).
+            end_session()
         cam_obj = calibrate.view_camera(context)
         area = context.area
         region = main_region(area)
@@ -259,11 +284,16 @@ class FTC_OT_calibrate(Operator):
         calibrate.ensure_handles(settings)
         if match_image_aspect(context.scene, calibrate.image_size(settings)):
             self.report({"INFO"}, "Render height changed to the image's aspect ratio")
-        session = Session(cam_obj, area, region)
+        session = Session(cam_obj, area, region, shadow_only=self.shadow)
         session.handler = bpy.types.SpaceView3D.draw_handler_add(draw.draw_overlay, (session,), "WINDOW", "POST_PIXEL")
         FTC_OT_calibrate._session = session
-        calibrate.session_camera = cam_obj.name
-        calibrate.update(context, cam_obj, apply=settings.live)
+        if self.shadow:
+            # Not a calibration session: the camera is not written.
+            if calibrate.cached_solution(cam_obj.data) is None:
+                calibrate.refresh(cam_obj.data)
+        else:
+            calibrate.session_camera = cam_obj.name
+            calibrate.update(context, cam_obj, apply=settings.live)
         context.window_manager.modal_handler_add(self)
         self.update_status(context, area)
         area.tag_redraw()
@@ -275,6 +305,12 @@ class FTC_OT_calibrate(Operator):
     def update_status(self, context, area) -> None:
         session = FTC_OT_calibrate._session
         settings = session_camera(session).data.ftc
+        if session.shadow_only:
+            text = "FTC  " + iface_("Shadow", "FTC") + "  |  " + iface_(SHADOW_STATUS_KEYS)
+            if text != session.status:
+                session.status = text
+                area.header_text_set(text)
+            return
         mode = iface_(MODE_NAMES[settings.mode])
         if settings.mode == "VP":
             mode += f" ({settings.vp_count})"
@@ -290,7 +326,7 @@ class FTC_OT_calibrate(Operator):
     def finish(self, context, *, apply: bool):
         session = FTC_OT_calibrate._session
         cam_obj = session_camera(session) if session else None
-        if apply and cam_obj is not None:
+        if apply and cam_obj is not None and not session.shadow_only:
             if calibrate.update(context, cam_obj, apply=True) is None:
                 error = cam_obj.data.ftc.results.error or "the calibration cannot be solved"
                 self.report({"WARNING"}, iface_("Camera not updated: {}").format(error))
@@ -308,6 +344,12 @@ class FTC_OT_calibrate(Operator):
         radius = draw.PICK_RADIUS * draw.ui_scale()
         best, best_d = None, radius
         solution = calibrate.cached_solution(settings.id_data)
+        if FTC_OT_calibrate._session.shadow_only:
+            for key in draw.session_keys(settings, FTC_OT_calibrate._session):
+                d = math.dist(view.to_region(draw.handle_co(settings, solution, key)), mouse)
+                if d < best_d:
+                    best, best_d = key, d
+            return best
         if not settings.freeze:
             for key in calibrate.active_handle_keys(settings):
                 d = math.dist(view.to_region(draw.handle_co(settings, solution, key)), mouse)
@@ -322,7 +364,7 @@ class FTC_OT_calibrate(Operator):
     def snap_target(self, settings, view, key, pos):
         radius = draw.PICK_RADIUS * draw.ui_scale() * 1.5
         best, best_d = None, radius
-        for other in calibrate.active_handle_keys(settings):
+        for other in draw.session_keys(settings, FTC_OT_calibrate._session):
             if other == key:
                 continue
             p = view.to_region(draw.handle_co(settings, calibrate.cached_solution(settings.id_data), other))
@@ -335,7 +377,8 @@ class FTC_OT_calibrate(Operator):
         push_undo(session, snap)
 
     def changed(self, context, cam_obj, *, reset_pitch=True, key=None):
-        if key in ops_sun.SUN_KEYS:
+        session = FTC_OT_calibrate._session
+        if key in ops_sun.SUN_KEYS or (session is not None and session.shadow_only):
             # Not a calibration input: no solve (nor uncertainty), only the sun.
             ops_sun.orient(cam_obj.data.ftc)
             calibrate.tag_redraw(context)
@@ -456,6 +499,9 @@ class FTC_OT_calibrate(Operator):
             return self.finish(context, apply=True)
         if event.type in {"ESC", "RIGHTMOUSE"}:
             return self.finish(context, apply=False)
+        if session.shadow_only and event.type in SHORTCUT_KEYS:
+            # Calibration shortcuts: not in a shadow session.
+            return {"RUNNING_MODAL"}
 
         if event.type == "H":
             self.push_undo(session, snapshot(settings))
@@ -590,7 +636,7 @@ class FTC_OT_apply(Operator):
         ops_orientation.sync(context, cam_obj)
         if match_image_aspect(context.scene, calibrate.image_size(cam_obj.data.ftc)):
             self.report({"INFO"}, "Render height changed to the image's aspect ratio")
-        if FTC_OT_calibrate.running():
+        if FTC_OT_calibrate.running(shadow=False):
             # Like Enter: the modal operator sees no session at its next event and stops.
             end_session()
             calibrate.tag_redraw(context)

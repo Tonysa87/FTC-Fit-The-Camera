@@ -241,8 +241,26 @@ _IT = {
     "From a shadow in the photo (shadow handles in Calibrate) and the sun of the date and place": (
         "Da un'ombra nella foto (maniglie dell'ombra in Calibra) e dal sole di data e luogo"
     ),
-    "Calibrate: orange handles on the foot and the top of something vertical, and on the tip of its shadow": (
-        "Calibra: maniglie arancioni sul piede e sulla cima di qualcosa di verticale, e sulla punta della sua ombra"
+    "Calibrate Shadow: orange handles on the foot and the top of something vertical, and on the tip of "
+    "its shadow": (
+        "Calibra ombra: maniglie arancioni sul piede e sulla cima di qualcosa di verticale, e sulla punta della "
+        "sua ombra"
+    ),
+    "Calibrate Shadow": "Calibra ombra",
+    "End placing the shadow handles": "Termina il posizionamento delle maniglie dell'ombra",
+    "Place the shadow handles in the camera view: the foot and the top of something vertical, the tip "
+    "of its shadow. The calibration guides are hidden and the camera is not changed": (
+        "Posiziona le maniglie dell'ombra nella vista camera: il piede e la cima di qualcosa di verticale, la "
+        "punta della sua ombra. Le guide di calibrazione sono nascoste e la camera non cambia"
+    ),
+    "Only the shadow handles of Fit Sun: the guides are hidden and the camera is not changed": (
+        "Solo le maniglie dell'ombra di Fit Sun: le guide sono nascoste e la camera non cambia"
+    ),
+    "Shadow Only": "Solo ombra",
+    "Foot, top, shadow tip  |  LMB drag: move  Shift: fine + magnifier  Ctrl: snap  "
+    "Ctrl+Z / Ctrl+Shift+Z: undo/redo  Enter/Esc/RMB: done": (
+        "Piede, cima, punta dell'ombra  |  LMB trascina: sposta  Shift: fine + lente  Ctrl: snap  "
+        "Ctrl+Z / Ctrl+Shift+Z: annulla/ripeti  Invio/Esc/RMB: fine"
     ),
     "Shadow Elevation": "Elevazione dall'ombra",
     "Shadow vs Date": "Ombra / data",

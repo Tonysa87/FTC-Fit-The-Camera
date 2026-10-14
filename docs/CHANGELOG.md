@@ -22,7 +22,8 @@ release since 0.1, is in [`CHANGELOG.it.md`](CHANGELOG.it.md).
   (pick the scene axis +X −X +Y −Y, then *Turn* it by eye; the default without a
   compass), or from a **shadow**. Most Android phones write no compass: no map
   or measuring is needed (an early map/landmark design was dropped after the
-  first GUI test as too complex). **Raise** lifts or lowers the date's sun by
+  first GUI test as too complex). **Calibrate Shadow** places only the shadow
+  handles (no guides, the camera untouched). **Raise** lifts or lowers the date's sun by
   eye when the CG shadows come out shorter or longer than in the photo.
 - **Sun from a shadow**: three handles on the foot and top of something vertical
   and on the tip of its shadow, on the ground or on a wall through the origin.
@@ -43,7 +44,8 @@ release since 0.1, is in [`CHANGELOG.it.md`](CHANGELOG.it.md).
   sun's elevation is compared, never changed: over 10°
   apart, a warning. *Follow the Sun* keeps the HDRI on the sun when it moves.
 - The viewer takes half the view and has a **Shift** magnifier (×4 on the
-  mouse, as for the calibration handles), on a 2048 px copy of the HDRI.
+  mouse, as for the calibration handles, with an inverted cross hair that
+  shows on the white sun), on a 2048 px copy of the HDRI.
 - A rotation fed by other nodes is followed back to its value and written
   there: a group's *Rotation* input (Poly Haven's World: degrees → Multiply →
   Combine XYZ), Value nodes, linear Math / Vector Math, nested groups; the

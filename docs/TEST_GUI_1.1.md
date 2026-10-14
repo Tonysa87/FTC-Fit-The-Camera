@@ -35,10 +35,13 @@ Zip: `\\wsl.localhost\Ubuntu-24.04\home\tony\Projects\FTC\dist\fit_the_camera-<v
    freccia N e la linea tratteggiata verso il sole.
 
 ## Sole dall'ombra
-8. **Ponte levatoio**: *Sun From* = *Shadow*. In *Calibrate* tre maniglie
-   arancioni: piede e cima di un montante della ringhiera, punta della sua
-   ombra sul ponte. Il pannello dà *Shadow Elevation* con ±; la luce segue
-   mentre trascini.
+8. **Ponte levatoio**: *Sun From* = *Shadow*. **Calibrate Shadow** (sezione
+   Fit Sun): solo tre maniglie arancioni, niente guide, intestazione "Foot,
+   top, shadow tip"; 1/2/3, F, H non fanno nulla. Piede e cima di un montante
+   della ringhiera, punta della sua ombra sul ponte. Il pannello dà *Shadow
+   Elevation* con ±; la luce segue mentre trascini. Invio o Esc chiudono senza
+   toccare la camera. *Calibrate* mentre gira passa alla calibrazione completa
+   (e viceversa).
 9. Torna a *Date and Place* e scegli *North* = **Shadow**: stesse maniglie, il
    nord viene dall'ombra; *Shadow vs Date* confronta l'elevazione e la crocetta
    bianca segna dove il sole della data metterebbe la punta.
@@ -52,7 +55,8 @@ Zip: `\\wsl.localhost\Ubuntu-24.04\home\tony\Projects\FTC\dist\fit_the_camera-<v
     l'HDRI ruota (nei nodi del World compare *FTC HDRI* o cambia solo la Z del
     tuo Mapping). Esc annulla senza cambiare nulla. Il visore occupa metà
     vista; tenendo **Shift** compare la lente ×4 sul mouse (cursore nascosto,
-    mirino al centro): il clic sceglie il punto sotto il mirino.
+    mirino al centro, a colori invertiti: si vede anche sul sole bianco): il
+    clic sceglie il punto sotto il mirino.
 12. Render: ombre della Sun e luce dell'HDRI dalla stessa parte. Cambia la
     *North Correction*: l'HDRI segue (*Follow the Sun*). Ruota a mano la Z del
     Mapping: *Follow the Sun* si spegne.
