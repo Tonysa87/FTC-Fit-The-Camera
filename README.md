@@ -58,7 +58,7 @@ The rest of this page explains every option.
 
 ## Features
 
-- **Vanishing points**: 1, 2 or 3, two guide lines per axis, with the axis and
+- **Vanishing points**: 1, 2 or 3, two to six guide lines per axis (1.1), with the axis and
   direction of each group (X, Y, Z, ±).
 - **Known rectangle**: the four corners of a rectangle of known size, lying on the reference plane (XY, XZ or YZ).
 - **Horizon**: the horizon line, the camera height and the heading.
@@ -124,7 +124,9 @@ Open the sidebar of the 3D viewport (N) and the **FTC** tab.
    guides onto edges of the image that are parallel in the real world.
    Shift = fine, with a ×4 magnifier on the handle, Ctrl = snap, 1/2/3 = axis,
    F = flip the direction, H = straighten the horizon, Ctrl+Z / Ctrl+Shift+Z = undo / redo, Enter = apply,
-   Esc / right click = exit. With *Live Update* (default) the camera follows the
+   Esc / right click = exit. The **− n +** buttons next to an axis (1.1) add a
+   guide line between its first two, up to six, or remove the last: more lines
+   on long edges average out the placement errors. With *Live Update* (default) the camera follows the
    guides while you drag; Enter or **Apply** writes it and ends the session.
    Outside a session, changes made in the panel move the camera only on
    **Apply**. In the camera view the photo moves with the camera: to see the

@@ -357,6 +357,20 @@ _IT = {
     "HDRI sun and Sun light both give direct light: lower one of them": (
         "Il sole dell'HDRI e la luce Sole danno entrambi luce diretta: abbassa uno dei due"
     ),
+    "End the calibration session, keeping the guides": "Termina la sessione di calibrazione, tenendo le guide",
+    "Edit the calibration guides in the camera view: drag the handles onto lines of the image. "
+    "Shortcuts are listed in the header": (
+        "Modifica le guide di calibrazione nella vista camera: trascina le maniglie sulle linee dell'immagine. "
+        "Le scorciatoie sono nell'header"
+    ),
+    "Flip the third axis. It follows from the first two (the world is right-handed): "
+    "axis 2 flips with it, or axis 1 when axis 2 is Z": (
+        "Inverte il terzo asse. Segue dai primi due (il riferimento è destrorso): con lui si inverte l'asse 2, "
+        "o l'asse 1 se il 2 è Z"
+    ),
+    "Flip the direction of this axis (the arrow on its first guide)": (
+        "Inverte il verso di questo asse (la freccia sulla sua prima guida)"
+    ),
     # Extra guide lines
     "Guide Lines": "Linee guida",
     "Add a guide line to this vanishing point (up to 6), between its first two lines: more lines average out "

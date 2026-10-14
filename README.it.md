@@ -97,7 +97,9 @@ Sidebar del viewport (N) › tab **FTC**.
    modifiche fatte nel pannello spostano la camera solo con **Apply**. Nella vista
    camera la foto si muove con la camera: il risultato si vede dagli oggetti
    della scena o dalla posizione della camera.
-   Accanto a ogni asse un pulsante ne inverte il verso.
+   Accanto a ogni asse un pulsante ne inverte il verso, e i pulsanti **− n +**
+   (1.1) aggiungono una linea guida tra le prime due, fino a sei, o tolgono
+   l'ultima: più linee su spigoli lunghi mediano gli errori di posizionamento.
    **Focale**: *Nota + guide* (default: parte dalla focale di Camera Data e le guide
    la correggono per quanto la misurano; se è sconosciuta la risolvono), *Solo
    guide*, *Solo nota*. **Scala**: *Misura di riferimento* (default per le

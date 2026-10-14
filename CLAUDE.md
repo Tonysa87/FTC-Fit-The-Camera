@@ -34,7 +34,13 @@ Extensions audience) and `README.it.md` (Italian); developer docs
   Point/Vector: lookup = Rz(angle) d, Texture type inverse). `Image.copy()` of
   a generated/edited image comes back regenerated (blank): read those
   directly. `hdri_fitted` = *Follow the Sun*, off when the Mapping's Z differs
-  from `hdri_angle`. Viewer closed on cancel()/load_pre. Next: A1 extra VP lines -> A2 report. Decided 2026-10-14: explicit *New Sun* button,
+  from `hdri_angle`. Viewer closed on cancel()/load_pre.
+  A1 DONE (1.1.0-alpha.5, audited): `vpN_lines` 2..6, handles vpN_3a..6b,
+  `calibrate.group_keys/group_lines`; a new line starts between the first two and
+  aims at their meeting point (`extra_line`); session snapshots keep the counts.
+  Operator tooltips: one-line `bl_description` (docstring line breaks reach the
+  tooltip and miss the translation); `description()` callbacks return `tip_(...)`.
+  Display > North off by default. Next: A2 report + English changelog. Decided 2026-10-14: explicit *New Sun* button,
   HDRI equirectangular only. No compass is the NORM (Android: none of the
   `samples/` has GPSImgDirection; all have GPS + UTC GPS time): north from a
   map bearing / azimuth slider / shadow are first-class, not fallbacks.

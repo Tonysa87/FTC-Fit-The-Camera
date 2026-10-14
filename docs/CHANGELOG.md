@@ -1,6 +1,12 @@
 # Changelog
 
 ## Non rilasciato
+- **Fino a sei linee per punto di fuga** (1.1 A1): pulsanti − n + accanto a ogni
+  asse; la nuova linea nasce tra le prime due, puntata sul loro punto di
+  incontro; l'undo della sessione ripristina anche il numero di linee. I file
+  1.0 restano a due linee. Tooltip dinamici ora tradotti.
+- *Visualizzazione › Nord* spento di default; tooltip di una riga (quelli su più
+  righe perdevano la traduzione).
 - **Fit Sun** (1.1, in corso): nuova sezione dopo *Render*. Data, ora e luogo
   dello scatto dall'EXIF (ora UTC del GPS, fuso dedotto confrontandola con
   l'orologio della fotocamera; avviso se l'ora GPS è vecchia), o a mano. Sole

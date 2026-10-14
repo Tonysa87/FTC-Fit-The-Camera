@@ -70,14 +70,28 @@ EXTRA_LINE_T = {3: 0.5, 4: 0.25, 5: 0.75, 6: 0.125}
 
 
 def extra_line(layout: dict, index: int, n: int) -> tuple:
-    """Default ends of line ``n`` (3..6) of group ``index``, between its first
-    two lines in ``layout``: a line that already points near the vanishing point."""
+    """Default ends of line ``n`` (3..6) of group ``index``: it starts between the
+    first two lines of ``layout`` and points at their meeting point (their
+    vanishing point), so a new line agrees with the others until it is moved.
+    Coordinates are normalised: meeting points survive the uneven scaling."""
     t = EXTRA_LINE_T[n]
-    ends = []
-    for end in "ab":
-        p1, p2 = layout[f"vp{index}_1{end}"], layout[f"vp{index}_2{end}"]
-        ends.append((p1[0] + t * (p2[0] - p1[0]), p1[1] + t * (p2[1] - p1[1])))
-    return tuple(ends)
+    a1, b1, a2, b2 = (np.asarray(layout[f"vp{index}_{k}"], float) for k in ("1a", "1b", "2a", "2b"))
+    if (b2 - a2) @ (b1 - a1) < 0.0:
+        a2, b2 = b2, a2  # line 2 drawn the other way
+    a = a1 + t * (a2 - a1)
+    length = (1.0 - t) * np.linalg.norm(b1 - a1) + t * np.linalg.norm(b2 - a2)
+    meet = np.cross(np.cross([*a1, 1.0], [*b1, 1.0]), np.cross([*a2, 1.0], [*b2, 1.0]))
+    scale = float(np.linalg.norm(meet))
+    if scale < 1e-12:
+        b = b1 + t * (b2 - b1)  # the two lines coincide
+    else:
+        # Towards the meeting point, or along it when it is at infinity (parallel lines).
+        direction = meet[:2] / meet[2] - a if abs(meet[2]) > 1e-9 * scale else meet[:2]
+        if direction @ (b1 - a1) < 0.0:
+            direction = -direction
+        norm = float(np.linalg.norm(direction))
+        b = a + length * direction / norm if norm > 1e-12 else b1 + t * (b2 - b1)
+    return (float(a[0]), float(a[1])), (float(b[0]), float(b[1]))
 
 
 def _add_extra_lines(layout: dict) -> None:
@@ -675,6 +689,12 @@ def seed_third_axis(cam_data) -> None:
     with suspended():
         for key, c in zip(keys, co):
             set_handle(settings, key, c)
+        # Extra lines of the group follow the new first two.
+        first_two = {k: handle(settings, k) for k in keys}
+        for n in range(3, line_count(settings, 3) + 1):
+            a, b = extra_line(first_two, 3, n)
+            set_handle(settings, f"vp3_{n}a", a)
+            set_handle(settings, f"vp3_{n}b", b)
 
 
 def cached_solution(cam_data) -> CameraSolution | None:

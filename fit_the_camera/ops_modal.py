@@ -9,6 +9,7 @@ import math
 import bpy
 from bpy.app.handlers import persistent
 from bpy.app.translations import pgettext_iface as iface_
+from bpy.app.translations import pgettext_tip as tip_
 from bpy.props import BoolProperty, IntProperty
 from bpy.types import Operator
 
@@ -81,6 +82,7 @@ def snapshot(settings) -> dict:
         "pitch_offset": settings.pitch_offset,
         "axes": (settings.vp1_axis, settings.vp2_axis, settings.vp3_axis),
         "straighten": settings.straighten,
+        "lines": (settings.vp1_lines, settings.vp2_lines, settings.vp3_lines),
     }
 
 
@@ -91,6 +93,8 @@ def restore(settings, snap: dict) -> None:
         settings.pitch_offset = snap["pitch_offset"]
         settings.vp1_axis, settings.vp2_axis, settings.vp3_axis = snap["axes"]
         settings.straighten = snap["straighten"]
+        if "lines" in snap:
+            settings.vp1_lines, settings.vp2_lines, settings.vp3_lines = snap["lines"]
 
 
 def session_camera(session):
@@ -227,8 +231,8 @@ class FTC_OT_calibrate(Operator):
     @classmethod
     def description(cls, context, properties):
         if cls._session is not None:
-            return "End the calibration session, keeping the guides"
-        return (
+            return tip_("End the calibration session, keeping the guides")
+        return tip_(
             "Edit the calibration guides in the camera view: drag the handles onto lines of the image. "
             "Shortcuts are listed in the header"
         )
@@ -637,11 +641,11 @@ class FTC_OT_flip_axis(Operator):
     @classmethod
     def description(cls, context, properties):
         if properties.index == 3:
-            return (
+            return tip_(
                 "Flip the third axis. It follows from the first two (the world is right-handed): "
                 "axis 2 flips with it, or axis 1 when axis 2 is Z"
             )
-        return "Flip the direction of this axis (the arrow on its first guide)"
+        return tip_("Flip the direction of this axis (the arrow on its first guide)")
 
     def execute(self, context):
         cam_obj = _panel_camera(context)
@@ -674,8 +678,8 @@ class FTC_OT_vp_line(Operator):
     @classmethod
     def description(cls, context, properties):
         if properties.remove:
-            return "Remove the last guide line of this vanishing point (two stay)"
-        return (
+            return tip_("Remove the last guide line of this vanishing point (two stay)")
+        return tip_(
             "Add a guide line to this vanishing point (up to 6), between its first two lines: more lines "
             "average out the placement errors"
         )
