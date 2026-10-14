@@ -8,7 +8,7 @@ import bpy
 from bpy.app.translations import pgettext_iface as iface_
 from bpy.types import Panel
 
-from . import calibrate, ops_orientation, ops_render, ops_sun
+from . import calibrate, ops_hdri, ops_orientation, ops_render, ops_sun
 from .draw import plane_axes, remaining_axis, third_axis
 from .exif import is_native_aspect
 from .ops_load import background_for
@@ -452,6 +452,39 @@ class FTC_PT_main(Panel):
             box = body.box()
             box.alert = True
             wrapped(box, context, iface_(problem), icon="ERROR")
+        self.draw_hdri(context, body, sun, state)
+
+    def draw_hdri(self, context, body, sun, state):
+        body.separator()
+        env, problem = ops_hdri.environment(context.scene.world)
+        row = body.row()
+        row.enabled = env is not None and state.direction is not None
+        row.operator("ftc.fit_hdri", icon="WORLD")
+        if env is None:
+            wrapped(body, context, iface_(problem), icon="INFO")
+            return
+        if problem:
+            wrapped(body, context, iface_(problem), icon="INFO")
+        col = body.column(align=True)
+        if sun.hdri_fitted and env.image.name == sun.hdri_image:
+            mapping = ops_hdri.mapping_of(env)
+            if mapping is not None:
+                z = mapping.inputs["Rotation"].default_value[2]
+                info_row(col, iface_("HDRI Rotation"), f"{math.degrees(z):.1f}°")
+            hdri_el = (sun.hdri_point[1] - 0.5) * 180.0
+            off = None
+            if state.direction is not None:
+                off = hdri_el - math.degrees(math.asin(max(-1.0, min(1.0, state.direction.z))))
+            text = f"{hdri_el:.1f}°" + (f"  ({off:+.1f}°)" if off is not None else "")
+            alert = off is not None and abs(off) > ops_hdri.ELEVATION_WARNING
+            info_row(col, iface_("HDRI Sun Elevation"), text, alert=alert)
+            if sun.light is not None:
+                wrapped(
+                    body,
+                    context,
+                    iface_("HDRI sun and Sun light both give direct light: lower one of them"),
+                    icon="INFO",
+                )
 
     def draw_shadow(self, context, body, sun, state):
         """Shadow handles: the sun itself (Shadow), or a check of the date and place."""

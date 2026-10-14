@@ -406,6 +406,13 @@ class FTC_Sun(PropertyGroup):
         soft_max=3.141592653589793,
         update=_sun_changed,
     )
+    # Fit HDRI: the sun's point on the World HDRI, kept on the sun when it moves.
+    hdri_point: FloatVectorProperty(
+        size=2,
+        description="Point of the sun on the HDRI picked by Fit HDRI (0..1, origin bottom-left)",
+    )
+    hdri_image: StringProperty(description="HDRI image fitted by Fit HDRI")
+    hdri_fitted: BoolProperty(description="The World HDRI follows the sun (set by Fit HDRI)")
     show_north: BoolProperty(
         name="North",
         translation_context=FTC_CONTEXT,

@@ -293,6 +293,48 @@ _IT = {
     "this shadow puts the sun below the horizon: check the handles and the shadow plane": (
         "quest'ombra mette il sole sotto l'orizzonte: controlla le maniglie e il piano dell'ombra"
     ),
+    # Fit HDRI
+    "Several Environment Textures reach the World output: using the first by name": (
+        "Più Environment Texture arrivano all'uscita del World: uso la prima per nome"
+    ),
+    "Turn the World's HDRI about Z so that its sun takes the direction of the photo's sun: click the sun on "
+    "the HDRI (FTC proposes the brightest spot), Enter applies": (
+        "Ruota l'HDRI del World attorno a Z finché il suo sole prende la direzione del sole della foto: clicca "
+        "il sole sull'HDRI (FTC propone il punto più luminoso), Invio applica"
+    ),
+    "Point of the sun on the HDRI (0..1, origin bottom-left); negative: let FTC find it": (
+        "Punto del sole sull'HDRI (0..1, origine in basso a sinistra); negativo: lo trova FTC"
+    ),
+    "Point of the sun on the HDRI picked by Fit HDRI (0..1, origin bottom-left)": (
+        "Punto del sole sull'HDRI scelto da Fit HDRI (0..1, origine in basso a sinistra)"
+    ),
+    "HDRI image fitted by Fit HDRI": "Immagine HDRI adattata da Fit HDRI",
+    "The World HDRI follows the sun (set by Fit HDRI)": "L'HDRI del World segue il sole (impostato da Fit HDRI)",
+    "The World has no nodes: add an Environment Texture with an HDRI": (
+        "Il World non ha nodi: aggiungi un'Environment Texture con un HDRI"
+    ),
+    "No Environment Texture reaches the World output": "Nessuna Environment Texture arriva all'uscita del World",
+    "The Environment Texture has no image": "L'Environment Texture non ha un'immagine",
+    "The Environment Texture is not equirectangular: Fit HDRI needs an equirectangular HDRI": (
+        "L'Environment Texture non è equirettangolare: Fit HDRI vuole un HDRI equirettangolare"
+    ),
+    "No sun yet: set Fit Sun first": "Ancora nessun sole: imposta prima Fit Sun",
+    "The HDRI image cannot be read": "L'immagine HDRI non si può leggere",
+    "The HDRI's Mapping has an X or Y rotation: its sun is matched about Z only, check it": (
+        "Il Mapping dell'HDRI ha una rotazione X o Y: il sole viene allineato solo attorno a Z, controllalo"
+    ),
+    "The HDRI's sun is {:+.0f}° off the photo's in elevation: the shadows will not have the same length": (
+        "Il sole dell'HDRI differisce di {:+.0f}° in elevazione da quello della foto: le ombre non avranno la "
+        "stessa lunghezza"
+    ),
+    "Click the sun in the HDRI · Enter: apply · Esc: cancel · the cross is the photo's sun": (
+        "Clicca il sole nell'HDRI · Invio: applica · Esc: annulla · la croce è il sole della foto"
+    ),
+    "HDRI Rotation": "Rotazione HDRI",
+    "HDRI Sun Elevation": "Elevazione del sole HDRI",
+    "HDRI sun and Sun light both give direct light: lower one of them": (
+        "Il sole dell'HDRI e la luce Sole danno entrambi luce diretta: abbassa uno dei due"
+    ),
     # FTC orientation
     "FTC Orientation": "Orientamento FTC",
     "No 3D view to create the orientation from": "Nessuna vista 3D da cui creare l'orientamento",

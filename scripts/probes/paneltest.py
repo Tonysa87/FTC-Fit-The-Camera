@@ -96,6 +96,7 @@ ctx = SimpleNamespace(
 panel = SimpleNamespace(layout=Mock())
 panel.draw_alignment = lambda *a: ui.FTC_PT_main.draw_alignment(panel, *a)
 panel.draw_shadow = lambda *a: ui.FTC_PT_main.draw_shadow(panel, *a)
+panel.draw_hdri = lambda *a: ui.FTC_PT_main.draw_hdri(panel, *a)
 for meth in ("draw_camera_data", "draw_calibration", "draw_display", "draw_results", "draw_tools"):
     pass
 count = 0
@@ -134,6 +135,9 @@ for mode, vp, scale, focal, cube, size, pp in itertools.product(
         except Exception as exc:
             problems.add(f"{fn.__name__} {mode} {vp} {scale} {focal}: {type(exc).__name__}: {exc}")
     count += 1
+# A World with an equirectangular HDRI, fitted once: the Fit HDRI rows are drawn.
+g["world_with"](g["synthetic_hdri"](0.3, 0.6, size=(64, 32)))
+s.sun.hdri_fitted, s.sun.hdri_image, s.sun.hdri_point = True, "synthetic_hdri", (0.3, 0.6)
 light = bpy.data.objects.new("probe sun", bpy.data.lights.new("probe sun", "SUN"))
 bpy.context.collection.objects.link(light)
 data = s.camera_data
