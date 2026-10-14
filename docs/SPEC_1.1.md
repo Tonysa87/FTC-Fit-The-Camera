@@ -68,8 +68,18 @@ Sun.
     default 0, con avviso. Nessun modello geomagnetico incluso.
   - La bussola dei telefoni sbaglia spesso di 5–15°: campo **correzione del
     nord** a mano e confronto con l'ombra quando c'è (vedi sotto).
-  - Senza direzione nell'EXIF: nord a mano (angolo, oppure "il nord è lungo
-    l'asse +Y della scena").
+  - Senza direzione nell'EXIF: **è il caso normale sui telefoni Android**
+    (nessuna delle foto in `samples/`, Motorola e OnePlus, ha
+    `GPSImgDirection`; tutte hanno GPS e ora UTC). Va trattato come strada
+    principale, non come ripiego. L'elevazione resta esatta (la calibrazione
+    conosce la verticale); manca solo il nord, un angolo attorno a Z:
+    - **da mappa**: "l'asse +X (o +Y) della scena punta a N°", letto su una
+      mappa da una facciata o una strada;
+    - **slider dell'azimut** a occhio: elevazione fissa, si ruota il sole
+      finché le ombre del CG coincidono con quelle della foto;
+    - **dall'ombra** (sotto), il più preciso.
+- Senza GPS: latitudine e longitudine a mano (basta la città: 100 km
+  ≈ 1° sul sole). Senza data e ora: solo l'ombra.
 - **Posizione del sole**: algoritmo NOAA, approssimazione dello SPA,
   accurato a circa 0,01°. Solver puro in `solver/sun.py`, senza dipendenze.
   Non usare l'estensione *Sun Position* di Blender: non è una dipendenza
@@ -101,10 +111,8 @@ calcolato meno l'azimut dell'ombra misurato. Il pannello mostra la
 ### Luce
 
 - Ruota la luce Sun **attiva o selezionata**.
-- **Decisione aperta**: se non c'è una Sun, FTC ne crea una ("FTC Sun") o
-  chiede di crearla? La regola della 1.0 è "FTC non crea oggetti per i
-  ruoli". La proposta è un pulsante esplicito *New Sun*, mai una creazione
-  automatica.
+- Se non c'è una Sun: pulsante esplicito *New Sun* che crea "FTC Sun", mai
+  una creazione automatica (deciso da Antonio, 2026-10-14).
 - Intensità, colore e angolo (morbidezza) restano all'utente: FTC imposta
   solo la direzione.
 - Opzionale: se il World usa un nodo *Sky Texture*, sincronizzarne
@@ -301,11 +309,12 @@ vivo come nelle altre modalità.
 - **Import dei progetti fSpy** (`.fspy`): tolto su decisione di Antonio
   (2026-10-14). Non riproporlo.
 
-## Decisioni aperte
+## Decisioni prese (2026-10-14)
 
-1. Sole: pulsante *New Sun* esplicito, o solo una luce scelta dall'utente?
-2. Orient HDRI: solo Environment Texture equirettangolare, o anche altre
-   proiezioni? Proposta: solo equirettangolare, che copre quasi tutti gli HDRI.
+1. Sole: pulsante *New Sun* esplicito; altrimenti la Sun attiva o
+   selezionata.
+2. Orient HDRI: solo Environment Texture equirettangolare; con altre
+   proiezioni il pulsante è disattivato e lo spiega.
 
 ## Fasi
 
