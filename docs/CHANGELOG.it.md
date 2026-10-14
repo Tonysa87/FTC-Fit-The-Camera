@@ -3,7 +3,7 @@
 Storia completa in italiano. Dalla 1.1 il changelog principale è in inglese:
 [`CHANGELOG.md`](CHANGELOG.md).
 
-## Non rilasciato (1.1)
+## 1.1.0 – 2026-10-14
 - Dal primo test GUI (semplificazione chiesta da Antonio): *Mappa* e
   *Riferimento* tolti (misurare direzioni su Google Earth era troppo complesso).
   Il nord ora è **Bussola** (automatica), **Lato** (asse della scena da cui

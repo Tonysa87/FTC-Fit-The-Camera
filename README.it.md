@@ -102,7 +102,7 @@ Sidebar del viewport (N) › tab **FTC**.
    camera la foto si muove con la camera: il risultato si vede dagli oggetti
    della scena o dalla posizione della camera.
    Accanto a ogni asse un pulsante ne inverte il verso, e i pulsanti **− n +**
-   (1.1, in sviluppo) aggiungono una linea guida tra le prime due, fino a sei, o tolgono
+   aggiungono una linea guida tra le prime due, fino a sei, o tolgono
    l'ultima: più linee su spigoli lunghi mediano gli errori di posizionamento.
    **Focale**: *Nota + guide* (default: parte dalla focale di Camera Data e le guide
    la correggono per quanto la misurano; se è sconosciuta la risolvono), *Solo
@@ -112,14 +112,14 @@ Sidebar del viewport (N) › tab **FTC**.
    faccia attiva (Edit Mode) o sull'oggetto attivo; Ruota 90° / Inverti.
 5. **Results** – focale, FOV, altezza, angoli, **incertezza** (focale ± %,
    orientamento ± °) e **aderenza guide** (scarto massimo); avvisi in giallo/rosso.
-   **Esporta report** (*Export Report*, 1.1, in sviluppo) li salva, con la fonte di ogni dato e il sole, in
+   **Esporta report** (*Export Report*) li salva, con la fonte di ogni dato e il sole, in
    Markdown o JSON.
 6. **Render** – **Prepare Render** prepara la scena per renderizzare la CG sopra la
    foto (vedi sotto); **Object Roles** elenca gli oggetti della scena: per ognuno
    si attiva *Shadow Catcher* o *Holdout*, oppure si assegnano ai selezionati con
    *Set Role of Selected*. Cambiano solo le impostazioni degli oggetti, non viene
    creato nulla.
-7. **Fit Sun** (1.1, in sviluppo) – una luce Sole e l'HDRI del World orientati
+7. **Fit Sun** – una luce Sole e l'HDRI del World orientati
    come il sole della foto: vedi sotto.
 8. **Tools › FTC Orientation** – rende l'orientamento "FTC" quello del viewport: gli
      assi calibrati della foto nella scena (creato da *Apply* e da *Align to
@@ -197,10 +197,7 @@ creato). Gli oggetti senza ruolo sono la CG, renderizzata normalmente.
 Un clic su una riga seleziona l'oggetto. *Set Role of Selected* assegna *Shadow
 Catcher*, *Holdout* o *No Role* a tutti gli oggetti selezionati.
 
-### Fit Sun (1.1, in sviluppo)
-
-> Non c'è nella 1.0 su Blender Extensions: arriva con la 1.1 (per ora build di
-> prova).
+### Fit Sun
 
 Orienta una luce Sole come il sole della foto, così le ombre della CG cadono come
 quelle vere. *Sole da* sceglie la fonte:

@@ -3,7 +3,7 @@
 From 1.1 the changelog is in English. The full history in Italian, with every
 release since 0.1, is in [`CHANGELOG.it.md`](CHANGELOG.it.md).
 
-## Unreleased (1.1)
+## 1.1.0 – 2026-10-14
 
 *FTC now gets the real sun: the light, the shadows and the HDRI match the photo.*
 
