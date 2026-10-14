@@ -302,8 +302,15 @@ _IT = {
     "The HDRI's vector comes from other nodes (not a Mapping): Fit HDRI cannot turn it": (
         "Il vettore dell'HDRI arriva da altri nodi (non un Mapping): Fit HDRI non può ruotarlo"
     ),
-    "The rotation of the HDRI's Mapping comes from other nodes: Fit HDRI cannot turn it": (
-        "La rotazione del Mapping dell'HDRI arriva da altri nodi: Fit HDRI non può ruotarlo"
+    "The rotation of the HDRI's Mapping comes from nodes FTC cannot follow back: Fit HDRI cannot turn it": (
+        "La rotazione del Mapping dell'HDRI arriva da nodi che FTC non sa ripercorrere: Fit HDRI non può "
+        "ruotarlo"
+    ),
+    "The rotation of the HDRI is keyframed or driven: Fit HDRI cannot turn it": (
+        "La rotazione dell'HDRI ha keyframe o driver: Fit HDRI non può ruotarlo"
+    ),
+    "The HDRI's rotation input cannot take the angle (its min / max): widen them or Fit HDRI cannot turn it": (
+        "L'input di rotazione dell'HDRI non accetta l'angolo (min / max): allargali o Fit HDRI non può ruotarlo"
     ),
     "The HDRI's Mapping has an X or Y rotation or scale: its sun is matched about Z only, check it": (
         "Il Mapping dell'HDRI ha rotazione o scala in X o Y: il sole viene allineato solo attorno a Z, controllalo"

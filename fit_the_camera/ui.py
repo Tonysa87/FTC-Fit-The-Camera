@@ -480,7 +480,7 @@ class FTC_PT_main(Panel):
             return
         if problem:
             wrapped(body, context, iface_(problem), icon="INFO")
-        if why := ops_hdri.vector_problem(env):
+        if why := ops_hdri.vector_problem(env, context.scene.world):
             wrapped(body, context, iface_(why), icon="ERROR")
         col = body.column(align=True)
         if sun.hdri_image and env.image.name != sun.hdri_image:
@@ -489,8 +489,9 @@ class FTC_PT_main(Panel):
             col.prop(sun, "hdri_fitted")
             mapping = ops_hdri.mapping_of(env)
             if mapping is not None:
-                z = mapping.inputs["Rotation"].default_value[2]
-                info_row(col, iface_("HDRI Rotation"), f"{math.degrees(z):.1f}°")
+                z = ops_hdri.get_z(mapping, ops_hdri.group_path(context.scene.world, env))
+                if math.isfinite(z):
+                    info_row(col, iface_("HDRI Rotation"), f"{math.degrees(z):.1f}°")
             hdri_el = (sun.hdri_point[1] - 0.5) * 180.0
             off = None
             if state.direction is not None:

@@ -42,6 +42,10 @@ release since 0.1, is in [`CHANGELOG.it.md`](CHANGELOG.it.md).
   behind reroutes, and inside node groups as HDRI add-ons build them). The
   sun's elevation is compared, never changed: over 10°
   apart, a warning. *Follow the Sun* keeps the HDRI on the sun when it moves.
+- A rotation fed by other nodes is followed back to its value and written
+  there: a group's *Rotation* input (Poly Haven's World: degrees → Multiply →
+  Combine XYZ), Value nodes, linear Math / Vector Math, nested groups; the
+  input's min / max are respected.
 - The equirectangular convention and the rotation sign are checked by Cycles
   renders in the tests.
 

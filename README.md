@@ -287,10 +287,15 @@ ambient light, reflections and the Sun light then agree.
   Correction* or time turns it with the light. Turning its Mapping by hand
   switches the following off; ticking it again takes over from there.
 - A Mapping behind reroutes is found; Environment Textures showing the same
-  image (one for the light, one for the camera) turn together. A vector or a
-  rotation driven by other nodes, or a World linked from a library, are refused
-  with a message. An HDRI inside a node group (as HDRI add-ons build the World)
-  is turned inside the group.
+  image (one for the light, one for the camera) turn together. An HDRI inside a
+  node group (as HDRI add-ons build the World) is turned inside the group.
+- When the Mapping's rotation comes from other nodes, FTC follows it back and
+  writes the value at the start: a group's *Rotation* input (Poly Haven: degrees
+  → Multiply → Combine XYZ), a Value node, through reroutes, Combine XYZ,
+  Math / Vector Math add, subtract, multiply, divide, radians/degrees, and nested
+  groups. Nodes that cannot be followed back (a sine, a texture...), keyframes
+  or drivers on the value, a vector from other nodes or a World linked from a
+  library are refused with a message.
 - HDRI sun and Sun light both give direct light: lower one of them.
 - Equirectangular HDRIs only (nearly all of them); other projections are
   reported.

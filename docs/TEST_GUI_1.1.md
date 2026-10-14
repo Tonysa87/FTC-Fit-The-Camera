@@ -54,6 +54,9 @@ Zip: `\\wsl.localhost\Ubuntu-24.04\home\tony\Projects\FTC\dist\fit_the_camera-<v
 12. Render: ombre della Sun e luce dell'HDRI dalla stessa parte. Cambia la
     *North Correction*: l'HDRI segue (*Follow the Sun*). Ruota a mano la Z del
     Mapping: *Follow the Sun* si spegne.
+    World di **Poly Haven** (gruppo con input *Rotation*): Fit HDRI cambia
+    l'input *Rotation* del gruppo (in gradi), non il Mapping; il render segue;
+    cambiando *Turn* il valore del gruppo si aggiorna.
 13. HDRI non equirettangolare (Mirror Ball) o senza World: il pulsante è
     disattivato e un messaggio spiega perché.
 
