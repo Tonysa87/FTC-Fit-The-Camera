@@ -18,7 +18,8 @@ Extensions audience) and `README.it.md` (Italian); developer docs
   (`ops_hdri.rotation_control`: reroutes, Combine XYZ, Value, linear Math /
   Vector Math, group inputs/outputs, min/max respected): his Poly Haven World
   (group input Rotation in degrees -> Multiply 0.0175 -> Combine XYZ Z ->
-  Mapping) is the case to verify in the GUI (checklist item 12). Then the
+  Mapping): verified by the user in the GUI, HDRI shadows "perfect" in
+  azimuth (elevation differs by nature: only Z is turned). Then the
   rest of the checklist, then release 1.1.0. He also asked whether the grid step
   should be labelled (offered, not decided).
 - **1.1 developed (2026-10-14): all phases S1–S4, A1, A2 done, audited, pushed.**
