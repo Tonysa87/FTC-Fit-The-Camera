@@ -195,9 +195,28 @@ _IT = {
     "Pick a Sun light or add one: FTC turns it towards the sun": (
         "Scegli una luce Sole o aggiungine una: FTC la orienta verso il sole"
     ),
-    "Date and time unknown: enter the local time of the shot": (
-        "Data e ora sconosciute: inserisci l'ora locale dello scatto"
+    "Date and time unknown: enter the local time of the shot, or Read from Photo": (
+        "Data e ora sconosciute: inserisci l'ora locale dello scatto, o Rileggi dalla foto"
     ),
+    "The GPS time and the camera clock disagree: check the time (camera clock and its time zone used)": (
+        "L'ora GPS e l'orologio della fotocamera non concordano: controlla l'ora (usati orologio e fuso)"
+    ),
+    "The camera looks steeply up or down: its compass is unreliable, check the north": (
+        "La camera guarda molto in alto o in basso: la sua bussola è inaffidabile, controlla il nord"
+    ),
+    "Place the Landmark handle on the landmark (Calibrate)": (
+        "Metti la maniglia Riferimento sul riferimento (Calibra)"
+    ),
+    "The light is in no scene (deleted?): pick another one or add a New Sun": (
+        "La luce non è in nessuna scena (cancellata?): scegline un'altra o aggiungi un Nuovo sole"
+    ),
+    "The light cannot be edited (linked from a library): pick another one or add a New Sun": (
+        "La luce non è modificabile (collegata da una libreria): scegline un'altra o aggiungi un Nuovo sole"
+    ),
+    "Keyframes, drivers or constraints on the light (or its parent) override its rotation": (
+        "Keyframe, driver o vincoli sulla luce (o sul suo genitore) ne sovrascrivono la rotazione"
+    ),
+    "No date, time or place found in the photo": "Nessuna data, ora o luogo trovati nella foto",
     "Time zone unknown: enter the UTC offset of the local time, daylight saving included": (
         "Fuso orario sconosciuto: inserisci il fuso UTC dell'ora locale, ora legale compresa"
     ),

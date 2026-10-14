@@ -189,8 +189,36 @@ def test_only_real_zones_are_accepted(hours, minutes, zone):
 
 
 def test_offset_disagreeing_with_gps_is_flagged():
+    """A complete camera clock beats a GPS time that disagrees (a stale fix)."""
     t = timed([LOCAL, (exif.TAG_OFFSET_TIME_ORIGINAL, ASCII, "+01:00")], GPS_TIME).capture_time()
-    assert t.clock_mismatch
+    assert t.clock_mismatch and t.source == "OFFSET" and t.offset_minutes == 60
+    assert t.utc == datetime(2026, 8, 4, 17, 52, 19, tzinfo=UTC)
+
+
+def test_day_old_gps_fix_loses_to_the_clock_with_offset():
+    gps = [(exif.GPS_DATE, ASCII, "2026:08:03"), (exif.GPS_TIME, RATIONAL, [(16, 1), (52, 1), (18, 1)])]
+    t = timed([LOCAL, (exif.TAG_OFFSET_TIME_ORIGINAL, ASCII, "+02:00")], gps).capture_time()
+    assert t.clock_mismatch and t.utc == datetime(2026, 8, 4, 16, 52, 19, tzinfo=UTC)
+
+
+def test_offset_agreeing_with_gps():
+    t = timed([LOCAL, (exif.TAG_OFFSET_TIME_ORIGINAL, ASCII, "+02:00")], GPS_TIME).capture_time()
+    assert not t.clock_mismatch and t.source == "GPS" and t.offset_minutes == 120
+
+
+@pytest.mark.parametrize("text, minutes", [("+05:45", 345), ("-09:30", -570), ("+14:00", 840)])
+def test_real_offsets(text, minutes):
+    assert timed([LOCAL, (exif.TAG_OFFSET_TIME_ORIGINAL, ASCII, text)]).offset_minutes == minutes
+
+
+@pytest.mark.parametrize("text", ["+14:59", "-14:00", "+04:15", "+02:60"])
+def test_impossible_offsets_are_none(text):
+    assert timed([LOCAL, (exif.TAG_OFFSET_TIME_ORIGINAL, ASCII, text)]).offset_minutes is None
+
+
+def test_impossible_latitude_is_none():
+    gps = [(exif.GPS_LAT_REF, ASCII, "N"), (exif.GPS_LAT, RATIONAL, [(95, 1), (0, 1), (0, 1)])]
+    assert timed(gps_ifd=gps).gps_latitude is None
 
 
 def test_offset_time_without_gps():

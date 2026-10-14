@@ -628,6 +628,27 @@ def cached_solution(cam_data) -> CameraSolution | None:
     return _solutions.get(cam_data.session_uid)
 
 
+def current_solution(cam_data) -> CameraSolution | None:
+    """The cached solution, or one solved now (and cached) without storing the
+    results: safe in draw callbacks, e.g. after a file was opened."""
+    solution = _solutions.get(cam_data.session_uid)
+    if solution is not None or cam_data.ftc.image is None:
+        return solution
+    try:
+        solution = solve(cam_data.ftc)
+    except (SolverError, ArithmeticError, ValueError, np.linalg.LinAlgError):
+        return None
+    if not _finite(solution):
+        return None
+    _solutions[cam_data.session_uid] = solution
+    return solution
+
+
+def forget_solutions() -> None:
+    """Drop every cached solution (they may not match the settings any more)."""
+    _solutions.clear()
+
+
 def _store_results(settings, solution: CameraSolution | None, error: str) -> None:
     res = settings.results
     res.valid = solution is not None
@@ -757,7 +778,7 @@ def apply_solution(cam_obj, solution: CameraSolution) -> None:
     # The Sun light follows the camera's north (compass, landmark).
     from . import ops_sun
 
-    ops_sun.orient(settings)
+    ops_sun.orient(settings, solution)
 
 
 def update(context, cam_obj, *, apply: bool) -> CameraSolution | None:

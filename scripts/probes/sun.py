@@ -41,7 +41,9 @@ for name, source in (("sun_map", "MAP"), ("sun_landmark", "LANDMARK")):
         fb.clear(color=(0.12, 0.12, 0.12, 1.0))
         with gpu.matrix.push_pop(), gpu.matrix.push_pop_projection():
             gpu.matrix.load_identity()
-            gpu.matrix.load_projection_matrix(Matrix(((2 / W, 0, 0, -1), (0, 2 / H, 0, -1), (0, 0, 1, 0), (0, 0, 0, 1))))
+            gpu.matrix.load_projection_matrix(
+                Matrix(((2 / W, 0, 0, -1), (0, 2 / H, 0, -1), (0, 0, 1, 0), (0, 0, 0, 1)))
+            )
             draw.draw_guides(view, s, sol, session, "METRIC")
         px = np.asarray(fb.read_color(0, 0, W, H, 4, 0, "FLOAT").to_list(), dtype=np.float32)
     off.free()

@@ -50,7 +50,7 @@ def time_row(layout, label, data, props, state):
     split.alert = state == "MISSING"
     sub = split.row()
     sub.alignment = "RIGHT"
-    sub.label(text=label)
+    sub.label(text=label, text_ctxt="FTC")
     row = split.row(align=True)
     for prop in props:
         row.prop(data, prop, text="")
@@ -387,8 +387,8 @@ class FTC_PT_main(Panel):
         sun = settings.sun
 
         col = body.column(align=True)
-        time_row(col, iface_("Date", "FTC"), data, ("day", "month", "year"), data.time_state)
-        time_row(col, iface_("Time", "FTC"), data, ("hour", "minute", "second"), data.time_state)
+        time_row(col, "Date", data, ("day", "month", "year"), data.time_state)
+        time_row(col, "Time", data, ("hour", "minute", "second"), data.time_state)
         row = field(body, data, "utc_offset", data.offset_state)
         if data.time_from_gps and data.offset_state == "EXIF" and data.utc_offset == 0.0:
             row.label(text="UTC")
@@ -404,9 +404,8 @@ class FTC_PT_main(Panel):
         row.prop(sun, "north_source", expand=True)
         col = body.column()
         if sun.north_source == "COMPASS":
-            if data.direction_state == "MISSING":
-                col.label(text="No compass direction in the photo: use Map or Landmark", icon="ERROR")
-            else:
+            # Without a compass the error box below says what to do.
+            if data.direction_state != "MISSING":
                 row = field(col, data, "direction", data.direction_state)
                 if data.direction_ref:
                     row.label(text=data.direction_ref)
@@ -439,6 +438,10 @@ class FTC_PT_main(Panel):
         row.operator("ftc.new_sun", text="", icon="LIGHT_SUN")
         if sun.light is None:
             body.label(text="Pick a Sun light or add one: FTC turns it towards the sun", icon="INFO")
+        elif problem := ops_sun.light_problem(sun.light):
+            box = body.box()
+            box.alert = True
+            wrapped(box, context, iface_(problem), icon="ERROR")
 
     def draw_tools(self, context, layout):
         header, body = layout.panel("ftc_tools", default_closed=False)

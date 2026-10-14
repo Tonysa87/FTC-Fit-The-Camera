@@ -9,6 +9,7 @@ its strength, colour and angle stay the user's.
 from __future__ import annotations
 
 import math
+import os
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 
@@ -18,6 +19,7 @@ from bpy.types import Operator
 from mathutils import Matrix, Vector
 
 from . import calibrate, ops_load
+from .exif import read_exif
 from .solver.common import ray
 from .solver.sun import SunPosition, scene_direction, sun_position, y_bearing
 
@@ -49,7 +51,7 @@ def location_state(data) -> str:
 def shooting_time(data) -> datetime:
     """Aware shooting time; ``ValueError`` with a message for the panel."""
     if data.time_state == "MISSING":
-        raise ValueError("Date and time unknown: enter the local time of the shot")
+        raise ValueError("Date and time unknown: enter the local time of the shot, or Read from Photo")
     if data.offset_state == "MISSING":
         raise ValueError("Time zone unknown: enter the UTC offset of the local time, daylight saving included")
     try:
@@ -92,12 +94,25 @@ def scene_north(settings, solution) -> tuple[float | None, str]:
     return result, "" if result is not None else "The landmark is straight above or below the camera: move it"
 
 
+# Steeper than this (degrees from the horizon) a phone's compass heading is unreliable.
+STEEP_VIEW_DEG = 70.0
+
+
+def _landmark_untouched(settings) -> bool:
+    return math.dist(calibrate.handle(settings, LANDMARK_KEY), calibrate.HANDLE_DEFAULTS[LANDMARK_KEY]) < 1e-6
+
+
 def evaluate(settings, solution=None) -> SunState:
-    """Sun of the photo for ``settings``. Never writes: safe in draw callbacks."""
+    """Sun of the photo for ``settings``. Never writes: safe in draw callbacks.
+    The scene north is filled in even when the time or place is missing."""
     state = SunState()
     data = settings.camera_data
+    sun = settings.sun
     if solution is None:
-        solution = calibrate.cached_solution(settings.id_data)
+        solution = calibrate.current_solution(settings.id_data)
+    bearing, north_error = scene_north(settings, solution)
+    if bearing is not None:
+        state.y_bearing = (bearing + math.degrees(sun.north_correction)) % 360.0
     try:
         when = shooting_time(data)
     except ValueError as exc:
@@ -107,23 +122,32 @@ def evaluate(settings, solution=None) -> SunState:
         state.error = "Place unknown: enter latitude and longitude (the nearest town is close enough)"
         return state
     state.utc = when
-    state.sun = sun_position(when, data.gps_latitude, data.gps_longitude)
+    try:
+        state.sun = sun_position(when, data.gps_latitude, data.gps_longitude)
+    except ValueError:
+        state.error = "Place unknown: enter latitude and longitude (the nearest town is close enough)"
+        return state
     if not state.sun.above_horizon:
         state.error = "The sun is below the horizon at that time: check date, time and UTC offset"
         return state
     if data.clock_mismatch:
-        state.warnings.append("The GPS time and the camera clock disagree: check the time (GPS time used)")
-    if (
-        settings.sun.north_source == "COMPASS"
-        and data.direction_ref.upper().startswith("M")
-        and settings.sun.declination == 0.0
-    ):
-        state.warnings.append("Magnetic compass: enter the declination of the place")
-    bearing, why = scene_north(settings, solution)
+        if data.time_from_gps:
+            state.warnings.append("The GPS time and the camera clock disagree: check the time (GPS time used)")
+        else:
+            state.warnings.append(
+                "The GPS time and the camera clock disagree: check the time (camera clock and its time zone used)"
+            )
+    if sun.north_source == "COMPASS" and data.direction_state != "MISSING" and solution is not None:
+        if data.direction_ref.upper().startswith("M") and sun.declination == 0.0:
+            state.warnings.append("Magnetic compass: enter the declination of the place")
+        view = scene_rotation(settings) @ solution.forward
+        if abs(math.degrees(math.asin(max(-1.0, min(1.0, float(view[2])))))) > STEEP_VIEW_DEG:
+            state.warnings.append("The camera looks steeply up or down: its compass is unreliable, check the north")
+    if sun.north_source == "LANDMARK" and _landmark_untouched(settings):
+        state.warnings.append("Place the Landmark handle on the landmark (Calibrate)")
     if bearing is None:
-        state.error = why
+        state.error = north_error
         return state
-    state.y_bearing = (bearing + math.degrees(settings.sun.north_correction)) % 360.0
     state.direction = Vector(scene_direction(state.sun, state.y_bearing).tolist())
     return state
 
@@ -134,20 +158,42 @@ def north_vector(y_bear: float) -> Vector:
     return Vector((math.sin(a), math.cos(a), 0.0))
 
 
-def orient(settings) -> SunState | None:
+def light_problem(light) -> str:
+    """Why FTC cannot (or not lastingly) turn ``light``; empty when it can."""
+    if light is None:
+        return ""
+    if not light.users_scene:
+        return "The light is in no scene (deleted?): pick another one or add a New Sun"
+    if not light.is_editable:
+        return "The light cannot be edited (linked from a library): pick another one or add a New Sun"
+    if calibrate.transform_overridden(light):
+        return "Keyframes, drivers or constraints on the light (or its parent) override its rotation"
+    return ""
+
+
+def orient(settings, solution=None) -> SunState | None:
     """Turn the camera's Sun light towards the sun; its location and scale stay."""
     light = settings.sun.light
-    if light is None:
+    if light is None or not light.users_scene or not light.is_editable:
         return None
-    state = evaluate(settings)
+    state = evaluate(settings, solution)
     if state.direction is None:
         return state
-    # A Sun light shines along its local -Z: +Z points at the sun.
-    rot = state.direction.to_track_quat("Z", "Y")
+    # A Sun light shines along its local -Z: the world +Z must point at the sun.
+    # Solve in the parent's space (mirrored or non-uniform parents included).
+    parent = Matrix.Identity(3)
     if light.parent is not None:
-        rot = (light.parent.matrix_world @ light.matrix_parent_inverse).to_quaternion().inverted() @ rot
+        parent = (light.parent.matrix_world @ light.matrix_parent_inverse).to_3x3()
+    try:
+        local = parent.inverted() @ state.direction
+    except ValueError:
+        return state
     # matrix_basis, not matrix_world: the latter lags behind a location just set.
     loc, _rot, scale = light.matrix_basis.decompose()
+    if scale.z < 0.0:
+        # A mirrored light: its own +Z is flipped by the scale.
+        local = -local
+    rot = local.normalized().to_track_quat("Z", "Y")
     light.matrix_basis = Matrix.LocRotScale(loc, rot, scale)
     return state
 
@@ -185,7 +231,9 @@ class FTC_OT_new_sun(Operator):
             calibrate.refresh(cam_data)
         light_data = bpy.data.lights.new(SUN_NAME, "SUN")
         obj = bpy.data.objects.new(SUN_NAME, light_data)
-        context.collection.objects.link(obj)
+        layer = context.view_layer.active_layer_collection
+        usable = layer is not None and not layer.exclude and layer.collection.library is None
+        (layer.collection if usable else context.scene.collection).objects.link(obj)
         state = evaluate(settings)
         # Above the scene origin, towards the sun: the light's line points at the origin.
         origin = calibrate.alignment_matrix(settings).translation
@@ -210,9 +258,15 @@ class FTC_OT_read_photo_time(Operator):
 
     def execute(self, context):
         settings = sun_settings(context)
-        image = settings.image
-        path = bpy.path.abspath(settings.source_path or image.filepath)
-        exif = ops_load.read_image_exif(image, path)
+        # The original file first: an upright copy is packed without EXIF.
+        source = bpy.path.abspath(settings.source_path) if settings.source_path else ""
+        if source and os.path.isfile(source):
+            exif = read_exif(source)
+        else:
+            exif = ops_load.read_image_exif(settings.image, bpy.path.abspath(settings.image.filepath))
+        if exif.capture_time() is None and exif.gps_latitude is None:
+            self.report({"WARNING"}, "No date, time or place found in the photo")
+            return {"CANCELLED"}
         ops_load.load_time_place(settings.camera_data, exif)
         settings_changed(settings.id_data, context)
         return {"FINISHED"}

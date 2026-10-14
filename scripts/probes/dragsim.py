@@ -23,7 +23,7 @@ s.scale_mode = "CUBE"
 view = draw.View(0.0, 0.0, 1920.0, 1080.0, (1920, 1080))
 op = ops.FTC_OT_calibrate
 fake = SimpleNamespace(
-    changed=lambda ctx, c, reset_pitch=True: calibrate.settings_changed(c.data, ctx, reset_pitch=reset_pitch)
+    changed=lambda ctx, c, reset_pitch=True, key=None: calibrate.settings_changed(c.data, ctx, reset_pitch=reset_pitch)
 )
 fake.snap_target = lambda *a: op.snap_target(fake, *a)
 session = SimpleNamespace(drag_key="cube_top", last_mouse=None, pitch_drag=None)

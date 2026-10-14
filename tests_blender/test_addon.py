@@ -438,7 +438,7 @@ def scale_cube_keeps_the_scale_across_changes():
     view = draw.View(0.0, 0.0, 1920.0, 1080.0, (1920, 1080))
     session = SimpleNamespace(drag_key="cube_base", last_mouse=(0.0, 0.0), pitch_drag=None)
 
-    def changed(ctx, camera, reset_pitch=True):
+    def changed(ctx, camera, reset_pitch=True, key=None):
         calibrate.settings_changed(camera.data, ctx, reset_pitch=reset_pitch)
 
     fake = SimpleNamespace(changed=changed)
@@ -1094,7 +1094,7 @@ def audit_edge_cases():
 SUN_AZIMUTH, SUN_ELEVATION = 148.508, 65.311
 
 
-def sun_tiff(direction=200.0, ref="T", gps_time=(10, 30, 0)):
+def sun_tiff(direction=200.0, ref="T", gps_time=(10, 30, 0), orientation=1):
     gps = [
         (exif.GPS_LAT_REF, ASCII, "N"),
         (exif.GPS_LAT, RATIONAL, [(45, 1), (27, 1), (5112, 100)]),  # 45.4642
@@ -1106,7 +1106,7 @@ def sun_tiff(direction=200.0, ref="T", gps_time=(10, 30, 0)):
     if direction is not None:
         gps += [(exif.GPS_DIRECTION_REF, ASCII, ref), (exif.GPS_DIRECTION, RATIONAL, [(int(direction * 100), 100)])]
     return build_tiff(
-        ifd0=[(exif.TAG_MAKE, ASCII, "SunCam"), (exif.TAG_ORIENTATION, SHORT, 1)],
+        ifd0=[(exif.TAG_MAKE, ASCII, "SunCam"), (exif.TAG_ORIENTATION, SHORT, orientation)],
         exif_ifd=[
             (exif.TAG_FOCAL_LENGTH, RATIONAL, [(240, 10)]),
             (exif.TAG_FOCAL_35MM, SHORT, 36),
@@ -1245,13 +1245,114 @@ def sun_time_read_again_and_stale_gps():
     assert ops_sun.location_state(data) == "EXIF"
 
 
+def shine(light):
+    """Direction the light shines along (its world -Z)."""
+    bpy.context.view_layer.update()
+    return (light.matrix_world.to_3x3() @ Vector((0.0, 0.0, -1.0))).normalized()
+
+
+@test
+def sun_light_mirrored_parented_or_gone():
+    ops_sun = importlib.import_module(PKG + ".ops_sun")
+    cam = _sun_camera(sun_tiff())
+    s = cam.data.ftc
+    assert bpy.ops.ftc.new_sun() == {"FINISHED"}
+    light = s.sun.light
+    sun = ops_sun.evaluate(s).direction
+    for scale in ((-1.0, 1.0, 1.0), (1.0, 1.0, -2.0), (-1.0, -1.0, -1.0), (2.0, 3.0, 0.5)):
+        light.scale = scale
+        ops_sun.orient(s)
+        assert shine(light).dot(sun) < -0.9999, scale
+    light.scale = (1.0, 1.0, 1.0)
+    parent = bpy.data.objects.new("mirror", None)
+    bpy.context.collection.objects.link(parent)
+    parent.scale = (1.0, -1.0, 3.0)
+    parent.rotation_euler = (0.3, 0.2, -0.7)
+    bpy.context.view_layer.update()
+    light.parent = parent
+    ops_sun.orient(s)
+    assert shine(light).dot(sun) < -0.9999, "mirrored, non-uniform parent"
+    light.parent = None
+
+    # A Track To constraint overrides the rotation: say so.
+    light.constraints.new("TRACK_TO")
+    assert "override" in ops_sun.light_problem(light)
+    light.constraints.remove(light.constraints[0])
+    assert ops_sun.light_problem(light) == ""
+
+    # Deleted (still referenced by FTC): left alone and reported.
+    for coll in list(light.users_collection):
+        coll.objects.unlink(light)
+    before = light.matrix_basis.copy()
+    s.sun.north_correction = math.radians(20.0)
+    assert light.matrix_basis == before
+    assert "no scene" in ops_sun.light_problem(light)
+
+
+@test
+def sun_north_without_time_and_landmark_checks():
+    ops_sun = importlib.import_module(PKG + ".ops_sun")
+    fresh_scene()
+    cam = load(write_photo("north.jpg", (1200, 800), camera_tiff()))
+    s = cam.data.ftc
+    s.sun.north_source = "MAP"
+    s.sun.map_bearing = math.radians(90.0)
+    state = ops_sun.evaluate(s)
+    assert state.error and angle_diff(state.y_bearing, 0.0) < 1e-4, "the N arrow needs no time"
+    # Landmark never placed: warned.
+    cam = _sun_camera(sun_tiff())
+    s = cam.data.ftc
+    s.sun.north_source = "LANDMARK"
+    assert any("Landmark handle" in w for w in ops_sun.evaluate(s).warnings)
+    calibrate.set_handle(s, "landmark", (0.3, 0.55))
+    assert not any("Landmark handle" in w for w in ops_sun.evaluate(s).warnings)
+    # Reset Guides keeps it on its landmark.
+    assert bpy.ops.ftc.reset() == {"FINISHED"}
+    assert (
+        calibrate.handle(s, "landmark") == (0.3, 0.55)
+        or max(abs(a - b) for a, b in zip(calibrate.handle(s, "landmark"), (0.3, 0.55))) < 1e-6
+    )
+    # A new photo without compass keeps a north chosen by hand.
+    load_op = bpy.ops.ftc.load_image(filepath=write_photo("again.jpg", (1200, 800), camera_tiff()), camera=cam.name)
+    assert load_op == {"FINISHED"}
+    assert s.sun.north_source == "LANDMARK"
+
+
+@test
+def sun_after_reopening_and_upright_copy():
+    ops_sun = importlib.import_module(PKG + ".ops_sun")
+    cam = _sun_camera(sun_tiff())
+    s = cam.data.ftc
+    assert not ops_sun.evaluate(s).error
+    path = os.path.join(SCRATCH, "sun_reopen.blend")
+    bpy.ops.wm.save_as_mainfile(filepath=path)
+    bpy.ops.wm.open_mainfile(filepath=path)
+    s = bpy.context.scene.camera.data.ftc
+    state = ops_sun.evaluate(s)
+    assert not state.error and state.direction is not None, state.error
+
+    # Upright copy (packed, no EXIF): Read from Photo uses the original file.
+    fresh_scene()
+    cam = load(write_photo("sun_portrait.jpg", (40, 20), sun_tiff(orientation=6)))
+    s = cam.data.ftc
+    assert bpy.ops.ftc.upright_image() == {"FINISHED"}
+    s.camera_data.hour = 3
+    assert bpy.ops.ftc.read_photo_time() == {"FINISHED"}
+    assert s.camera_data.time_state == "EXIF" and s.camera_data.hour == 12
+    # Original gone and the copy without EXIF: nothing is wiped.
+    s.source_path = os.path.join(SCRATCH, "missing.jpg")
+    s.camera_data.hour = 3
+    assert bpy.ops.ftc.read_photo_time() == {"CANCELLED"}
+    assert s.camera_data.hour == 3 and s.camera_data.time_state == "MANUAL"
+
+
 @test
 def every_button_has_a_tooltip():
     """Operators and the settings drawn as buttons all carry a description."""
     internal = {"loading", "active_vp", "handles", "anchor_matrix", "camera_data", "results", "image", "rna_type"}
     internal |= {"sun"}
     internal |= {"name", "make", "model", "lens", "image_width", "image_height", "has_gps", "direction_ref"}
-    internal |= {p for p in ("gps_latitude", "gps_longitude", "gps_altitude")}
+    internal |= {"gps_altitude"}
     missing = []
     for op in (
         "load_image",

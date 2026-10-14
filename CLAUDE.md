@@ -15,7 +15,14 @@ Extensions audience) and `README.it.md` (Italian); developer docs
   `FTC_Sun` on `settings.sun`), north from COMPASS / MAP / LANDMARK (handle
   `landmark`, pose-only) + `north_correction`; the light follows on sun changes
   and in `calibrate.apply_solution`. Names chosen by the user: *Fit Sun*, *Fit
-  HDRI* (S4 button), never translated. Next: S3 sun from a shadow (tip also on a
+  HDRI* (S4 button), never translated. 1.1.0-alpha.2 = alpha.1 + audit fixes (2026-10-14).
+  Sun lessons: a deleted object stays alive while a PointerProperty holds it
+  (`users_scene` empty: skip + warn); write `matrix_basis` (matrix_world lags) and
+  solve in the parent's space with the scale sign (mirrored lights); a label given
+  an already-translated string is translated again ("Data"->"Dati"): pass
+  `text_ctxt`; GPS time vs camera clock: clock+offset wins on disagreement (stale
+  fix), GPS only without offset; panels use `calibrate.current_solution` (solves
+  lazily without writing, cache cleared on undo outside a session). Next: S3 sun from a shadow (tip also on a
   wall) -> S4 Fit HDRI -> A1 extra VP lines -> A2 report. Decided 2026-10-14: explicit *New Sun* button,
   HDRI equirectangular only. No compass is the NORM (Android: none of the
   `samples/` has GPSImgDirection; all have GPS + UTC GPS time): north from a

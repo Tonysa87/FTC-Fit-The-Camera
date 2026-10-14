@@ -81,12 +81,21 @@ def _manual(field):
 def _manual_time(self, context):
     if not self.loading:
         self.time_state = "MANUAL"
+        self.clock_mismatch = False  # the user has checked the time
         _sun_changed(self, context)
 
 
 def _manual_offset(self, context):
     if not self.loading:
         self.offset_state = "MANUAL"
+        self.clock_mismatch = False
+        _sun_changed(self, context)
+
+
+def _direction_changed(self, context):
+    # The compass direction sets the camera yaw (horizon) and the sun's north.
+    _manual("direction")(self, context)
+    if not self.loading:
         _sun_changed(self, context)
 
 
@@ -179,7 +188,7 @@ class FTC_CameraData(PropertyGroup):
         description="Compass bearing of the view, degrees clockwise from north",
         min=0.0,
         max=360.0,
-        update=_manual("direction"),
+        update=_direction_changed,
     )
     direction_state: EnumProperty(items=FIELD_STATE_ITEMS, default="MISSING")
     direction_ref: StringProperty(name="Direction Reference", description="T = true north, M = magnetic north")
