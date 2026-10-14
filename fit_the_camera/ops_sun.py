@@ -267,12 +267,17 @@ def light_problem(light) -> str:
 
 
 def orient(settings, solution=None) -> SunState | None:
-    """Turn the camera's Sun light towards the sun; its location and scale stay."""
+    """Turn the camera's Sun light towards the sun (its location and scale
+    stay), and a fitted World HDRI with it."""
+    from . import ops_hdri  # (it imports draw, which imports this module)
+
     light = settings.sun.light
-    if light is None or not light.users_scene or not light.is_editable:
+    usable = light is not None and bool(light.users_scene) and light.is_editable
+    if not usable and not settings.sun.hdri_fitted:
         return None
     state = evaluate(settings, solution)
-    if state.direction is None:
+    ops_hdri.follow(settings, bpy.context.scene, state)
+    if not usable or state.direction is None:
         return state
     # A Sun light shines along its local -Z: the world +Z must point at the sun.
     # Solve in the parent's space (mirrored or non-uniform parents included).

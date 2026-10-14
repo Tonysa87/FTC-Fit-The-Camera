@@ -1420,6 +1420,134 @@ def shadow_checks_the_date_and_gives_the_north():
     assert abs(math.degrees(math.asin(d.z)) - SUN_ELEVATION) < 0.05
 
 
+def synthetic_hdri(u0, v0, size=(512, 256), radius_deg=3.0):
+    """Float equirectangular image: a dim sky and a bright disc (the sun) at (u0, v0)."""
+    from solver.hdri import direction
+
+    w, h = size
+    rows, cols = np.mgrid[0:h, 0:w]
+    u, v = (cols + 0.5) / w, (rows + 0.5) / h
+    phi, theta = (0.5 - u) * 2 * math.pi, (v - 0.5) * math.pi
+    dirs = np.stack([np.cos(theta) * np.cos(phi), np.cos(theta) * np.sin(phi), np.sin(theta)], -1)
+    px = np.full((h, w, 4), 0.02, dtype=np.float32)
+    px[..., 3] = 1.0
+    px[dirs @ direction(u0, v0) > math.cos(math.radians(radius_deg)), :3] = 50.0
+    img = bpy.data.images.new("synthetic_hdri", w, h, float_buffer=True)
+    img.pixels.foreach_set(px.ravel())
+    img.update()
+    return img
+
+
+def world_with(image):
+    world = bpy.data.worlds.new("hdri world")
+    world.use_nodes = True
+    tree = world.node_tree
+    env = tree.nodes.new("ShaderNodeTexEnvironment")
+    env.image = image
+    tree.links.new(env.outputs["Color"], tree.nodes["Background"].inputs["Color"])
+    bpy.context.scene.world = world
+    return world, env
+
+
+def center_brightness(scene, direction, name):
+    """Render a narrow view along ``direction`` (world) and return the centre pixel."""
+    cam_data = bpy.data.cameras.new(name)
+    cam_data.lens, cam_data.sensor_width = 400.0, 36.0  # about 5° wide
+    probe = bpy.data.objects.new(name, cam_data)
+    scene.collection.objects.link(probe)
+    probe.rotation_mode = "QUATERNION"
+    probe.rotation_quaternion = Vector(direction).to_track_quat("-Z", "Y")
+    previous = scene.camera
+    scene.camera = probe
+    scene.render.engine = "CYCLES"
+    scene.cycles.samples, scene.cycles.use_denoising = 1, False
+    scene.render.resolution_x = scene.render.resolution_y = 9
+    scene.render.resolution_percentage = 100
+    scene.render.film_transparent = False
+    scene.view_settings.view_transform = "Standard"
+    try:
+        px = _render_to_array(scene, name)
+    finally:
+        scene.camera = previous
+    return float(px[4, 4, :3].mean())
+
+
+@test
+def fit_hdri_renders_the_sun_where_computed():
+    """Cycles' equirectangular convention and the Mapping sign, checked by a render."""
+    from solver.hdri import image_point
+
+    ops_sun = importlib.import_module(PKG + ".ops_sun")
+    cam = _sun_camera(sun_tiff())
+    scene = bpy.context.scene
+    s = cam.data.ftc
+    s.sun.north_source = "MAP"
+    s.sun.map_axis, s.sun.map_bearing = "+X", math.radians(90.0)
+    sun = ops_sun.evaluate(s).direction
+    u0, v0 = 0.2, image_point(sun)[1]
+    world, env = world_with(synthetic_hdri(u0, v0))
+    assert bpy.ops.ftc.fit_hdri(point=(u0, v0)) == {"FINISHED"}
+    mapping = env.inputs["Vector"].links[0].from_node
+    assert mapping.type == "MAPPING" and mapping.get("ftc_hdri")
+    assert s.sun.hdri_fitted and s.sun.hdri_image == env.image.name
+    assert center_brightness(scene, sun, "hdri_on_sun") > 0.9, "the HDRI's sun is where the photo's is"
+    z = mapping.inputs["Rotation"].default_value[2]
+    mapping.inputs["Rotation"].default_value[2] = -z
+    assert center_brightness(scene, sun, "hdri_wrong_sign") < 0.2, "the opposite turn misses it"
+
+    # FTC finds the sun on its own (thumbnail, brightest point), in memory...
+    assert bpy.ops.ftc.fit_hdri() == {"FINISHED"}
+    assert abs(mapping.inputs["Rotation"].default_value[2] - z) < math.radians(1.0)
+    # ...and from a file larger than the thumbnail (reduced by Blender).
+    path = os.path.join(SCRATCH, "big_hdri.exr")
+    big = synthetic_hdri(u0, v0, size=(2400, 1200), radius_deg=0.6)
+    big.filepath_raw, big.file_format = path, "OPEN_EXR"
+    big.save()
+    env.image = bpy.data.images.load(path)
+    s.sun.hdri_fitted = False
+    mapping.inputs["Rotation"].default_value[2] = 0.0
+    assert bpy.ops.ftc.fit_hdri() == {"FINISHED"}
+    assert abs(mapping.inputs["Rotation"].default_value[2] - z) < math.radians(1.0)
+    # A second fit reuses the same Mapping node.
+    assert sum(n.type == "MAPPING" for n in world.node_tree.nodes) == 1
+
+    # The fitted HDRI follows the sun.
+    s.sun.north_correction = math.radians(25.0)
+    moved = ops_sun.evaluate(s).direction
+    assert center_brightness(scene, moved, "hdri_follows") > 0.9
+
+
+@test
+def fit_hdri_needs_an_equirectangular_world():
+    ops_hdri = importlib.import_module(PKG + ".ops_hdri")
+    cam = _sun_camera(sun_tiff())
+    s = cam.data.ftc
+    s.sun.north_source = "MAP"
+    scene = bpy.context.scene
+    scene.world = bpy.data.worlds.new("plain")
+    assert ops_hdri.environment(scene.world)[0] is None
+    with contextlib.redirect_stderr(None) if False else contextlib.nullcontext():
+        try:
+            result = bpy.ops.ftc.fit_hdri()
+        except RuntimeError:
+            result = {"CANCELLED"}
+    assert result == {"CANCELLED"}
+    _world, env = world_with(synthetic_hdri(0.3, 0.6, size=(64, 32)))
+    env.projection = "MIRROR_BALL"
+    node, problem = ops_hdri.environment(scene.world)
+    assert node is None and "equirectangular" in problem
+    env.projection = "EQUIRECTANGULAR"
+    # A user's own Mapping (Texture type, with a location) is reused: only Z changes.
+    tree = scene.world.node_tree
+    mine = tree.nodes.new("ShaderNodeMapping")
+    mine.vector_type = "TEXTURE"
+    mine.inputs["Location"].default_value = (1.0, 2.0, 3.0)
+    tree.links.new(mine.outputs["Vector"], env.inputs["Vector"])
+    assert bpy.ops.ftc.fit_hdri(point=(0.3, 0.6)) == {"FINISHED"}
+    assert ops_hdri.mapping_of(env) == mine and tuple(mine.inputs["Location"].default_value) == (1.0, 2.0, 3.0)
+    assert sum(n.type == "MAPPING" for n in tree.nodes) == 1
+
+
 @test
 def every_button_has_a_tooltip():
     """Operators and the settings drawn as buttons all carry a description."""
@@ -1446,6 +1574,7 @@ def every_button_has_a_tooltip():
         "set_role",
         "new_sun",
         "read_photo_time",
+        "fit_hdri",
     ):
         if not getattr(bpy.ops.ftc, op).get_rna_type().description.strip():
             missing.append("ftc." + op)
