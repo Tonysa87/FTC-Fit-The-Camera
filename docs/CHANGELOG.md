@@ -23,7 +23,10 @@ release since 0.1, is in [`CHANGELOG.it.md`](CHANGELOG.it.md).
   compass), or from a **shadow**. Most Android phones write no compass: no map
   or measuring is needed (an early map/landmark design was dropped after the
   first GUI test as too complex). **Calibrate Shadow** places only the shadow
-  handles (no guides, the camera untouched). **Raise** lifts or lowers the date's sun by
+  handles (no guides, the camera untouched). The white × labelled *Fit Sun*
+  is the computed sun everywhere (shadow tip in the camera view, sun in the
+  HDRI viewer); *Check with a Shadow* also works with *Side* (*Shadow vs
+  Turn*). **Raise** lifts or lowers the date's sun by
   eye when the CG shadows come out shorter or longer than in the photo.
 - **Sun from a shadow**: three handles on the foot and top of something vertical
   and on the tip of its shadow, on the ground or on a wall through the origin.

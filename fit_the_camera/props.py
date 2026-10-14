@@ -312,7 +312,8 @@ class FTC_Sun(PropertyGroup):
         name="Check with a Shadow",
         translation_context=FTC_CONTEXT,
         description=(
-            "Show the shadow handles (foot and top of something vertical, tip of its shadow) to check the compass"
+            "Show the shadow handles (foot and top of something vertical, tip of its shadow) to check the north "
+            "and the sun's height: the × marks where the Fit Sun sun puts the shadow tip"
         ),
         update=_sun_changed,
     )

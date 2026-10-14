@@ -261,9 +261,21 @@ the real ones. *Sun From* picks the source:
   through the origin (*Shadow On*: put the origin at the foot of that wall). The
   sun lies along the line from the tip through the top. The panel gives its
   elevation with a ± from the handles: a long shadow measures better than a
-  short one, and *Shadow vs Date* checks the time and the calibration. With the
-  compass, *Check with a Shadow* shows *Shadow vs Compass*. A white cross marks
-  where the date's sun would put the tip.
+  short one, and *Shadow vs Date* checks the time and the calibration (it is
+  also the *Raise* that matches). With the compass or a side, *Check with a
+  Shadow* shows the shadow handles and *Shadow vs Compass* / *Shadow vs Turn*
+  (the turn the shadow asks for).
+- **The white × "Fit Sun"** is always the sun computed by Fit Sun (date,
+  place, *Turn* / *North Correction*, *Raise*), next to something measured:
+  - in the camera view, with the shadow handles: where that sun puts the
+    shadow tip. On the tip handle, the sun is right; *Turn* moves it sideways,
+    *Raise* along the shadow;
+  - in the Fit HDRI viewer: where that sun lies on the HDRI, in the column of
+    the orange ring (the HDRI's sun you picked); their vertical gap is the
+    elevation difference.
+
+  Not to be confused with the grey **+** (3 vanishing points): the principal
+  point.
 - **The light**: pick a Sun light, or press the sun icon next to *Light* (*New Sun*). FTC only sets its
   rotation: strength, colour and angle stay yours. It follows the camera on
   *Apply* and while calibrating. A deleted or linked light, or constraints and

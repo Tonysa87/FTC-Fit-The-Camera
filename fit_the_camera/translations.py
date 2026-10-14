@@ -309,8 +309,8 @@ _IT = {
         "Il sole dell'HDRI differisce di {:+.0f}° in elevazione da quello della foto: le ombre non avranno la "
         "stessa lunghezza"
     ),
-    "Click the sun in the HDRI · Shift: magnifier · Enter: apply · Esc: cancel · the cross is the photo's sun": (
-        "Clicca il sole nell'HDRI · Shift: lente · Invio: applica · Esc: annulla · la croce è il sole della foto"
+    "Click the sun in the HDRI · Shift: magnifier · Enter: apply · Esc: cancel · ×: the photo's sun (Fit Sun)": (
+        "Clicca il sole nell'HDRI · Shift: lente · Invio: applica · Esc: annulla · ×: il sole della foto (Fit Sun)"
     ),
     "HDRI Rotation": "Rotazione HDRI",
     "Sun Point": "Punto del sole",
@@ -420,10 +420,19 @@ _IT = {
     ),
     "No compass direction in the photo: use Side or Shadow": "Nessuna bussola nella foto: usa Lato o Ombra",
     "Shadow vs Compass": "Ombra / bussola",
-    "Show the shadow handles (foot and top of something vertical, tip of its shadow) to check the compass": (
+    "Show the shadow handles (foot and top of something vertical, tip of its shadow) to check the north "
+    "and the sun's height: the × marks where the Fit Sun sun puts the shadow tip": (
         "Mostra le maniglie dell'ombra (piede e cima di qualcosa di verticale, punta della sua ombra) per "
-        "verificare la bussola"
+        "verificare il nord e l'altezza del sole: la × segna dove il sole di Fit Sun mette la punta dell'ombra"
     ),
+    "×: the tip by the Fit Sun sun (Turn, Raise)": "×: la punta data dal sole di Fit Sun (Ruota, Alza)",
+    "×: where the Fit Sun sun puts the shadow tip; Raise moves it along the shadow": (
+        "×: dove il sole di Fit Sun mette la punta dell'ombra; Alza la sposta lungo l'ombra"
+    ),
+    "×: where the Fit Sun sun puts the shadow tip; {} moves it sideways, Raise along the shadow": (
+        "×: dove il sole di Fit Sun mette la punta dell'ombra; {} la sposta di lato, Alza lungo l'ombra"
+    ),
+    "Shadow vs Turn": "Ombra / Ruota",
     # FTC orientation
     "FTC Orientation": "Orientamento FTC",
     "No 3D view to create the orientation from": "Nessuna vista 3D da cui creare l'orientamento",

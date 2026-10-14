@@ -582,7 +582,7 @@ def paint(viewer, region):
             pick = viewer.to_region(viewer.pick)
             draw.text((pick[0] + 14 * s, pick[1] + 6 * s), f"{elevation(viewer.pick[1]):.1f}°", draw.SUN_COLOR)
         hint = bpy.app.translations.pgettext_iface(
-            "Click the sun in the HDRI · Shift: magnifier · Enter: apply · Esc: cancel · the cross is the photo's sun"
+            "Click the sun in the HDRI · Shift: magnifier · Enter: apply · Esc: cancel · ×: the photo's sun (Fit Sun)"
         )
         draw.text((x0, y1 + 10 * s), hint, draw.WHITE, 12.0)
         if viewer.magnify and viewer.mouse is not None and viewer.inside(*viewer.mouse):
@@ -605,10 +605,8 @@ def _markers(viewer, to_region, s, clip=None) -> None:
         if shown(p := to_region(viewer.pick), 11.0 * s):
             draw.circle(p, 11.0 * s, draw.SUN_COLOR)
         c = to_region((viewer.pick[0], 0.5 + viewer.sun_elevation / 180.0))
-        r = 6.0 * s
-        if shown(c, r * math.sqrt(2.0)):
-            cross = [(c[0] - r, c[1] - r), (c[0] + r, c[1] + r), (c[0] - r, c[1] + r), (c[0] + r, c[1] - r)]
-            draw.lines(cross, draw.WHITE, 1.0)
+        if shown(c, 6.0 * s * math.sqrt(2.0)):
+            draw.sun_mark(c, 6.0, label_left=True)
 
 
 def _lens(viewer, s) -> None:

@@ -48,6 +48,12 @@ Zip: `\\wsl.localhost\Ubuntu-24.04\home\tony\Projects\FTC\dist\fit_the_camera-<v
 10. **Cabina**: ombra del cartello sul muro: *Shadow On* = parete (XZ o YZ),
     origine nello spigolo muro–marciapiede.
 
+9b. **Cabina**, *North* = *Side* −Y: spunta **Check with a Shadow**, Calibrate
+    Shadow sul cartello e la sua ombra sul muro. Accanto alla punta compare la
+    **× "Fit Sun"**: con *Turn* si sposta di lato, con *Raise* lungo l'ombra;
+    portala sulla maniglia della punta. *Shadow vs Turn* dice quanto aggiungere
+    a Turn, *Shadow vs Date* il Raise che combacia.
+
 ## Fit HDRI
 11. World con un HDRI equirettangolare (Environment Texture). Con il sole
     impostato, **Fit HDRI**: si apre il visore sull'HDRI, anello bianco sul punto

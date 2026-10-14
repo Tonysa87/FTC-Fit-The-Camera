@@ -244,9 +244,20 @@ quelle vere. *Sole da* sceglie la fonte:
   parete per l'origine (*Ombra su*: metti l'origine al piede di quella parete).
   Il sole sta sulla retta dalla punta alla cima. Il pannello dà la sua elevazione
   con un ± dalle maniglie: un'ombra lunga misura meglio di una corta, e *Ombra /
-  data* verifica ora e calibrazione. Con la bussola, *Verifica con un'ombra*
-  mostra *Ombra / bussola*. Una crocetta bianca segna dove il sole della data
-  metterebbe la punta.
+  data* verifica ora e calibrazione (ed è anche l'*Alza* che fa combaciare).
+  Con la bussola o un lato, *Verifica con un'ombra* mostra le maniglie
+  dell'ombra e *Ombra / bussola* / *Ombra / Ruota* (la rotazione chiesta
+  dall'ombra).
+- **La × bianca "Fit Sun"** è sempre il sole calcolato da Fit Sun (data, luogo,
+  *Ruota* / *Correzione del nord*, *Alza*), accanto a qualcosa di misurato:
+  - nella vista camera, con le maniglie dell'ombra: dove quel sole mette la
+    punta dell'ombra. Sulla maniglia della punta il sole è giusto; *Ruota* la
+    sposta di lato, *Alza* lungo l'ombra;
+  - nel visore di Fit HDRI: dove quel sole sta nell'HDRI, nella colonna
+    dell'anello arancione (il sole dell'HDRI scelto); la distanza in verticale
+    è la differenza di elevazione.
+
+  Da non confondere con la **+** grigia (3 punti di fuga): il punto principale.
 - **La luce**: scegli una luce Sole, o premi l'icona del sole accanto a *Luce* (*Nuovo sole*). FTC ne imposta solo la
   rotazione: intensità, colore e angolo restano tuoi. Segue la camera con
   *Applica* e durante la calibrazione. Una luce cancellata o collegata, o vincoli

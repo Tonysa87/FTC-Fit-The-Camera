@@ -22,7 +22,10 @@ Storia completa in italiano. Dalla 1.1 il changelog principale è in inglese:
   **Shift** (×4 sul mouse, come per le maniglie, mirino a colori invertiti per
   vederlo sul sole bianco), su una copia a 2048 px. **Calibra ombra** (sezione
   Fit Sun): una sessione con le sole maniglie dell'ombra, senza guide e senza
-  toccare la camera.
+  toccare la camera. La × bianca con l'etichetta *Fit Sun* è ovunque il sole
+  calcolato (punta dell'ombra nella vista camera, sole nel visore HDRI), con
+  suggerimenti nel pannello e nell'intestazione; *Verifica con un'ombra* anche
+  con *Lato* (*Ombra / Ruota*).
 - **Report di calibrazione** (1.1 A2): *Esporta report* in *Risultati*, in
   Markdown o JSON: focale, sensore, campo visivo, posizione e rotazione,
   incertezza, aderenza delle guide, fonte di ogni dato (EXIF o manuale) e sole.

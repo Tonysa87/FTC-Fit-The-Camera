@@ -77,8 +77,8 @@ def shadow_in_use(settings) -> bool:
     sun = settings.sun
     if sun.source == "SHADOW":
         return True
-    north = north_source(settings)
-    return north == "SHADOW" or (north == "COMPASS" and sun.use_shadow)
+    # With the compass or a side: the shadow checks the north and the height.
+    return north_source(settings) == "SHADOW" or sun.use_shadow
 
 
 def shadow_of(settings) -> Shadow:
@@ -233,7 +233,8 @@ def evaluate(settings, solution=None) -> SunState:
     elif state.y_bearing is None:
         state.error = north_error
         return state
-    elif shadow_bearing is not None:
+    if north != "SHADOW" and shadow_bearing is not None:
+        # The turn the shadow asks for (add it to Turn / North Correction).
         state.shadow_north_offset = (shadow_bearing - state.y_bearing + 180.0) % 360.0 - 180.0
         state.shadow_north_spread = azimuth_spread(state.shadow_spread, state.shadow)
     state.direction = Vector(scene_direction(raised(state.sun, sun), state.y_bearing).tolist())

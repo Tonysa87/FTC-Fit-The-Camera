@@ -509,9 +509,22 @@ def _shadow(view, solution, settings):
     px = project(solution, [hit])[0]
     if np.isnan(px).any():
         return
-    c = view.px_to_region(px)
-    r = 5.0 * ui_scale()
+    sun_mark(view.px_to_region(px))
+
+
+def sun_mark(c, size=5.0, *, label_left=False) -> None:
+    """The sun of Fit Sun (date, place, Turn, Raise) wherever it is compared with
+    something measured: a white × labelled "Fit Sun" (on its left when the
+    right side has another label)."""
+    s = ui_scale()
+    r = size * s
     lines([(c[0] - r, c[1] - r), (c[0] + r, c[1] + r), (c[0] - r, c[1] + r), (c[0] + r, c[1] - r)], WHITE, 1.0)
+    label = "Fit Sun"
+    x = c[0] + r + 4.0 * s
+    if label_left:
+        blf.size(0, 10.0 * s)
+        x = c[0] - r - 4.0 * s - blf.dimensions(0, label)[0]
+    text((x, c[1] - 4.0 * s), label, WHITE, 10.0)
 
 
 def axis_letter(label: str) -> str:

@@ -307,6 +307,8 @@ class FTC_OT_calibrate(Operator):
         settings = session_camera(session).data.ftc
         if session.shadow_only:
             text = "FTC  " + iface_("Shadow", "FTC") + "  |  " + iface_(SHADOW_STATUS_KEYS)
+            if settings.sun.source == "TIME":
+                text += "  |  " + iface_("×: the tip by the Fit Sun sun (Turn, Raise)")
             if text != session.status:
                 session.status = text
                 area.header_text_set(text)

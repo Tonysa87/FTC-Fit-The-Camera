@@ -315,8 +315,8 @@ def active_handle_keys(settings) -> list[str]:
     if settings.pp_mode == "MANUAL":
         keys.append("pp")
     sun = settings.sun
-    shadow = sun.north_source == "SHADOW" or (sun.north_source == "COMPASS" and sun.use_shadow)
-    if sun.source == "SHADOW" or shadow:
+    # (the same rule as ops_sun.shadow_in_use)
+    if sun.source == "SHADOW" or sun.north_source == "SHADOW" or sun.use_shadow:
         keys += ["shadow_foot", "shadow_top", "shadow_tip"]
     return keys
 
