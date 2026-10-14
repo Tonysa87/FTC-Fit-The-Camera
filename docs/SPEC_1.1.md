@@ -75,6 +75,12 @@ Sun.
     conosce la verticale); manca solo il nord, un angolo attorno a Z:
     - **da mappa**: "l'asse +X (o +Y) della scena punta a N°", letto su una
       mappa da una facciata o una strada;
+    - **da un punto lontano**: una maniglia su un riferimento riconoscibile
+      (punta di un'isola, campanile, cima) e il suo azimut letto sulla
+      mappa; il nord = azimut del raggio orizzontale della maniglia − azimut
+      inserito. Serve nei paesaggi senza facciate (`samples/IMG_20250630_152535968_HDR.jpg`:
+      lago con isola all'orizzonte, calibrazione *Horizon*, sole a ~239°/56°,
+      GPS vero). L'errore di parallasse è trascurabile se il punto è lontano;
     - **slider dell'azimut** a occhio: elevazione fissa, si ruota il sole
       finché le ombre del CG coincidono con quelle della foto;
     - **dall'ombra** (sotto), il più preciso.
