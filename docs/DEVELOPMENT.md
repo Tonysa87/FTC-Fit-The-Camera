@@ -19,6 +19,7 @@ fit_the_camera/          # l'estensione (questa cartella diventa lo zip)
     plane.py             # rettangolo noto (omografia, vincoli di Zhang)
     horizon.py           # orizzonte
     convert.py           # soluzione -> camera Blender, focale da mm / 35 mm
+    sun.py               # posizione del sole (NOAA), nord della scena (1.1)
   exif.py                # parser EXIF in Python puro (JPEG, TIFF, PNG, WebP)
   props.py               # PropertyGroup salvato su ogni Camera (camera.ftc)
   calibrate.py           # impostazioni -> solver -> camera; incertezza; avvisi
@@ -27,6 +28,7 @@ fit_the_camera/          # l'estensione (questa cartella diventa lo zip)
   ops_align.py           # allineamento alla scena
   ops_orientation.py     # orientamento di trasformazione "FTC" (assi calibrati)
   ops_render.py          # Prepara render, ruoli Shadow Catcher / Holdout
+  ops_sun.py             # Fit Sun: ora/luogo -> sole nella scena -> luce Sole (1.1)
   draw.py                # overlay gpu (guide, maniglie, griglia, orizzonte, cubo)
   ui.py                  # pannello
   translations.py        # traduzione italiana
@@ -55,6 +57,9 @@ docs/TEST_GUI.md         # checklist del test a mano in Blender (da fare: 1.0.0)
 - Segno degli assi: lungo la prima guida del gruppo (prima → seconda maniglia),
   calcolato con la velocità d'immagine, stabile anche con punti di fuga all'infinito.
 - Yaw in gradi, orario da +Y (bussola con il nord su +Y).
+- Sole (1.1): azimut e direzioni in gradi orari dal nord visti dall'alto; il nord
+  della scena è la direzione di bussola dell'asse +Y (`solver/sun.y_bearing`).
+  Una luce Sole illumina lungo il suo −Z: FTC punta il suo +Z verso il sole.
 - Piano di riferimento: XY (pavimento), XZ (parete rivolta a −Y), YZ (parete
   rivolta a +X), y locale verso l'alto sulle pareti.
 - Sensore = lato lungo del sensore intero; la parte coperta dall'immagine si
