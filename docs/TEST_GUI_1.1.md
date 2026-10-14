@@ -50,7 +50,9 @@ Zip: `\\wsl.localhost\Ubuntu-24.04\home\tony\Projects\FTC\dist\fit_the_camera-<v
     impostato, **Fit HDRI**: si apre il visore sull'HDRI, anello bianco sul punto
     più luminoso, crocetta dove cade il sole della foto. Clic sul sole, **Invio**:
     l'HDRI ruota (nei nodi del World compare *FTC HDRI* o cambia solo la Z del
-    tuo Mapping). Esc annulla senza cambiare nulla.
+    tuo Mapping). Esc annulla senza cambiare nulla. Il visore occupa metà
+    vista; tenendo **Shift** compare la lente ×4 sul mouse (cursore nascosto,
+    mirino al centro): il clic sceglie il punto sotto il mirino.
 12. Render: ombre della Sun e luce dell'HDRI dalla stessa parte. Cambia la
     *North Correction*: l'HDRI segue (*Follow the Sun*). Ruota a mano la Z del
     Mapping: *Follow the Sun* si spegne.

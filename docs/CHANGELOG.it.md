@@ -18,7 +18,8 @@ Storia completa in italiano. Dalla 1.1 il changelog principale è in inglese:
   del Mapping che arriva da altri nodi e scrive il valore all'origine: l'input
   *Rotation* del gruppo di Poly Haven (gradi → Multiply → Combine XYZ), nodi
   Value, Math / Vector Math lineari, gruppi annidati; rispetta min / max
-  dell'input.
+  dell'input. Il visore di Fit HDRI occupa metà vista e ha la lente con
+  **Shift** (×4 sul mouse, come per le maniglie), su una copia a 2048 px.
 - **Report di calibrazione** (1.1 A2): *Esporta report* in *Risultati*, in
   Markdown o JSON: focale, sensore, campo visivo, posizione e rotazione,
   incertezza, aderenza delle guide, fonte di ogni dato (EXIF o manuale) e sole.

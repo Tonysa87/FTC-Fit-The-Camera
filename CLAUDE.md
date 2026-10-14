@@ -7,8 +7,8 @@ Extensions audience) and `README.it.md` (Italian); developer docs
 "Camera Match": the final name is **FTC**, package `fit_the_camera`, tab "FTC").
 
 ## Status / next session (bookmark 2026-10-14, night)
-- **RESUME HERE**: the user is GUI-testing **1.1.0-alpha.10** on Windows
-  (`dist/fit_the_camera-1.1.0-alpha.10.zip`, checklist `docs/TEST_GUI_1.1.md`).
+- **RESUME HERE**: the user is GUI-testing **1.1.0-alpha.11** on Windows
+  (`dist/fit_the_camera-1.1.0-alpha.11.zip`, checklist `docs/TEST_GUI_1.1.md`).
   Cabin photo (`samples/IMG_20260804_185218650.jpg`) DONE: Side **-Y** (not -X:
   +Y runs into the wall), Turn -16°, **Raise** -3.5° (16.0° -> 12.5°) -> the CG
   sign shadow matches the photo ("PERFETTO"). Raise (`sun.elevation_correction`,
@@ -19,7 +19,10 @@ Extensions audience) and `README.it.md` (Italian); developer docs
   Vector Math, group inputs/outputs, min/max respected): his Poly Haven World
   (group input Rotation in degrees -> Multiply 0.0175 -> Combine XYZ Z ->
   Mapping): verified by the user in the GUI, HDRI shadows "perfect" in
-  azimuth (elevation differs by nature: only Z is turned). Then the
+  azimuth (elevation differs by nature: only Z is turned). alpha.11 (asked by
+  him): the HDRI viewer at half size (`VIEWER_FRACTION`) with a Shift
+  magnifier on the mouse (`ops_hdri._lens`, 2048 px viewer copy, proposal from
+  a 1024 `reduced` one); probe `hdri` also writes `hdri_lens.png`. Then the
   rest of the checklist, then release 1.1.0. He also asked whether the grid step
   should be labelled (offered, not decided).
 - **1.1 developed (2026-10-14): all phases S1–S4, A1, A2 done, audited, pushed.**

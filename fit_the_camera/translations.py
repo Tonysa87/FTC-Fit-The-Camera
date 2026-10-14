@@ -291,8 +291,8 @@ _IT = {
         "Il sole dell'HDRI differisce di {:+.0f}° in elevazione da quello della foto: le ombre non avranno la "
         "stessa lunghezza"
     ),
-    "Click the sun in the HDRI · Enter: apply · Esc: cancel · the cross is the photo's sun": (
-        "Clicca il sole nell'HDRI · Invio: applica · Esc: annulla · la croce è il sole della foto"
+    "Click the sun in the HDRI · Shift: magnifier · Enter: apply · Esc: cancel · the cross is the photo's sun": (
+        "Clicca il sole nell'HDRI · Shift: lente · Invio: applica · Esc: annulla · la croce è il sole della foto"
     ),
     "HDRI Rotation": "Rotazione HDRI",
     "Sun Point": "Punto del sole",
