@@ -30,6 +30,8 @@ VIEWER_FRACTION = 0.5
 # the shadows will not have the same length.
 ELEVATION_WARNING = 10.0
 VIEWER_MARGIN = 40.0
+# Passed on to the 3D view while the viewer is open.
+NAVIGATION_EVENTS = {"MIDDLEMOUSE", "WHEELUPMOUSE", "WHEELDOWNMOUSE", "TRACKPADPAN", "TRACKPADZOOM", "MOUSEROTATE"}
 
 
 def _environments(tree, start, found, seen, path=()) -> None:
@@ -128,6 +130,9 @@ def mapping_of(env):
 LIMITED = "The HDRI's rotation input cannot take the angle (its min / max): widen them or Fit HDRI cannot turn it"
 UNFOLLOWED = "The rotation of the HDRI's Mapping comes from nodes FTC cannot follow back: Fit HDRI cannot turn it"
 ANIMATED = "The rotation of the HDRI is keyframed or driven: Fit HDRI cannot turn it"
+LINKED = "The rotation of the HDRI is in a node group linked from a library: make it local to fit its HDRI"
+MUTED = "The HDRI's Mapping node is muted: unmute it or remove it"
+SHARED = "The HDRI's node group is used several times: only this instance's rotation input turns"
 
 
 @dataclass
@@ -149,9 +154,10 @@ class Control:
     def get(self) -> float:
         return self.scale * self.value() + self.offset
 
-    def set(self, rotation: float) -> None:
-        """Write the value giving ``rotation`` (radians, any turn of it: the one
-        closest to the current value that fits the input's limits)."""
+    def target(self, rotation: float) -> float:
+        """The value giving ``rotation`` (radians, any turn of it: the one
+        closest to the current value that fits the input's limits);
+        ``ValueError`` when none fits. Nothing is written."""
         value = (rotation - self.offset) / self.scale
         turn = abs(2.0 * math.pi / self.scale)
         value += round((self.value() - value) / turn) * turn
@@ -164,13 +170,23 @@ class Control:
             if not lo - 1e-6 <= value <= hi + 1e-6:
                 # Blender may store it anyway, but the input says it is out of range.
                 raise ValueError(LIMITED)
+        return value
+
+    def _write(self, value: float) -> None:
         if self.component is None:
             self.socket.default_value = value
         else:
             v = list(self.socket.default_value)
             v[self.component] = value
             self.socket.default_value = v
+
+    def set(self, rotation: float) -> None:
+        """Write the value giving ``rotation`` (see ``target``); put the old one
+        back and raise when the socket does not take it (clamped)."""
+        old = self.value()
+        self._write(self.target(rotation))
         if abs(_wrap(self.get() - rotation)) > 1e-4:
+            self._write(old)
             raise ValueError(LIMITED)
 
 
@@ -233,10 +249,14 @@ def rotation_control(mapping, path=(), component: int = 2):
                 return ANIMATED
             if socket.type != ("VECTOR" if comp is not None else "VALUE"):
                 return UNFOLLOWED
+            if not socket.id_data.is_editable:
+                return LINKED
             return Control(socket, comp, scale, offset, limits)
         out, node = source
         if out.type != ("VECTOR" if comp is not None else "VALUE"):
             return UNFOLLOWED  # a conversion between a vector and a number
+        if node.mute:
+            return UNFOLLOWED  # it passes its first input through: not its formula
         limits = None
         kind = node.type
         if kind == "COMBXYZ" and comp is not None:
@@ -244,6 +264,8 @@ def rotation_control(mapping, path=(), component: int = 2):
         elif kind == "VALUE" and comp is None:
             if _animated(out):
                 return ANIMATED
+            if not out.id_data.is_editable:
+                return LINKED
             return Control(out, None, scale, offset)
         elif kind == "MATH" and comp is None and not node.use_clamp:
             a, b = node.inputs[0], node.inputs[1]
@@ -255,6 +277,8 @@ def rotation_control(mapping, path=(), component: int = 2):
                 line = _math_line(node.operation, float(k.default_value), x_first)
                 if line is None or k.is_linked:
                     return UNFOLLOWED
+                if _animated(k):
+                    return ANIMATED
             offset += scale * line[1]
             scale *= line[0]
             socket = x
@@ -264,6 +288,8 @@ def rotation_control(mapping, path=(), component: int = 2):
                 k = node.inputs["Scale"]
                 if k.is_linked:
                     return UNFOLLOWED
+                if _animated(k):
+                    return ANIMATED
                 line = (float(k.default_value), 0.0)
                 x = a
             else:
@@ -271,6 +297,8 @@ def rotation_control(mapping, path=(), component: int = 2):
                 x, k = (a, b) if x_first else (b, a)
                 if k.is_linked:
                     return UNFOLLOWED
+                if _animated(k):
+                    return ANIMATED
                 line = _math_line(node.operation, float(k.default_value[comp]), x_first)
                 if line is None:
                     return UNFOLLOWED
@@ -282,7 +310,7 @@ def rotation_control(mapping, path=(), component: int = 2):
             socket = next((s for s in outer.inputs if s.identifier == out.identifier), None)
             if socket is None:
                 return UNFOLLOWED
-            limits = _interface_limits(outer.node_tree, out.identifier) if comp is None else None
+            limits = _interface_limits(outer.node_tree, out.identifier)
             path = path[:-1]
             if socket.is_linked:
                 limits = None
@@ -299,14 +327,17 @@ def rotation_control(mapping, path=(), component: int = 2):
     return UNFOLLOWED
 
 
-def vector_problem(env, world=None) -> str:
-    """Why FTC cannot turn ``env``'s HDRI about Z; empty when it can."""
+def vector_problem(env, world=None, path=None) -> str:
+    """Why FTC cannot turn ``env``'s HDRI about Z; empty when it can. ``path``:
+    the group nodes leading to ``env``'s tree (found from ``world`` when None)."""
     node = _upstream(env.inputs["Vector"])
     if node is None or node.type == "TEX_COORD":
         return ""
     if node.type != "MAPPING":
         return "The HDRI's vector comes from other nodes (not a Mapping): Fit HDRI cannot turn it"
-    control = rotation_control(node, group_path(world, env))
+    if node.mute:
+        return MUTED
+    control = rotation_control(node, group_path(world, env) if path is None else path)
     return control if isinstance(control, str) else ""
 
 
@@ -427,12 +458,21 @@ def fit(settings, scene, uv, state=None):
     if env is None:
         raise ValueError(problem)
     nodes = same_image(env)
-    for node in nodes:
-        if why := vector_problem(node, world):
-            raise ValueError(why)
+    # The textures next to env share its tree, so its group path.
+    path = group_path(world, env)
     angle = z_rotation(uv[0], state.direction)
     warning = problem
-    path = group_path(world, env)
+    for node in nodes:
+        if why := vector_problem(node, path=path):
+            raise ValueError(why)
+        # Check every value before writing any: a refusal leaves the World as it was.
+        mapping = mapping_of(node)
+        if mapping is not None:
+            control = rotation_control(mapping, path)
+            control.target(-angle if mapping.vector_type == "TEXTURE" else angle)
+            owner = control.socket.node
+            if owner.type == "GROUP" and owner.node_tree is not None and owner.node_tree.users > 1:
+                warning = SHARED
     for node in nodes:
         mapping = ensure_mapping(node.id_data, node)
         set_z(mapping, angle, path)
@@ -450,13 +490,15 @@ def follow(settings, scene, state, *, force=False) -> None:
         return
     world = scene.world
     env, _problem = environment(world)
-    if env is None or env.image.name != sun.hdri_image or vector_problem(env, world):
-        return
-    mapping = mapping_of(env)
-    if mapping is None:
+    if env is None or env.image.name != sun.hdri_image:
         return
     path = group_path(world, env)
+    mapping = mapping_of(env)
+    if mapping is None or vector_problem(env, path=path):
+        return
     current = get_z(mapping, path)
+    if not math.isfinite(current):
+        return
     if not force and abs(_wrap(current - sun.hdri_angle)) > 1e-4:
         sun.hdri_fitted = False  # the user took over
         return
@@ -464,7 +506,7 @@ def follow(settings, scene, state, *, force=False) -> None:
     if abs(_wrap(angle - current)) > 1e-7:
         for node in same_image(env):
             other = mapping_of(node)
-            if other is not None and not vector_problem(node, world):
+            if other is not None and not vector_problem(node, path=path):
                 try:
                     set_z(other, angle, path)
                 except ValueError:  # beyond the rotation input's limits
@@ -606,7 +648,7 @@ def _markers(viewer, to_region, s, clip=None) -> None:
             draw.circle(p, 11.0 * s, draw.SUN_COLOR)
         c = to_region((viewer.pick[0], 0.5 + viewer.sun_elevation / 180.0))
         if shown(c, 6.0 * s * math.sqrt(2.0)):
-            draw.sun_mark(c, 6.0, label_left=True)
+            draw.sun_mark(c, 6.0, label_left=True, label=clip is None)
 
 
 def _lens(viewer, s) -> None:
@@ -739,14 +781,15 @@ class FTC_OT_fit_hdri(Operator):
         if viewer is None:
             return {"CANCELLED"}
         try:
-            if event.type in {"MIDDLEMOUSE", "WHEELUPMOUSE", "WHEELDOWNMOUSE"}:
+            if event.type in NAVIGATION_EVENTS or event.type.startswith("NDOF"):
                 return {"PASS_THROUGH"}
             if event.type in {"MOUSEMOVE", "LEFT_SHIFT", "RIGHT_SHIFT"}:
                 region = next((r for r in context.area.regions if r.as_pointer() == viewer.region_ptr), None)
                 if region is not None:
                     viewer.mouse = (event.mouse_x - region.x, event.mouse_y - region.y)
+                    was = viewer.magnify
                     viewer.set_magnifier(context.window, event.shift and viewer.inside(*viewer.mouse))
-                    if viewer.magnify or event.type != "MOUSEMOVE":
+                    if viewer.magnify or was != viewer.magnify or event.type != "MOUSEMOVE":
                         context.area.tag_redraw()
                 return {"RUNNING_MODAL"}
             if event.type == "LEFTMOUSE" and event.value == "PRESS":

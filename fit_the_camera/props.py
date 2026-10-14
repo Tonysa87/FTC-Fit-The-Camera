@@ -351,7 +351,7 @@ class FTC_Sun(PropertyGroup):
             (
                 "SHADOW",
                 "Shadow",
-                "From a shadow in the photo (shadow handles in Calibrate) and the sun of the date and place",
+                "From a shadow in the photo (shadow handles in Calibrate Shadow) and the sun of the date and place",
             ),
             (
                 "SIDE",

@@ -272,6 +272,11 @@ class FTC_OT_calibrate(Operator):
             # session at its next event and stops).
             end_session()
         cam_obj = calibrate.view_camera(context)
+        if self.shadow and not ops_sun.shadow_in_use(cam_obj.data.ftc):
+            self.report(
+                {"WARNING"}, "No shadow handles in use: choose Sun From Shadow, North Shadow or Check with a Shadow"
+            )
+            return {"CANCELLED"}
         area = context.area
         region = main_region(area)
         if region is None:
@@ -287,6 +292,9 @@ class FTC_OT_calibrate(Operator):
         session = Session(cam_obj, area, region, shadow_only=self.shadow)
         session.handler = bpy.types.SpaceView3D.draw_handler_add(draw.draw_overlay, (session,), "WINDOW", "POST_PIXEL")
         FTC_OT_calibrate._session = session
+        # This operator's session: a switch to the other kind starts a new one,
+        # and this modal must then stop without ending it.
+        self._own = session
         if self.shadow:
             # Not a calibration session: the camera is not written.
             if calibrate.cached_solution(cam_obj.data) is None:
@@ -308,7 +316,12 @@ class FTC_OT_calibrate(Operator):
         if session.shadow_only:
             text = "FTC  " + iface_("Shadow", "FTC") + "  |  " + iface_(SHADOW_STATUS_KEYS)
             if settings.sun.source == "TIME":
-                text += "  |  " + iface_("×: the tip by the Fit Sun sun (Turn, Raise)")
+                north = ops_sun.north_source(settings)
+                if north == "SHADOW":
+                    text += "  |  " + iface_("×: the tip by the Fit Sun sun (Raise)")
+                else:
+                    turn = iface_("Turn", "FTC") if north == "SIDE" else iface_("North Correction", "FTC")
+                    text += "  |  " + iface_("×: the tip by the Fit Sun sun ({}, Raise)").format(turn)
             if text != session.status:
                 session.status = text
                 area.header_text_set(text)
@@ -338,15 +351,20 @@ class FTC_OT_calibrate(Operator):
         calibrate.tag_redraw(context)
         return {"FINISHED"}
 
+    def owns_session(self) -> bool:
+        session = FTC_OT_calibrate._session
+        return session is not None and session is getattr(self, "_own", session)
+
     def cancel(self, context):
         # Blender dropped the modal handler (window closed, file loaded...).
-        end_session()
+        if self.owns_session():
+            end_session()
 
     def pick(self, settings, view, mouse) -> str | None:
         radius = draw.PICK_RADIUS * draw.ui_scale()
         best, best_d = None, radius
         solution = calibrate.cached_solution(settings.id_data)
-        if FTC_OT_calibrate._session.shadow_only:
+        if getattr(FTC_OT_calibrate._session, "shadow_only", False):
             for key in draw.session_keys(settings, FTC_OT_calibrate._session):
                 d = math.dist(view.to_region(draw.handle_co(settings, solution, key)), mouse)
                 if d < best_d:
@@ -379,9 +397,10 @@ class FTC_OT_calibrate(Operator):
         push_undo(session, snap)
 
     def changed(self, context, cam_obj, *, reset_pitch=True, key=None):
-        session = FTC_OT_calibrate._session
-        if key in ops_sun.SUN_KEYS or (session is not None and session.shadow_only):
+        if key in ops_sun.SUN_KEYS:
             # Not a calibration input: no solve (nor uncertainty), only the sun.
+            # (Undo can bring back guides too: then it solves; a shadow session
+            # never writes the camera, calibrate.session_camera is not set.)
             ops_sun.orient(cam_obj.data.ftc)
             calibrate.tag_redraw(context)
             return
@@ -396,12 +415,14 @@ class FTC_OT_calibrate(Operator):
         except Exception:
             # Blender would drop the handler without cancel(): never leave a
             # session behind that nothing can end.
-            end_session()
+            if self.owns_session():
+                end_session()
             raise
 
     def _modal(self, context, event):
         session = FTC_OT_calibrate._session
-        if session is None:
+        if session is None or not self.owns_session():
+            # Ended, or replaced by another session (Calibrate <-> Calibrate Shadow).
             return {"CANCELLED"}
         cam_obj = session_camera(session)
         area, region = find_region(context.window, session.area_ptr, session.region_ptr)
@@ -411,6 +432,9 @@ class FTC_OT_calibrate(Operator):
             # The view now looks through another camera (or the image is gone).
             return self.finish(context, apply=False)
         settings = cam_obj.data.ftc
+        if session.shadow_only and not ops_sun.shadow_in_use(settings):
+            # The shadow handles were switched off in the panel: nothing left to place.
+            return self.finish(context, apply=False)
         self.update_status(context, area)
         rv3d = area.spaces.active.region_3d
         view = session.view
@@ -467,7 +491,7 @@ class FTC_OT_calibrate(Operator):
             if session.hover is not None:
                 session.hover = None
                 area.tag_redraw()
-            if not (in_area and event.value == "PRESS" and event.type in SHORTCUT_KEYS):
+            if session.shadow_only or not (in_area and event.value == "PRESS" and event.type in SHORTCUT_KEYS):
                 return {"PASS_THROUGH"}
 
         if event.type == "MOUSEMOVE":
@@ -502,8 +526,8 @@ class FTC_OT_calibrate(Operator):
         if event.type in {"ESC", "RIGHTMOUSE"}:
             return self.finish(context, apply=False)
         if session.shadow_only and event.type in SHORTCUT_KEYS:
-            # Calibration shortcuts: not in a shadow session.
-            return {"RUNNING_MODAL"}
+            # Calibration shortcuts: not in a shadow session (Ctrl combinations go to Blender).
+            return {"PASS_THROUGH"} if event.ctrl else {"RUNNING_MODAL"}
 
         if event.type == "H":
             self.push_undo(session, snapshot(settings))

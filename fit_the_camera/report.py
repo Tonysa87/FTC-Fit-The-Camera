@@ -169,12 +169,15 @@ def sun_report(settings, scene) -> dict | None:
         place = ops_sun.location_state(data)
         out["latitude"] = _field(data.gps_latitude, place)
         out["longitude"] = _field(data.gps_longitude, place)
-        out["north_from"] = sun.north_source
+        out["north_from"] = ops_sun.north_source(settings)
+        if out["north_from"] == "SIDE":
+            out["sun_from_axis"] = sun.sun_side
         out["north_correction_deg"] = _deg(sun.north_correction)
         out["elevation_correction_deg"] = _deg(sun.elevation_correction)
     if state.sun is not None:
         out["azimuth_deg"] = round(state.sun.azimuth, 3)
         out["elevation_deg"] = round(state.sun.elevation, 3)
+        out["light_elevation_deg"] = round(ops_sun.raised(state.sun, sun).elevation, 3)
     if state.y_bearing is not None:
         out["scene_y_bearing_deg"] = round(state.y_bearing, 3)
     if state.direction is not None:

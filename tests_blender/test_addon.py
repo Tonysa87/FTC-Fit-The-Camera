@@ -1172,7 +1172,7 @@ def sun_from_exif_time_place_and_compass():
     assert abs(math.degrees(math.asin(light_dir(light).z)) - (SUN_ELEVATION - 3.0)) < 0.05
     assert angle_diff(heading_deg(light_dir(light)), 270.0) < 0.05
     s.sun.elevation_correction = math.radians(-120.0)
-    assert abs(light_dir(light).z) < 1e-6
+    assert abs(math.degrees(math.asin(light_dir(light).z)) - 0.5) < 1e-3, "kept just above the horizon"
     s.sun.elevation_correction = 0.0
 
     # The north correction turns the sun about Z; the light stays where it is.
@@ -1213,6 +1213,9 @@ def calibrate_shadow_leaves_the_camera_alone():
     ops_modal.FTC_OT_calibrate._session = session
     try:
         assert ops_modal.FTC_OT_calibrate.running(shadow=True) and not ops_modal.FTC_OT_calibrate.running(shadow=False)
+        # The modal of a session replaced by another (Calibrate <-> Calibrate Shadow) stops without ending it.
+        assert ops_modal.FTC_OT_calibrate.owns_session(SimpleNamespace(_own=session))
+        assert not ops_modal.FTC_OT_calibrate.owns_session(SimpleNamespace(_own=object()))
         assert draw.session_keys(s, session) == list(ops_sun.SHADOW_KEYS)
         assert ops_modal.session_camera(session) == cam and calibrate.session_camera is None
         view = draw.View(0.0, 0.0, 1920.0, 1080.0, (1920, 1080))
@@ -1751,14 +1754,27 @@ def fit_hdri_turns_a_group_rotation_input():
     s.sun.north_correction = math.radians(20.0)
     assert not s.sun.hdri_fitted
 
-    # Limits too narrow for the angle: refused.
+    # Limits too narrow for the angle: refused, the World as it was.
     rotation.min_value, rotation.max_value = 0.0, 1.0
     node.inputs["Rotation"].default_value = 0.5
+    count = len(nodes)
     try:
         result = bpy.ops.ftc.fit_hdri(point=(u0, v0))
     except RuntimeError:
         result = {"CANCELLED"}
-    assert result == {"CANCELLED"}
+    assert result == {"CANCELLED"} and node.inputs["Rotation"].default_value == 0.5 and len(nodes) == count
+    rotation.min_value, rotation.max_value = 0.0, 360.0
+
+    # A muted Multiply passes its input through: not followed. A muted Mapping: refused.
+    multiply.mute = True
+    assert "cannot follow" in ops_hdri.vector_problem(env, world)
+    multiply.mute = False
+    mapping.mute = True
+    assert "muted" in ops_hdri.vector_problem(env, world)
+    mapping.mute = False
+    # A keyframed constant: the fit would hold on one frame only.
+    multiply.inputs[1].keyframe_insert("default_value")
+    assert "keyframed" in ops_hdri.vector_problem(env, world)
 
 
 @test
@@ -1832,6 +1848,7 @@ def export_report_json_and_markdown():
     assert report["calibration"]["lines_per_vanishing_point"] == [2, 2]
     sun = report["sun"]
     assert abs(sun["azimuth_deg"] - SUN_AZIMUTH) < 0.05 and sun["light"] == s.sun.light.name
+    assert sun["light_elevation_deg"] == sun["elevation_deg"] and sun["north_from"] == "COMPASS"
     assert sun["utc"].startswith("2026-06-21T10:30:00") and sun["latitude"]["source"] == "EXIF"
 
     cam.name = "cam|one"
