@@ -1601,6 +1601,26 @@ def extra_guide_lines():
     assert s.vp1_lines == 2 and "vp1_3a" not in calibrate.active_handle_keys(s)
     assert len(s.handles) == len(calibrate.HANDLE_DEFAULTS)
 
+    # Line 2 drawn the other way and shorter: the new line still aims at the
+    # meeting point of the first two.
+    calibrate.set_handle(s, "vp2_2a", (0.15, 0.62))
+    calibrate.set_handle(s, "vp2_2b", (0.40, 0.69))
+    assert bpy.ops.ftc.vp_line(index=2) == {"FINISHED"}
+    pts = [np.array([*calibrate.handle(s, k), 1.0]) for k in ("vp2_1a", "vp2_1b", "vp2_2a", "vp2_2b")]
+    meet = np.cross(np.cross(pts[0], pts[1]), np.cross(pts[2], pts[3]))
+    meet = meet[:2] / meet[2]
+    a, b = (np.array(calibrate.handle(s, k)) for k in ("vp2_3a", "vp2_3b"))
+    off = abs((b - a)[0] * (meet - a)[1] - (b - a)[1] * (meet - a)[0]) / np.linalg.norm(b - a)
+    assert off < 1e-5, off
+
+    # Session undo brings the number of lines back with the handles.
+    ops = importlib.import_module(PKG + ".ops_modal")
+    snap = ops.snapshot(s)
+    bpy.ops.ftc.vp_line(index=2)
+    assert s.vp2_lines == 4
+    ops.restore(s, snap)
+    assert s.vp2_lines == 3
+
 
 @test
 def every_button_has_a_tooltip():

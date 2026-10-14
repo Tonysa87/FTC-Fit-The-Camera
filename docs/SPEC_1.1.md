@@ -353,6 +353,9 @@ vivo come nelle altre modalità.
   modificate non salvate: lette direttamente (la copia di Blender le
   rigenera vuote).
 
+- A1: fatta (fino a 6 linee, pulsanti − n +; la nuova linea punta
+  all'incontro delle prime due).
+
 ## Fasi
 
 1. **1.0.x** – correzioni dalle segnalazioni degli utenti (Reddit, issue,
