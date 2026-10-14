@@ -85,7 +85,8 @@ The rest of this page explains every option.
 - **Fit Sun** (1.1, in development): a Sun light turned like the sun of the
   photo, from the EXIF date, time and GPS (or entered by hand), with the north
   from the compass, a map, a distant landmark or a shadow; or measured on a
-  shadow in the photo alone.
+  shadow in the photo alone. **Fit HDRI** turns the World HDRI about Z onto
+  that sun.
 - Interface in English and Italian.
 
 ## Install
@@ -257,7 +258,30 @@ the real ones. *Sun From* picks the source:
 - *Display › North* draws the north (N) and the sun direction (dashed) on the
   ground through the origin while calibrating.
 
-Next in 1.1: *Fit HDRI* (the World HDRI turned about Z onto the sun).
+#### Fit HDRI
+
+With an equirectangular HDRI in the World (an *Environment Texture*), **Fit
+HDRI** turns it about Z so that its sun comes from the same side as the photo's:
+ambient light, reflections and the Sun light then agree.
+
+- A viewer opens over the viewport with a reduced copy of the HDRI. FTC proposes
+  the brightest spot (a white ring); click the sun if it is wrong (bright clouds,
+  reflections, a hidden sun), **Enter** applies, **Esc** cancels. The white cross
+  is where the photo's sun lands: its height against the HDRI's sun.
+- Only the Z rotation of a *Mapping* node changes: an existing one is reused
+  (its X, Y and location stay), otherwise *Texture Coordinate › Mapping* is
+  inserted. The sun's elevation is never changed, only compared: more than 10°
+  apart means the shadows will not have the same length (warning).
+- The HDRI then follows the sun (*Follow the Sun*): a new north, *North
+  Correction* or time turns it with the light. Turning its Mapping by hand
+  switches the following off; ticking it again takes over from there.
+- A Mapping behind reroutes is found; Environment Textures showing the same
+  image (one for the light, one for the camera) turn together. A vector or a
+  rotation driven by other nodes, an HDRI inside a node group or a World linked
+  from a library are refused with a message.
+- HDRI sun and Sun light both give direct light: lower one of them.
+- Equirectangular HDRIs only (nearly all of them); other projections are
+  reported.
 
 ## Tips
 

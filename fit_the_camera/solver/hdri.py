@@ -15,10 +15,12 @@ import math
 
 import numpy as np
 
-# Brightest pixels taken as the sun: those above this luminance quantile...
-SUN_QUANTILE = 0.999
-# ...within this angle of the brightest one (other bright spots are ignored).
+# Pixels taken as the sun: at least this fraction of the brightest one...
+SUN_FRACTION = 0.5
+# ...within this angle of it (other bright spots are ignored).
 SUN_RADIUS_DEG = 10.0
+# Below this peak / median luminance there is no sun to propose.
+SUN_CONTRAST = 4.0
 
 
 def direction(u: float, v: float) -> np.ndarray:
@@ -40,25 +42,31 @@ def luminance(rgb: np.ndarray) -> np.ndarray:
     return rgb[..., 0] * 0.2126 + rgb[..., 1] * 0.7152 + rgb[..., 2] * 0.0722
 
 
-def brightest_point(lum: np.ndarray) -> tuple[float, float]:
+def brightest_point(lum: np.ndarray) -> tuple[float, float] | None:
     """Image point (u, v) of the sun in an equirectangular luminance map (rows
-    bottom to top): the centroid of the brightest pixels around the brightest
-    one, across the left/right seam too."""
+    bottom to top): the luminance-weighted centroid of the pixels at least half
+    as bright as the brightest one and near it (across the left/right seam too).
+    ``None`` when nothing stands out (no sun to propose)."""
     h, w = lum.shape
-    finite = np.where(np.isfinite(lum), lum, 0.0)
-    row, col = np.unravel_index(int(np.argmax(finite)), finite.shape)
+    finite = lum[np.isfinite(lum)]
+    if finite.size == 0:
+        return None
+    # A sun that overflowed (half-float EXR) is +inf: brighter than anything finite.
+    brightest = float(finite.max())
+    clean = np.nan_to_num(lum, nan=0.0, posinf=2.0 * abs(brightest) + 1.0, neginf=0.0)
+    top = float(clean.max())
+    if top <= SUN_CONTRAST * max(float(np.median(clean)), 1e-12):
+        return None
+    row, col = np.unravel_index(int(np.argmax(clean)), clean.shape)
     peak = direction((col + 0.5) / w, (row + 0.5) / h)
     rows, cols = np.mgrid[0:h, 0:w]
-    u = (cols + 0.5) / w
-    v = (rows + 0.5) / h
-    phi = (0.5 - u) * 2.0 * math.pi
-    theta = (v - 0.5) * math.pi
+    phi = (0.5 - (cols + 0.5) / w) * 2.0 * math.pi
+    theta = ((rows + 0.5) / h - 0.5) * math.pi
     dirs = np.stack([np.cos(theta) * np.cos(phi), np.cos(theta) * np.sin(phi), np.sin(theta)], axis=-1)
     near = dirs @ peak > math.cos(math.radians(SUN_RADIUS_DEG))
-    threshold = np.quantile(finite, SUN_QUANTILE)
-    mask = near & (finite >= min(threshold, finite[row, col]))
+    mask = near & (clean >= SUN_FRACTION * top)
     # Average directions, not (u, v): no trouble at the seam or near the poles.
-    weights = np.cos(theta)[mask]  # equal-area pixels
+    weights = (clean * np.cos(theta))[mask]  # luminance x pixel area
     mean = (dirs[mask] * weights[:, None]).sum(axis=0)
     if np.linalg.norm(mean) < 1e-12:
         return (col + 0.5) / w, (row + 0.5) / h

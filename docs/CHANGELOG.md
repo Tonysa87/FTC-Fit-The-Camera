@@ -25,6 +25,18 @@
   ombre a terra indipendenti dall'altezza dell'origine; punta su parete sotto il
   suolo = errore; ± dell'azimut sulla riga *Ombra / nord*; la luce si riallinea
   dopo Esc/undo anche senza *Live Update*.
+- **Fit HDRI** (1.1 S4): l'HDRI equirettangolare del World ruota attorno a Z
+  finché il suo sole ha l'azimut del sole della foto. Visore sul viewport con
+  la copia ridotta dell'HDRI, punto più luminoso proposto, clic per correggere,
+  Invio/Esc; solo la rotazione Z di un nodo Mapping (riusato o inserito);
+  elevazione confrontata (avviso oltre 10°). L'HDRI adattato segue il sole.
+  Convenzione e segno verificati con render Cycles. Audit (alpha.4): Mapping
+  trovato anche dietro i reroute, vettore/rotazione da altri nodi, gruppi e
+  World collegati rifiutati; più Environment con la stessa immagine ruotano
+  insieme; *Segui il sole* visibile, si spegne se il Mapping viene ruotato a
+  mano; visore chiuso al caricamento di un file; redo con il punto cliccato;
+  sole proposto pesato per luminanza (nuvole), sole "infinito" degli EXR half,
+  nessuna proposta senza un sole evidente.
 - Manifest: tag `Camera`, `Render` (tolto `3D View`, chiesto dal moderatore di
   Blender Extensions all'approvazione della 1.0.0).
 - Nuovo logo (mirino in una cornice): il precedente somigliava a quello di fSpy.

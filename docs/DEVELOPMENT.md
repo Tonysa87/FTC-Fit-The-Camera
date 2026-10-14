@@ -20,6 +20,7 @@ fit_the_camera/          # l'estensione (questa cartella diventa lo zip)
     horizon.py           # orizzonte
     convert.py           # soluzione -> camera Blender, focale da mm / 35 mm
     sun.py               # posizione del sole (NOAA), nord della scena, sole da un'ombra (1.1)
+    hdri.py              # HDRI equirettangolare: punto <-> direzione, sole, rotazione Z (1.1)
   exif.py                # parser EXIF in Python puro (JPEG, TIFF, PNG, WebP)
   props.py               # PropertyGroup salvato su ogni Camera (camera.ftc)
   calibrate.py           # impostazioni -> solver -> camera; incertezza; avvisi
@@ -28,7 +29,8 @@ fit_the_camera/          # l'estensione (questa cartella diventa lo zip)
   ops_align.py           # allineamento alla scena
   ops_orientation.py     # orientamento di trasformazione "FTC" (assi calibrati)
   ops_render.py          # Prepara render, ruoli Shadow Catcher / Holdout
-  ops_sun.py             # Fit Sun: ora/luogo -> sole nella scena -> luce Sole (1.1)
+  ops_sun.py             # Fit Sun: ora/luogo o ombra -> sole nella scena -> luce Sole (1.1)
+  ops_hdri.py            # Fit HDRI: visore, nodo Mapping, l'HDRI segue il sole (1.1)
   draw.py                # overlay gpu (guide, maniglie, griglia, orizzonte, cubo)
   ui.py                  # pannello
   translations.py        # traduzione italiana
@@ -60,6 +62,10 @@ docs/TEST_GUI.md         # checklist del test a mano in Blender (da fare: 1.0.0)
 - Sole (1.1): azimut e direzioni in gradi orari dal nord visti dall'alto; il nord
   della scena è la direzione di bussola dell'asse +Y (`solver/sun.y_bearing`).
   Una luce Sole illumina lungo il suo −Z: FTC punta il suo +Z verso il sole.
+- HDRI (1.1): convenzione equirettangolare di Cycles, u = 0,5 guarda +X, u
+  cresce in senso orario visto dall'alto, v = 0,5 orizzonte; il Mapping (tipo
+  Point/Vector) ruota il vettore di lettura: la direzione d del mondo mostra
+  l'HDRI in Rz(angolo)·d. Verificato da render Cycles nei test Blender.
 - Piano di riferimento: XY (pavimento), XZ (parete rivolta a −Y), YZ (parete
   rivolta a +X), y locale verso l'alto sulle pareti.
 - Sensore = lato lungo del sensore intero; la parte coperta dall'immagine si

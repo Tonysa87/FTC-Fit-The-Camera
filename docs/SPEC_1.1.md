@@ -346,6 +346,12 @@ vivo come nelle altre modalità.
   *Ombra* in coda all'enum, punta anche su parete XZ/YZ per l'origine.
   Riferimento per il vincolo: Kee, O'Brien, Farid (2013), *Exposing Photo
   Manipulation with Inconsistent Shadows*, ACM TOG 32(4).
+- S4: fatta (*Fit HDRI*). Convenzione equirettangolare e segno del Mapping
+  verificati da render Cycles (test `fit_hdri_renders_the_sun_where_computed`,
+  al posto della sfera speculare). In più rispetto alla spec: l'HDRI adattato
+  segue il sole quando cambiano nord, correzione o ora. Immagini generate o
+  modificate non salvate: lette direttamente (la copia di Blender le
+  rigenera vuote).
 
 ## Fasi
 

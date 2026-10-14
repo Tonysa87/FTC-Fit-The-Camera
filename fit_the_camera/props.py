@@ -111,6 +111,14 @@ def _sun_changed(self, context):
     ops_sun.settings_changed(self.id_data, context)
 
 
+def _hdri_follow_changed(self, context):
+    if self.hdri_fitted and not calibrate.updating():
+        from . import ops_hdri, ops_sun
+
+        # Taken over again: from the Mapping's present turn.
+        ops_hdri.follow(self.id_data.ftc, context.scene, ops_sun.evaluate(self.id_data.ftc), force=True)
+
+
 def _is_sun_light(self, obj):
     return obj.type == "LIGHT" and obj.data.type == "SUN"
 
@@ -412,7 +420,16 @@ class FTC_Sun(PropertyGroup):
         description="Point of the sun on the HDRI picked by Fit HDRI (0..1, origin bottom-left)",
     )
     hdri_image: StringProperty(description="HDRI image fitted by Fit HDRI")
-    hdri_fitted: BoolProperty(description="The World HDRI follows the sun (set by Fit HDRI)")
+    hdri_angle: FloatProperty(description="Z turn last given to the HDRI by FTC (radians)")
+    hdri_fitted: BoolProperty(
+        name="Follow the Sun",
+        translation_context=FTC_CONTEXT,
+        description=(
+            "Keep the World HDRI on the sun when the sun moves (north, time). Fit HDRI turns it on; turning the "
+            "HDRI's Mapping by hand turns it off"
+        ),
+        update=_hdri_follow_changed,
+    )
     show_north: BoolProperty(
         name="North",
         translation_context=FTC_CONTEXT,

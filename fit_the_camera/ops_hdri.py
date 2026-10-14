@@ -11,6 +11,7 @@ import math
 import bpy
 import gpu
 import numpy as np
+from bpy.app.handlers import persistent
 from bpy.props import FloatVectorProperty
 from bpy.types import Operator
 from gpu_extras.batch import batch_for_shader
@@ -28,12 +29,14 @@ VIEWER_MARGIN = 40.0
 
 def environment(world):
     """The World's Environment Texture node that reaches the output, and why
-    not (empty when usable). Several: the first, with a warning."""
-    if world is None or not world.use_nodes or world.node_tree is None:
+    not (empty when usable). Several: the first by name, with a warning."""
+    if world is None or world.node_tree is None:
         return None, "The World has no nodes: add an Environment Texture with an HDRI"
+    if not world.is_editable:
+        return None, "The World is linked from a library: make it local to fit its HDRI"
     tree = world.node_tree
     output = next((n for n in tree.nodes if n.type == "OUTPUT_WORLD" and n.is_active_output), None)
-    found = []
+    found, grouped = [], False
     seen = set()
     stack = [output] if output is not None else []
     while stack:
@@ -43,33 +46,66 @@ def environment(world):
         seen.add(node.as_pointer())
         if node.type == "TEX_ENVIRONMENT":
             found.append(node)
+        elif node.type == "GROUP" and node.node_tree is not None:
+            grouped |= any(n.type == "TEX_ENVIRONMENT" for n in node.node_tree.nodes)
         for socket in node.inputs:
             for link in socket.links:
                 if link.is_valid and not link.is_muted:
                     stack.append(link.from_node)
     if not found:
+        if grouped:
+            return None, "The Environment Texture is inside a node group: Fit HDRI needs it in the World's own nodes"
         return None, "No Environment Texture reaches the World output"
     node = sorted(found, key=lambda n: n.name)[0]
     if node.image is None:
         return None, "The Environment Texture has no image"
     if node.projection != "EQUIRECTANGULAR":
         return None, "The Environment Texture is not equirectangular: Fit HDRI needs an equirectangular HDRI"
-    if len(found) > 1:
+    if any(n.image != node.image for n in found):
         return node, "Several Environment Textures reach the World output: using the first by name"
     return node, ""
 
 
-def mapping_of(env):
-    """The Mapping node feeding ``env`` (directly), or ``None``."""
-    vector = env.inputs["Vector"]
-    if vector.links and vector.links[0].from_node.type == "MAPPING":
-        return vector.links[0].from_node
+def same_image(world, env):
+    """Every Environment Texture of ``world`` showing ``env``'s image (e.g. one
+    for the light and one for the camera): they turn together."""
+    return [n for n in world.node_tree.nodes if n.type == "TEX_ENVIRONMENT" and n.image == env.image]
+
+
+def _upstream(socket):
+    """Node feeding ``socket``, through reroutes; ``None`` when unlinked (or muted)."""
+    while socket.links:
+        link = socket.links[0]
+        if not link.is_valid or link.is_muted:
+            return None
+        if link.from_node.type == "REROUTE":
+            socket = link.from_node.inputs[0]
+            continue
+        return link.from_node
     return None
+
+
+def mapping_of(env):
+    """The Mapping node feeding ``env`` (through reroutes), or ``None``."""
+    node = _upstream(env.inputs["Vector"])
+    return node if node is not None and node.type == "MAPPING" else None
+
+
+def vector_problem(env) -> str:
+    """Why FTC cannot turn ``env``'s HDRI about Z; empty when it can."""
+    node = _upstream(env.inputs["Vector"])
+    if node is None or node.type == "TEX_COORD":
+        return ""
+    if node.type != "MAPPING":
+        return "The HDRI's vector comes from other nodes (not a Mapping): Fit HDRI cannot turn it"
+    if node.inputs["Rotation"].is_linked:
+        return "The rotation of the HDRI's Mapping comes from other nodes: Fit HDRI cannot turn it"
+    return ""
 
 
 def ensure_mapping(tree, env):
     """The Mapping node of ``env``; inserted (Texture Coordinate > Mapping,
-    tagged) when missing, between ``env`` and whatever fed its vector."""
+    tagged) when missing, after the Texture Coordinate that fed it, if any."""
     mapping = mapping_of(env)
     if mapping is not None:
         return mapping
@@ -90,6 +126,12 @@ def ensure_mapping(tree, env):
     return mapping
 
 
+def get_z(mapping) -> float:
+    """Z turn of ``mapping`` as a Point/Vector rotation (Texture type: inverse)."""
+    z = mapping.inputs["Rotation"].default_value[2]
+    return -z if mapping.vector_type == "TEXTURE" else z
+
+
 def set_z(mapping, angle: float) -> None:
     """Set the Z turn of ``mapping`` for a Point/Vector-type rotation ``angle``
     (a Texture-type mapping applies the inverse)."""
@@ -102,9 +144,17 @@ def set_z(mapping, angle: float) -> None:
 
 
 def tilted(mapping) -> bool:
-    """X or Y rotation on the mapping: the sun is matched about Z only."""
-    rotation = mapping.inputs["Rotation"]
-    return rotation.is_linked or abs(rotation.default_value[0]) > 1e-6 or abs(rotation.default_value[1]) > 1e-6
+    """X/Y rotation or a mirrored / uneven X-Y scale: the sun is matched about Z only."""
+    rot = mapping.inputs["Rotation"].default_value
+    scale = mapping.inputs["Scale"]
+    if scale.is_linked:
+        return True
+    sx, sy = scale.default_value[0], scale.default_value[1]
+    return abs(rot[0]) > 1e-6 or abs(rot[1]) > 1e-6 or sx <= 0.0 or sy <= 0.0 or abs(sx - sy) > 1e-6 * abs(sx)
+
+
+def _wrap(angle: float) -> float:
+    return (angle + math.pi) % (2.0 * math.pi) - math.pi
 
 
 def thumbnail(image, long_side=THUMB_LONG_SIDE) -> np.ndarray:
@@ -139,7 +189,8 @@ def thumbnail(image, long_side=THUMB_LONG_SIDE) -> np.ndarray:
 
 def fit(settings, scene, uv, state=None):
     """Turn the World's HDRI so that its point ``uv`` (the sun) takes the azimuth
-    of the computed sun. Returns (elevation difference in degrees, warning)."""
+    of the computed sun. Returns (Z angle, elevation difference in degrees,
+    warning); ``ValueError`` when it cannot."""
     from . import ops_sun
 
     state = state or ops_sun.evaluate(settings)
@@ -149,26 +200,44 @@ def fit(settings, scene, uv, state=None):
     env, problem = environment(world)
     if env is None:
         raise ValueError(problem)
-    mapping = ensure_mapping(world.node_tree, env)
-    set_z(mapping, z_rotation(uv[0], state.direction))
+    nodes = same_image(world, env)
+    for node in nodes:
+        if why := vector_problem(node):
+            raise ValueError(why)
+    angle = z_rotation(uv[0], state.direction)
     warning = problem
-    if tilted(mapping):
-        warning = "The HDRI's Mapping has an X or Y rotation: its sun is matched about Z only, check it"
+    for node in nodes:
+        mapping = ensure_mapping(world.node_tree, node)
+        set_z(mapping, angle)
+        if tilted(mapping):
+            warning = "The HDRI's Mapping has an X or Y rotation or scale: its sun is matched about Z only, check it"
     sun_elevation = math.degrees(math.asin(max(-1.0, min(1.0, state.direction.z))))
-    return elevation(uv[1]) - sun_elevation, warning
+    return angle, elevation(uv[1]) - sun_elevation, warning
 
 
-def follow(settings, scene, state) -> None:
-    """Keep a fitted HDRI on the sun when the sun moves (no warnings)."""
+def follow(settings, scene, state, *, force=False) -> None:
+    """Keep a fitted HDRI on the sun when the sun moves. A Mapping turned by hand
+    since the last fit stops the following (``force`` takes it over again)."""
     sun = settings.sun
     if not sun.hdri_fitted or scene is None or state is None or state.direction is None:
         return
     env, _problem = environment(scene.world)
-    if env is None or env.image is None or env.image.name != sun.hdri_image:
+    if env is None or env.image.name != sun.hdri_image or vector_problem(env):
         return
     mapping = mapping_of(env)
-    if mapping is not None and mapping.id_data.is_editable:
-        set_z(mapping, z_rotation(sun.hdri_point[0], state.direction))
+    if mapping is None:
+        return
+    current = get_z(mapping)
+    if not force and abs(_wrap(current - sun.hdri_angle)) > 1e-4:
+        sun.hdri_fitted = False  # the user took over
+        return
+    angle = z_rotation(sun.hdri_point[0], state.direction)
+    if abs(_wrap(angle - current)) > 1e-7:
+        for node in same_image(scene.world, env):
+            other = mapping_of(node)
+            if other is not None and not vector_problem(node):
+                set_z(other, angle)
+    sun.hdri_angle = angle
 
 
 # ----------------------------------------------------------------------------
@@ -305,11 +374,13 @@ class FTC_OT_fit_hdri(Operator):
         return settings, state, env
 
     def _apply(self, context, settings, state, env, uv):
-        difference, warning = fit(settings, context.scene, uv, state)
+        angle, difference, warning = fit(settings, context.scene, uv, state)
         sun = settings.sun
         sun.hdri_point = uv
         sun.hdri_image = env.image.name
-        sun.hdri_fitted = True
+        sun.hdri_angle = angle
+        with calibrate.suspended():
+            sun.hdri_fitted = True
         if warning:
             self.report({"WARNING"}, bpy.app.translations.pgettext_tip(warning))
         if abs(difference) > ELEVATION_WARNING:
@@ -327,6 +398,8 @@ class FTC_OT_fit_hdri(Operator):
             uv = tuple(self.point)
             if uv[0] < 0.0:
                 uv = brightest_point(luminance(thumbnail(env.image)))
+                if uv is None:
+                    raise ValueError("No clear sun in the HDRI: click it in the Fit HDRI viewer (3D view)")
             self._apply(context, settings, state, env, uv)
         except ValueError as exc:
             self.report({"ERROR"}, bpy.app.translations.pgettext_tip(str(exc)))
@@ -334,6 +407,7 @@ class FTC_OT_fit_hdri(Operator):
         return {"FINISHED"}
 
     def invoke(self, context, event):
+        close_viewer()
         if context.area is None or context.area.type != "VIEW_3D" or self.point[0] >= 0.0:
             return self.execute(context)
         try:
@@ -372,7 +446,13 @@ class FTC_OT_fit_hdri(Operator):
                 return {"RUNNING_MODAL"}
             if event.type in {"RET", "NUMPAD_ENTER"} and event.value == "PRESS" and viewer.pick is not None:
                 settings, state, env = self._state
-                self._apply(context, settings, state, env, viewer.pick)
+                self.point = viewer.pick  # kept for Adjust Last Operation
+                try:
+                    self._apply(context, settings, state, env, viewer.pick)
+                except ValueError as exc:
+                    self.report({"ERROR"}, bpy.app.translations.pgettext_tip(str(exc)))
+                    self.finish(context)
+                    return {"CANCELLED"}
                 self.finish(context)
                 return {"FINISHED"}
             if event.type in {"ESC", "RIGHTMOUSE"} and event.value == "PRESS":
@@ -382,6 +462,10 @@ class FTC_OT_fit_hdri(Operator):
             self.finish(context)
             raise
         return {"RUNNING_MODAL"}
+
+    def cancel(self, context):
+        # Blender drops the modal (file loaded, window closed): drop the viewer too.
+        close_viewer()
 
     def finish(self, context):
         close_viewer()
@@ -396,15 +480,23 @@ def close_viewer() -> None:
     FTC_OT_fit_hdri._viewer = None
 
 
+@persistent
+def _on_load_pre(*_args):
+    close_viewer()
+
+
 classes = (FTC_OT_fit_hdri,)
 
 
 def register():
     for cls in classes:
         bpy.utils.register_class(cls)
+    bpy.app.handlers.load_pre.append(_on_load_pre)
 
 
 def unregister():
+    if _on_load_pre in bpy.app.handlers.load_pre:
+        bpy.app.handlers.load_pre.remove(_on_load_pre)
     close_viewer()
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)
