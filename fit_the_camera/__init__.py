@@ -8,6 +8,7 @@ from . import (
     ops_modal,
     ops_orientation,
     ops_render,
+    ops_sun,
     props,
     translations,
     ui,
@@ -25,6 +26,7 @@ if "bpy" in locals():
         ops_orientation,
         ops_align,
         ops_render,
+        ops_sun,
         ui,
         translations,
     ):
@@ -32,7 +34,7 @@ if "bpy" in locals():
 
 import bpy  # noqa: E402,F401
 
-modules = (translations, props, ops_load, ops_modal, ops_orientation, ops_align, ops_render, ui)
+modules = (translations, props, ops_load, ops_modal, ops_orientation, ops_align, ops_render, ops_sun, ui)
 
 
 def register():

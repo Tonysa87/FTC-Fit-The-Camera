@@ -121,11 +121,105 @@ _IT = {
     "Camera that receives the photo: a new one, or one of the scene (its photo is replaced)": (
         "Camera che riceve la foto: una nuova o una della scena (la sua foto viene sostituita)"
     ),
-    "Name the new camera after the photo file (otherwise \"FTC Camera\")": (
-        "Dà alla nuova camera il nome del file della foto (altrimenti \"FTC Camera\")"
+    'Name the new camera after the photo file (otherwise "FTC Camera")': (
+        'Dà alla nuova camera il nome del file della foto (altrimenti "FTC Camera")'
     ),
     "Look through another camera with a photo and calibrate it (it becomes the scene camera)": (
         "Guarda da un'altra camera con foto e calibrala (diventa la camera della scena)"
+    ),
+    # Fit Sun
+    "Read from Photo": "Rileggi dalla foto",
+    "Read the date, time and place of the shot again from the photo, replacing what was entered by hand": (
+        "Rilegge dalla foto data, ora e luogo dello scatto, sostituendo quanto inserito a mano"
+    ),
+    "New Sun": "Nuovo sole",
+    "Add a Sun light that follows the sun of the photo (only its direction: strength and colour are yours)": (
+        "Aggiunge una luce Sole che segue il sole della foto (solo la direzione: intensità e colore restano tuoi)"
+    ),
+    "Year of the shot": "Anno dello scatto",
+    "Month of the shot": "Mese dello scatto",
+    "Day of the shot": "Giorno dello scatto",
+    "Local hour of the shot": "Ora locale dello scatto",
+    "Minute of the shot": "Minuto dello scatto",
+    "Second of the shot": "Secondo dello scatto",
+    "Time zone of the local time, daylight saving included (e.g. +2 for Italy in summer)": (
+        "Fuso orario dell'ora locale, ora legale compresa (es. +2 per l'Italia d'estate)"
+    ),
+    "The time is the GPS time (UTC) of the photo": "L'ora è quella GPS (UTC) della foto",
+    "The GPS time and the camera clock disagree": "L'ora GPS e l'orologio della fotocamera non concordano",
+    "Where the photo was taken, degrees north (negative south); a city is close enough for the sun": (
+        "Dove è stata scattata la foto, gradi nord (negativi a sud); per il sole basta la città"
+    ),
+    "Where the photo was taken, degrees east (negative west); a city is close enough for the sun": (
+        "Dove è stata scattata la foto, gradi est (negativi a ovest); per il sole basta la città"
+    ),
+    "Sun light that FTC turns towards the sun of the photo (only its rotation is changed)": (
+        "Luce Sole che FTC orienta verso il sole della foto (cambia solo la rotazione)"
+    ),
+    "How the north of the scene is found": "Come si trova il nord della scena",
+    "From the compass direction of the photo (EXIF), rarely written by Android phones": (
+        "Dalla direzione della bussola nella foto (EXIF), che i telefoni Android scrivono di rado"
+    ),
+    "From the compass bearing of a scene axis, read on a map along a facade or a street": (
+        "Dalla direzione di un asse della scena, letta su una mappa lungo una facciata o una strada"
+    ),
+    "From a distant landmark in the photo (Landmark handle in Calibrate) and its bearing on a map": (
+        "Da un riferimento lontano nella foto (maniglia Riferimento in Calibra) e dalla sua direzione sulla mappa"
+    ),
+    "Scene axis whose bearing is read on the map": "Asse della scena di cui si legge la direzione sulla mappa",
+    "Compass bearing of the scene axis, clockwise from true north": (
+        "Direzione dell'asse della scena, in senso orario dal nord geografico"
+    ),
+    "Compass bearing from the camera to the landmark, read on a map, clockwise from true north": (
+        "Direzione dalla camera al riferimento, letta su una mappa, in senso orario dal nord geografico"
+    ),
+    "Magnetic declination at the place, east positive: added to a magnetic compass direction "
+    "(look it up for the place and year)": (
+        "Declinazione magnetica del luogo, positiva a est: si somma a una direzione di bussola magnetica "
+        "(cercala per il luogo e l'anno)"
+    ),
+    "Turns the scene north, and the sun with it, about the vertical: phone compasses are often "
+    "5-15° off; adjust it until the CG shadows match the photo": (
+        "Ruota il nord della scena, e il sole con lui, attorno alla verticale: le bussole dei telefoni "
+        "sbagliano spesso di 5-15°; regolala finché le ombre del CG coincidono con la foto"
+    ),
+    "Show the scene north and the sun direction on the reference plane while calibrating": (
+        "Mostra il nord della scena e la direzione del sole sul piano di riferimento durante la calibrazione"
+    ),
+    "No compass direction in the photo: use Map or Landmark": "Nessuna bussola nella foto: usa Mappa o Riferimento",
+    "Drag the Landmark handle (Calibrate) onto a distant feature": (
+        "Trascina la maniglia Riferimento (Calibra) su un elemento lontano"
+    ),
+    "Sun Azimuth": "Azimut del sole",
+    "Sun Elevation": "Elevazione del sole",
+    "Pick a Sun light or add one: FTC turns it towards the sun": (
+        "Scegli una luce Sole o aggiungine una: FTC la orienta verso il sole"
+    ),
+    "Date and time unknown: enter the local time of the shot": (
+        "Data e ora sconosciute: inserisci l'ora locale dello scatto"
+    ),
+    "Time zone unknown: enter the UTC offset of the local time, daylight saving included": (
+        "Fuso orario sconosciuto: inserisci il fuso UTC dell'ora locale, ora legale compresa"
+    ),
+    "Invalid date": "Data non valida",
+    "Place unknown: enter latitude and longitude (the nearest town is close enough)": (
+        "Luogo sconosciuto: inserisci latitudine e longitudine (basta la città più vicina)"
+    ),
+    "The sun is below the horizon at that time: check date, time and UTC offset": (
+        "A quell'ora il sole è sotto l'orizzonte: controlla data, ora e fuso UTC"
+    ),
+    "The GPS time and the camera clock disagree: check the time (GPS time used)": (
+        "L'ora GPS e l'orologio della fotocamera non concordano: controlla l'ora (usata quella GPS)"
+    ),
+    "Magnetic compass: enter the declination of the place": "Bussola magnetica: inserisci la declinazione del luogo",
+    "Calibrate the camera first: the north is found from its view": (
+        "Calibra prima la camera: il nord si ricava dalla sua vista"
+    ),
+    "The camera looks straight up or down: no north from its compass": (
+        "La camera guarda dritta in alto o in basso: la bussola non dà il nord"
+    ),
+    "The landmark is straight above or below the camera: move it": (
+        "Il riferimento è dritto sopra o sotto la camera: spostalo"
     ),
     # FTC orientation
     "FTC Orientation": "Orientamento FTC",
@@ -135,7 +229,34 @@ _IT = {
 # Generic words, translated only where FTC asks with its own context ("FTC"):
 # registered in the default context they would change the rest of Blender too.
 CONTEXT = "FTC"
-_IT_FTC = {"Results": "Risultati", "Yaw": "Imbardata", "Display": "Visualizzazione"}
+_IT_FTC = {
+    "Results": "Risultati",
+    "Yaw": "Imbardata",
+    "Display": "Visualizzazione",
+    # Fit Sun
+    "Date": "Data",
+    "Time": "Ora",
+    "Year": "Anno",
+    "Month": "Mese",
+    "Day": "Giorno",
+    "Hour": "Ora",
+    "Minute": "Minuto",
+    "Second": "Secondo",
+    "UTC Offset": "Fuso UTC",
+    "Latitude": "Latitudine",
+    "Longitude": "Longitudine",
+    "Light": "Luce",
+    "North": "Nord",
+    "Compass": "Bussola",
+    "Map": "Mappa",
+    "Landmark": "Riferimento",
+    "Axis": "Asse",
+    "Bearing": "Direzione",
+    "Landmark Bearing": "Direzione del riferimento",
+    "Declination": "Declinazione",
+    "North Correction": "Correzione del nord",
+    "Sun": "Sole",
+}
 
 translations_dict = {"it_IT": {("*", en): it for en, it in _IT.items()}}
 translations_dict["it_IT"].update({(CONTEXT, en): it for en, it in _IT_FTC.items()})

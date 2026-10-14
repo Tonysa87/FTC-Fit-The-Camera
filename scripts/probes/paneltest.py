@@ -133,4 +133,33 @@ for mode, vp, scale, focal, cube, size, pp in itertools.product(
         except Exception as exc:
             problems.add(f"{fn.__name__} {mode} {vp} {scale} {focal}: {type(exc).__name__}: {exc}")
     count += 1
+light = bpy.data.objects.new("probe sun", bpy.data.lights.new("probe sun", "SUN"))
+bpy.context.collection.objects.link(light)
+data = s.camera_data
+for source, ref, has_light, time_state, offset_state, place, direction in itertools.product(
+    ("COMPASS", "MAP", "LANDMARK"),
+    ("", "T", "M"),
+    (True, False),
+    ("MISSING", "EXIF", "MANUAL"),
+    ("MISSING", "EXIF"),
+    ("MISSING", "EXIF"),
+    ("MISSING", "EXIF"),
+):
+    with calibrate.suspended():
+        s.mode = "VP"
+        s.sun.north_source = source
+        s.sun.light = light if has_light else None
+        data.loading = True
+        data.direction_ref = ref
+        data.time_state, data.offset_state, data.location_state = time_state, offset_state, place
+        data.direction_state = direction
+        data.year, data.month, data.day, data.hour = 2026, 6, 21, 12
+        data.gps_latitude, data.gps_longitude = 45.0, 9.0
+        data.loading = False
+    calibrate.refresh(cam.data)
+    try:
+        ui.FTC_PT_main.draw_sun(panel, ctx, Mock(), s)
+    except Exception as exc:
+        problems.add(f"draw_sun {source} {ref} {time_state}: {type(exc).__name__}: {exc}")
+    count += 1
 print("configs", count, "problems:", *sorted(problems), sep="\n  ")

@@ -161,9 +161,10 @@ def test_gps_time_is_utc_and_implies_the_zone():
     """Android phones: GPS time, camera clock, no offset tag (the samples)."""
     t = timed([LOCAL], GPS_TIME).capture_time()
     assert t.source == "GPS" and not t.clock_mismatch
-    assert t.utc == datetime(2026, 8, 4, 16, 52, 18, tzinfo=UTC)
+    # The camera clock (18:52:19) gives the instant: the GPS fix is a second older.
+    assert t.utc == datetime(2026, 8, 4, 16, 52, 19, tzinfo=UTC)
     assert t.offset_minutes == 120
-    assert t.local == datetime(2026, 8, 4, 18, 52, 18)
+    assert t.local == datetime(2026, 8, 4, 18, 52, 19)
 
 
 def test_gps_time_alone():

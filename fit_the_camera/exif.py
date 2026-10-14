@@ -158,7 +158,8 @@ class CaptureTime:
 
 
 def capture_time(local, offset, gps) -> CaptureTime | None:
-    """GPS time first (UTC from the satellites), else the camera clock with its
+    """GPS time first (UTC from the satellites; when the camera clock agrees
+    with it, the camera clock to the second), else the camera clock with its
     written offset, else the bare local time. Never guesses the zone from the
     longitude (daylight saving time breaks it)."""
     if gps is not None:
@@ -173,7 +174,12 @@ def capture_time(local, offset, gps) -> CaptureTime | None:
                 mismatch = True
         if mismatch or implied is None:
             return CaptureTime(gps, local, None, "GPS", mismatch)
-        return CaptureTime(gps, (gps + timedelta(minutes=implied)).replace(tzinfo=None), implied, "GPS")
+        if local is None:
+            return CaptureTime(gps, (gps + timedelta(minutes=implied)).replace(tzinfo=None), implied, "GPS")
+        # Phones write the time of the last GPS fix, seconds before the shot: the
+        # camera clock gives the instant, the GPS time only its zone.
+        utc = local.replace(tzinfo=timezone(timedelta(minutes=implied))).astimezone(UTC)
+        return CaptureTime(utc, local, implied, "GPS")
     if local is None:
         return None
     if offset is not None:

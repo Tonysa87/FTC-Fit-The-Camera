@@ -1089,10 +1089,167 @@ def audit_edge_cases():
     assert len(bpy.data.images) == count
 
 
+# Milan, 21 June 2026, 12:30 CEST (10:30 UTC): NREL SPA gives azimuth 148.508°,
+# apparent elevation 65.311° (tests/test_sun.py).
+SUN_AZIMUTH, SUN_ELEVATION = 148.508, 65.311
+
+
+def sun_tiff(direction=200.0, ref="T", gps_time=(10, 30, 0)):
+    gps = [
+        (exif.GPS_LAT_REF, ASCII, "N"),
+        (exif.GPS_LAT, RATIONAL, [(45, 1), (27, 1), (5112, 100)]),  # 45.4642
+        (exif.GPS_LON_REF, ASCII, "E"),
+        (exif.GPS_LON, RATIONAL, [(9, 1), (11, 1), (2400, 100)]),  # 9.19
+        (exif.GPS_DATE, ASCII, "2026:06:21"),
+        (exif.GPS_TIME, RATIONAL, [(v, 1) for v in gps_time]),
+    ]
+    if direction is not None:
+        gps += [(exif.GPS_DIRECTION_REF, ASCII, ref), (exif.GPS_DIRECTION, RATIONAL, [(int(direction * 100), 100)])]
+    return build_tiff(
+        ifd0=[(exif.TAG_MAKE, ASCII, "SunCam"), (exif.TAG_ORIENTATION, SHORT, 1)],
+        exif_ifd=[
+            (exif.TAG_FOCAL_LENGTH, RATIONAL, [(240, 10)]),
+            (exif.TAG_FOCAL_35MM, SHORT, 36),
+            (exif.TAG_DATETIME_ORIGINAL, ASCII, "2026:06:21 12:30:00"),
+        ],
+        gps_ifd=gps,
+    )
+
+
+def _sun_camera(tiff):
+    fresh_scene()
+    cam = load(write_photo("sun.jpg", (1920, 1080), tiff))
+    syn = make_camera(image_size=(1920, 1080))
+    set_guides_from(cam.data.ftc, syn)
+    assert calibrate.update(bpy.context, cam, apply=True) is not None, cam.data.ftc.results.error
+    return cam
+
+
+def heading_deg(v):
+    return math.degrees(math.atan2(v.x, v.y)) % 360.0
+
+
+def angle_diff(a, b):
+    return abs((a - b + 180.0) % 360.0 - 180.0)
+
+
+def light_dir(light):
+    bpy.context.view_layer.update()
+    return (light.matrix_world.to_3x3() @ Vector((0.0, 0.0, 1.0))).normalized()
+
+
+@test
+def sun_from_exif_time_place_and_compass():
+    cam = _sun_camera(sun_tiff())
+    s = cam.data.ftc
+    data = s.camera_data
+    assert data.time_state == data.offset_state == data.location_state == "EXIF"
+    assert (data.hour, data.minute, data.utc_offset) == (12, 30, 2.0) and data.time_from_gps
+    assert s.sun.north_source == "COMPASS"
+    assert bpy.ops.ftc.new_sun() == {"FINISHED"}
+    light = s.sun.light
+    assert light is not None and light.data.type == "SUN"
+    d = light_dir(light)
+    assert abs(math.degrees(math.asin(d.z)) - SUN_ELEVATION) < 0.05
+    # The camera looks to 200°: the sun is 148.5 - 200 degrees clockwise from its view.
+    view = cam.matrix_world.to_3x3() @ Vector((0.0, 0.0, -1.0))
+    assert angle_diff(heading_deg(d) - heading_deg(view), SUN_AZIMUTH - 200.0) < 0.05
+
+    # Map: +X points east, so +Y is north and the scene is east-north-up.
+    s.sun.north_source = "MAP"
+    s.sun.map_axis = "+X"
+    s.sun.map_bearing = math.radians(90.0)
+    assert angle_diff(heading_deg(light_dir(light)), SUN_AZIMUTH) < 0.05
+    s.sun.map_axis = "-Y"
+    s.sun.map_bearing = math.radians(180.0)
+    assert angle_diff(heading_deg(light_dir(light)), SUN_AZIMUTH) < 0.05
+
+    # Landmark on the principal point: its ray is the view, same as the compass.
+    s.sun.north_source = "LANDMARK"
+    assert "landmark" in calibrate.active_handle_keys(s)
+    assert "landmark" not in calibrate.calibrate_keys(s)
+    calibrate.set_handle(s, "landmark", (0.5, 0.5))
+    s.sun.landmark_bearing = math.radians(200.0)
+    assert angle_diff(heading_deg(light_dir(light)) - heading_deg(view), SUN_AZIMUTH - 200.0) < 0.05
+
+    # The north correction turns the sun about Z; the light stays where it is.
+    light.location = (1.0, 2.0, 3.0)
+    before = heading_deg(light_dir(light))
+    s.sun.north_correction = math.radians(10.0)
+    assert angle_diff(heading_deg(light_dir(light)), before - 10.0) < 1e-3
+    assert (light.matrix_world.translation - Vector((1.0, 2.0, 3.0))).length < 1e-6
+    assert abs(math.degrees(math.asin(light_dir(light).z)) - SUN_ELEVATION) < 0.05
+
+    # A rotated parent: the light still points at the sun.
+    target = light_dir(light).copy()
+    parent = bpy.data.objects.new("rig", None)
+    bpy.context.collection.objects.link(parent)
+    parent.rotation_euler = (0.4, -0.3, 1.1)
+    bpy.context.view_layer.update()
+    light.parent = parent
+    assert math.degrees(light_dir(light).angle(target)) > 10.0
+    s.sun.north_correction = math.radians(10.0001)
+    assert math.degrees(light_dir(light).angle(target)) < 1e-2
+
+
+@test
+def sun_needs_time_zone_and_place_and_daylight():
+    ops_sun = importlib.import_module(PKG + ".ops_sun")
+    fresh_scene()
+    cam = load(write_photo("nosun.jpg", (1200, 800), camera_tiff()))
+    s = cam.data.ftc
+    data = s.camera_data
+    assert s.sun.north_source == "MAP", "no compass: the north comes from a map"
+    assert "Date and time" in ops_sun.evaluate(s).error
+    data.hour = 12
+    assert data.time_state == "MANUAL"
+    data.year, data.month, data.day = 2026, 6, 21
+    assert "Time zone" in ops_sun.evaluate(s).error
+    data.utc_offset = 2.0
+    assert data.offset_state == "MANUAL"
+    assert "Place" in ops_sun.evaluate(s).error
+    data.gps_latitude, data.gps_longitude = 45.4642, 9.19
+    assert data.location_state == "MANUAL"
+    data.minute = 30
+    state = ops_sun.evaluate(s)
+    assert not state.error, state.error
+    assert abs(state.sun.azimuth - SUN_AZIMUTH) < 0.05 and abs(state.sun.elevation - SUN_ELEVATION) < 0.05
+    assert bpy.ops.ftc.new_sun() == {"FINISHED"}
+    light = s.sun.light
+    before = light.matrix_basis.copy()
+    data.hour = 23
+    assert "below the horizon" in ops_sun.evaluate(s).error
+    assert light.matrix_basis == before, "a night time leaves the light alone"
+    data.day = 31
+    data.month = 6
+    assert ops_sun.evaluate(s).error == "Invalid date"
+
+
+@test
+def sun_time_read_again_and_stale_gps():
+    ops_sun = importlib.import_module(PKG + ".ops_sun")
+    fresh_scene()
+    # GPS fix 2 h 13 min older than the camera clock: not a time zone.
+    cam = load(write_photo("stale.jpg", (1200, 800), sun_tiff(direction=None, gps_time=(10, 17, 0))))
+    s = cam.data.ftc
+    data = s.camera_data
+    assert data.clock_mismatch and data.offset_state == "EXIF" and data.utc_offset == 0.0
+    assert (data.hour, data.minute) == (10, 17), "the GPS time, shown as UTC"
+    assert any("GPS time" in w for w in ops_sun.evaluate(s).warnings)
+    data.hour = 8
+    assert data.time_state == "MANUAL"
+    assert bpy.ops.ftc.read_photo_time() == {"FINISHED"}
+    assert data.time_state == "EXIF" and data.hour == 10
+    # 1.0 files: GPS read, no location state yet.
+    data.location_state = "MISSING"
+    assert ops_sun.location_state(data) == "EXIF"
+
+
 @test
 def every_button_has_a_tooltip():
     """Operators and the settings drawn as buttons all carry a description."""
     internal = {"loading", "active_vp", "handles", "anchor_matrix", "camera_data", "results", "image", "rna_type"}
+    internal |= {"sun"}
     internal |= {"name", "make", "model", "lens", "image_width", "image_height", "has_gps", "direction_ref"}
     internal |= {p for p in ("gps_latitude", "gps_longitude", "gps_altitude")}
     missing = []
@@ -1112,11 +1269,13 @@ def every_button_has_a_tooltip():
         "use_orientation",
         "prepare_render",
         "set_role",
+        "new_sun",
+        "read_photo_time",
     ):
         if not getattr(bpy.ops.ftc, op).get_rna_type().description.strip():
             missing.append("ftc." + op)
     settings = bpy.data.cameras.new("tooltips").ftc
-    for rna in (settings.bl_rna, settings.camera_data.bl_rna):
+    for rna in (settings.bl_rna, settings.camera_data.bl_rna, settings.sun.bl_rna):
         for prop in rna.properties:
             if prop.identifier in internal or prop.identifier.endswith("_state"):
                 continue

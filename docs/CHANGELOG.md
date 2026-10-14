@@ -1,6 +1,16 @@
 # Changelog
 
 ## Non rilasciato
+- **Fit Sun** (1.1, in corso): nuova sezione dopo *Render*. Data, ora e luogo
+  dello scatto dall'EXIF (ora UTC del GPS, fuso dedotto confrontandola con
+  l'orologio della fotocamera; avviso se l'ora GPS è vecchia), o a mano. Sole
+  calcolato con l'algoritmo NOAA (< 0,013° dallo SPA del NREL). Nord della
+  scena da **bussola** EXIF (declinazione a mano se magnetica), da **mappa**
+  (direzione di un asse della scena) o da un **riferimento** lontano (maniglia
+  nella calibrazione + sua direzione sulla mappa); *North Correction* per
+  ruotarlo a occhio. FTC orienta la luce Sole scelta, o una nuova con *New Sun*;
+  intensità e colore restano dell'utente. Freccia del nord e direzione del sole
+  sul piano di riferimento (*Display > North*).
 - Manifest: tag `Camera`, `Render` (tolto `3D View`, chiesto dal moderatore di
   Blender Extensions all'approvazione della 1.0.0).
 - Nuovo logo (mirino in una cornice): il precedente somigliava a quello di fSpy.

@@ -109,3 +109,34 @@ def direction_enu(azimuth: float, elevation: float) -> np.ndarray:
     """Unit vector towards the sun in a local frame: x east, y north, z up."""
     az, el = math.radians(azimuth), math.radians(elevation)
     return np.array([math.sin(az) * math.cos(el), math.cos(az) * math.cos(el), math.sin(el)])
+
+
+# ----------------------------------------------------------------------------
+# Scene north. The scene is Z up; its north is given by the compass bearing of
+# the scene's +Y axis ("Y bearing"): 0 when +Y points to true north, 90 when it
+# points east. Bearings and headings are degrees clockwise seen from above.
+
+# Below this horizontal length (sine of ~0.6°) a direction has no usable heading.
+MIN_HORIZONTAL = 0.01
+
+
+def heading(vector) -> float | None:
+    """Heading of a scene direction, degrees clockwise from +Y seen from above;
+    ``None`` when it is (nearly) vertical."""
+    x, y = float(vector[0]), float(vector[1])
+    if math.hypot(x, y) < MIN_HORIZONTAL * float(np.linalg.norm(vector)):
+        return None
+    return math.degrees(math.atan2(x, y)) % 360.0
+
+
+def y_bearing(bearing: float, direction) -> float | None:
+    """Bearing of the scene +Y axis, given that the scene ``direction`` points to
+    compass ``bearing`` (a camera view with its EXIF direction, a landmark ray,
+    a scene axis read on a map). ``None`` when ``direction`` is vertical."""
+    h = heading(direction)
+    return None if h is None else (bearing - h) % 360.0
+
+
+def scene_direction(sun: SunPosition, y_bear: float) -> np.ndarray:
+    """Unit vector towards the sun in the scene."""
+    return direction_enu(sun.azimuth - y_bear, sun.elevation)

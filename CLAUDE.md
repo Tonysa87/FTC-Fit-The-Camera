@@ -10,8 +10,13 @@ Extensions audience) and `README.it.md` (Italian); developer docs
 - **1.1 in progress** from `docs/SPEC_1.1.md`. S1 DONE (2026-10-14): `exif.capture_time()`
   (GPS UTC > camera clock + OffsetTimeOriginal > bare local time; GPS vs clock
   checked against real zones, `clock_mismatch` = stale GPS fix) and `solver/sun.py`
-  (NOAA, < 0.013° vs NREL SPA in `tests/test_sun.py`). Next: S2 Sun -> S3 sun from a shadow -> S4 Orient HDRI -> A1
-  extra VP lines -> A2 report). Decided 2026-10-14: explicit *New Sun* button,
+  (NOAA, < 0.013° vs NREL SPA in `tests/test_sun.py`). S2 built as 1.1.0-alpha.1
+  (2026-10-14), awaiting the user's GUI test: section **Fit Sun** (`ops_sun.py`,
+  `FTC_Sun` on `settings.sun`), north from COMPASS / MAP / LANDMARK (handle
+  `landmark`, pose-only) + `north_correction`; the light follows on sun changes
+  and in `calibrate.apply_solution`. Names chosen by the user: *Fit Sun*, *Fit
+  HDRI* (S4 button), never translated. Next: S3 sun from a shadow (tip also on a
+  wall) -> S4 Fit HDRI -> A1 extra VP lines -> A2 report. Decided 2026-10-14: explicit *New Sun* button,
   HDRI equirectangular only. No compass is the NORM (Android: none of the
   `samples/` has GPSImgDirection; all have GPS + UTC GPS time): north from a
   map bearing / azimuth slider / shadow are first-class, not fallbacks.
@@ -89,7 +94,8 @@ Extensions audience) and `README.it.md` (Italian); developer docs
   section with a mock layout that validates props/operators), `drawall` (overlay in
   864 configs), `dragsim` (modal drag code on the cube handles), `planes`,
   `timing`, `snap` (overlay PNGs), `render` (Cycles render through Prepare
-  Render), `lens` (magnifier snapshot). Panels cannot be drawn headless otherwise; set ui_scale in mocks (it is
+  Render), `lens` (magnifier snapshot), `sun` (north arrow, sun direction,
+  landmark handle). Panels cannot be drawn headless otherwise; set ui_scale in mocks (it is
   0 in background mode).
 
 ## Architecture

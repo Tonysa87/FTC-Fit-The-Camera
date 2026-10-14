@@ -5,7 +5,16 @@ from datetime import UTC, datetime, timedelta, timezone
 import numpy as np
 import pytest
 
-from solver.sun import direction_enu, julian_day, refraction, sun_position
+from solver.sun import (
+    SunPosition,
+    direction_enu,
+    heading,
+    julian_day,
+    refraction,
+    scene_direction,
+    sun_position,
+    y_bearing,
+)
 
 # Reference: NREL SPA (pvlib 0.16.1 ``spa_python``, sea level, 1013.25 hPa, 10 °C,
 # delta T 69.2 s). Name, UTC time, latitude, longitude, azimuth, geometric
@@ -105,3 +114,33 @@ def test_direction_enu_axes():
     np.testing.assert_allclose(direction_enu(0.0, 0.0), [0.0, 1.0, 0.0], atol=1e-12)
     np.testing.assert_allclose(direction_enu(90.0, 0.0), [1.0, 0.0, 0.0], atol=1e-12)
     np.testing.assert_allclose(direction_enu(123.0, 90.0), [0.0, 0.0, 1.0], atol=1e-12)
+
+
+def test_heading_is_clockwise_from_y():
+    assert heading([0.0, 1.0, 0.0]) == pytest.approx(0.0)
+    assert heading([1.0, 0.0, -5.0]) == pytest.approx(90.0)
+    assert heading([0.0, -2.0, 0.3]) == pytest.approx(180.0)
+    assert heading([-1.0, 0.0, 0.0]) == pytest.approx(270.0)
+    assert heading([0.0, 0.0, -1.0]) is None
+    assert heading([0.001, 0.0, -1.0]) is None
+
+
+def test_y_bearing_from_a_view_direction():
+    # The camera looks along +X and the compass says east: +Y is north.
+    assert y_bearing(90.0, [1.0, 0.0, -0.2]) == pytest.approx(0.0)
+    # The camera looks along +Y and the compass says 30°: +Y points to 30°.
+    assert y_bearing(30.0, [0.0, 1.0, 0.0]) == pytest.approx(30.0)
+    # Looking along -X towards north: +X is south, +Y is east.
+    assert y_bearing(0.0, [-1.0, 0.0, 0.0]) == pytest.approx(90.0)
+    assert y_bearing(10.0, [0.0, 0.0, 1.0]) is None
+
+
+def test_scene_direction_follows_the_north():
+    sun = SunPosition(azimuth=239.0, elevation=56.0)
+    # +Y north: the scene is the local east-north-up frame.
+    np.testing.assert_allclose(scene_direction(sun, 0.0), direction_enu(239.0, 56.0), atol=1e-12)
+    # A camera looking at the sun's compass bearing sees it straight ahead.
+    view = np.array([0.3, 0.8, -0.1])
+    d = scene_direction(sun, y_bearing(239.0, view))
+    assert heading(d) == pytest.approx(heading(view))
+    assert math.degrees(math.asin(d[2])) == pytest.approx(56.0)

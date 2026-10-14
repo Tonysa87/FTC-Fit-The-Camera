@@ -18,7 +18,7 @@ from bpy_extras.view3d_utils import location_3d_to_region_2d
 from gpu_extras.batch import batch_for_shader
 from mathutils import Matrix
 
-from . import calibrate
+from . import calibrate, ops_sun
 from .solver.common import plane_frame, vanishing_point
 from .solver.scale import CUBE_EDGES, cube_corners, cube_top_px
 
@@ -32,6 +32,9 @@ WHITE = (1.0, 1.0, 1.0, 1.0)
 HORIZON_COLOR = (1.0, 0.85, 0.25, 0.9)
 NEUTRAL = (0.9, 0.9, 0.9, 1.0)
 ERROR_COLOR = (1.0, 0.35, 0.3, 1.0)
+SUN_COLOR = (1.0, 0.6, 0.15, 1.0)
+# Length of the north arrow, as a fraction of the camera distance to the origin.
+NORTH_LENGTH = 0.15
 
 
 MAX_DASHES = 200
@@ -451,6 +454,38 @@ def _origin_gizmo(view, solution, settings):
             segment(o, view.px_to_region(tip), colors[axis], 1.0, trim_b=False)
 
 
+def _north(view, solution, settings):
+    """North arrow and sun direction on the horizontal plane through the origin."""
+    state = ops_sun.evaluate(settings, solution)
+    if state.y_bearing is None:
+        return
+    to_calibrated = ops_sun.scene_rotation(settings).T
+    length = NORTH_LENGTH * float(np.linalg.norm(solution.position))
+    origin = project(solution, [0.0, 0.0, 0.0])[0]
+    if np.isnan(origin).any():
+        return
+    o = view.px_to_region(origin)
+    s = ui_scale()
+    north = np.array(ops_sun.north_vector(state.y_bearing))
+    arrows = [(north, WHITE, "N", True)]
+    if state.direction is not None:
+        flat = np.array([state.direction.x, state.direction.y, 0.0])
+        if np.linalg.norm(flat) > 1e-6:
+            arrows.append(
+                (flat / np.linalg.norm(flat), SUN_COLOR, bpy.app.translations.pgettext_iface("Sun", "FTC"), False)
+            )
+    for vec, color, label, solid in arrows:
+        tip = project(solution, [to_calibrated @ vec * length])[0]
+        if np.isnan(tip).any():
+            continue
+        t = view.px_to_region(tip)
+        if solid:
+            segment(o, t, color, 1.0, trim_a=False, trim_b=False, arrow=True)
+        else:
+            dashed(o, t, color, 1.0, 5.0)
+        text((t[0] + 6 * s, t[1] + 6 * s), label, color)
+
+
 def axis_letter(label: str) -> str:
     return label.lstrip("+-")
 
@@ -563,6 +598,8 @@ def draw_guides(view, settings, solution, session, unit_system):
 
         if solution is not None:
             _origin_gizmo(view, solution, settings)
+            if settings.sun.show_north:
+                _north(view, solution, settings)
 
         if solution is not None and settings.mode == "VP" and int(settings.vp_count) == 3:
             pp = view.px_to_region(solution.principal_point)
@@ -583,6 +620,11 @@ def draw_guides(view, settings, solution, session, unit_system):
                 color = colors[settings.ref_axis]
             elif key.startswith("cube"):
                 color = colors[plane_axes(calibrate.reference_plane(settings))[2]]
+            elif key == "landmark":
+                color = SUN_COLOR
+                pos = hpos(key)
+                bearing = f"{math.degrees(settings.sun.landmark_bearing):.1f}°"
+                text((pos[0] + 10 * s, pos[1] + 10 * s), bearing, color)
             elif key.startswith("hz"):
                 color = colors[axis_letter(settings.vp2_axis)] if settings.mode == "VP" else HORIZON_COLOR
             else:

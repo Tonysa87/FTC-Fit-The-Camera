@@ -161,13 +161,44 @@ def load_camera_data(settings, exif, size) -> None:
         for field, value in (("focal_mm", exif.focal_mm), ("focal_35mm", exif.focal_35mm), ("sensor_mm", sensor)):
             setattr(data, field, value or 0.0)
             setattr(data, field + "_state", "EXIF" if value else "MISSING")
-        data.has_gps = exif.gps_latitude is not None and exif.gps_longitude is not None
-        data.gps_latitude = exif.gps_latitude or 0.0
-        data.gps_longitude = exif.gps_longitude or 0.0
         data.gps_altitude = exif.gps_altitude or 0.0
         data.direction = exif.gps_direction or 0.0
         data.direction_state = "EXIF" if exif.gps_direction is not None else "MISSING"
         data.direction_ref = exif.gps_direction_ref or ""
+    finally:
+        data.loading = False
+    load_time_place(data, exif)
+    # Android phones rarely write the compass: then the north comes from a map.
+    with calibrate.suspended():
+        settings.sun.north_source = "COMPASS" if exif.gps_direction is not None else "MAP"
+
+
+def load_time_place(data, exif) -> None:
+    """Shooting time and place from EXIF; absent values are marked missing."""
+    data.loading = True
+    try:
+        data.has_gps = exif.gps_latitude is not None and exif.gps_longitude is not None
+        data.gps_latitude = exif.gps_latitude or 0.0
+        data.gps_longitude = exif.gps_longitude or 0.0
+        data.location_state = "EXIF" if data.has_gps else "MISSING"
+        when = exif.capture_time()
+        data.time_from_gps = when is not None and when.source == "GPS"
+        data.clock_mismatch = when is not None and when.clock_mismatch
+        if when is None:
+            data.time_state = data.offset_state = "MISSING"
+            return
+        if when.offset_minutes is not None:
+            local, offset = when.local, when.offset_minutes
+        elif when.utc is not None and (when.local is None or when.clock_mismatch):
+            # Only the GPS time can be trusted: show it as UTC.
+            local, offset = when.utc.replace(tzinfo=None), 0
+        else:
+            local, offset = when.local, None
+        data.year, data.month, data.day = local.year, local.month, local.day
+        data.hour, data.minute, data.second = local.hour, local.minute, local.second
+        data.time_state = "EXIF"
+        data.utc_offset = (offset or 0) / 60.0
+        data.offset_state = "EXIF" if offset is not None else "MISSING"
     finally:
         data.loading = False
 
@@ -188,7 +219,7 @@ class FTC_OT_load_image(Operator, ImportHelper):
     )
     name_after_photo: BoolProperty(
         name="Name After Photo",
-        description="Name the new camera after the photo file (otherwise \"FTC Camera\")",
+        description='Name the new camera after the photo file (otherwise "FTC Camera")',
         default=True,
     )
 
