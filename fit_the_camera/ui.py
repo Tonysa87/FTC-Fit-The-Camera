@@ -465,8 +465,13 @@ class FTC_PT_main(Panel):
             return
         if problem:
             wrapped(body, context, iface_(problem), icon="INFO")
+        if why := ops_hdri.vector_problem(env):
+            wrapped(body, context, iface_(why), icon="ERROR")
         col = body.column(align=True)
-        if sun.hdri_fitted and env.image.name == sun.hdri_image:
+        if sun.hdri_image and env.image.name != sun.hdri_image:
+            wrapped(body, context, iface_("The World HDRI changed: Fit HDRI again"), icon="INFO")
+        elif sun.hdri_image:
+            col.prop(sun, "hdri_fitted")
             mapping = ops_hdri.mapping_of(env)
             if mapping is not None:
                 z = mapping.inputs["Rotation"].default_value[2]

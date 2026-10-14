@@ -240,7 +240,32 @@ quelle vere. *Sole da* sceglie la fonte:
 - *Visualizzazione › Nord* disegna il nord (N) e la direzione del sole
   (tratteggiata) sul suolo per l'origine durante la calibrazione.
 
-Prossimo nella 1.1: *Fit HDRI* (l'HDRI del World ruotato attorno a Z sul sole).
+#### Fit HDRI
+
+Con un HDRI equirettangolare nel World (una *Environment Texture*), **Fit HDRI**
+lo ruota attorno a Z finché il suo sole arriva dalla stessa parte di quello
+della foto: luce ambiente, riflessi e luce Sole sono così d'accordo.
+
+- Sul viewport si apre un visore con una copia ridotta dell'HDRI. FTC propone il
+  punto più luminoso (anello bianco); se è sbagliato (nuvole luminose, riflessi,
+  sole coperto) clicca il sole, **Invio** applica, **Esc** annulla. La croce
+  bianca è dove cade il sole della foto: la sua altezza rispetto al sole
+  dell'HDRI.
+- Cambia solo la rotazione Z di un nodo *Mapping*: se c'è già viene usato (X, Y
+  e posizione restano), altrimenti viene inserito *Texture Coordinate › Mapping*.
+  L'elevazione del sole non viene mai cambiata, solo confrontata: oltre 10° di
+  differenza le ombre non avranno la stessa lunghezza (avviso).
+- Poi l'HDRI segue il sole (*Segui il sole*): un nuovo nord, la *Correzione del
+  nord* o l'ora lo ruotano insieme alla luce. Ruotare a mano il suo Mapping
+  spegne l'inseguimento; riattivarlo riparte da lì.
+- Un Mapping dietro dei reroute viene trovato; le Environment Texture con la
+  stessa immagine (una per la luce, una per la camera) ruotano insieme. Un
+  vettore o una rotazione che arrivano da altri nodi, un HDRI dentro un gruppo
+  di nodi o un World collegato da libreria vengono rifiutati con un messaggio.
+- Il sole dell'HDRI e la luce Sole danno entrambi luce diretta: abbassa uno dei
+  due.
+- Solo HDRI equirettangolari (quasi tutti); le altre proiezioni vengono
+  segnalate.
 
 ### Consigli (verificati su foto reali, vedi `tests/data`)
 

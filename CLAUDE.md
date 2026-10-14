@@ -28,7 +28,13 @@ Extensions audience) and `README.it.md` (Italian); developer docs
   (`ops_sun.SUN_KEYS`: pose-only, kept by Reset Guides, drag only orients);
   ground shadows are scale-invariant (plane below the camera if the origin is
   above it), wall tips need the origin on the wall's foot; shadow north ignores
-  north_correction; heading spread = spread / cos(elevation). Next: S4 Fit HDRI -> A1 extra VP lines -> A2 report. Decided 2026-10-14: explicit *New Sun* button,
+  north_correction; heading spread = spread / cos(elevation).
+  S4 DONE (1.1.0-alpha.4, audited): `ops_hdri.py` + `solver/hdri.py`, Cycles
+  equirect convention checked by renders (u=0.5 -> +X, clockwise; Mapping
+  Point/Vector: lookup = Rz(angle) d, Texture type inverse). `Image.copy()` of
+  a generated/edited image comes back regenerated (blank): read those
+  directly. `hdri_fitted` = *Follow the Sun*, off when the Mapping's Z differs
+  from `hdri_angle`. Viewer closed on cancel()/load_pre. Next: A1 extra VP lines -> A2 report. Decided 2026-10-14: explicit *New Sun* button,
   HDRI equirectangular only. No compass is the NORM (Android: none of the
   `samples/` has GPSImgDirection; all have GPS + UTC GPS time): north from a
   map bearing / azimuth slider / shadow are first-class, not fallbacks.

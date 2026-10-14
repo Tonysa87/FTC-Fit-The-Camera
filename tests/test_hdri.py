@@ -55,3 +55,27 @@ def test_z_rotation_puts_the_sun_on_the_target():
     angle = z_rotation(u, target)
     # The world direction ``target`` shows the HDRI at Rz(angle) @ target.
     assert image_point(rz(angle) @ target) == pytest.approx((u, v))
+
+
+def test_a_bright_cloud_near_the_sun_barely_moves_it():
+    lum = _sky(1024, 512, 0.3, 0.62, sun=5e4)
+    cloud = direction(0.3 + 6.0 / 360.0, 0.62)
+    h, w = lum.shape
+    rows, cols = np.mgrid[0:h, 0:w]
+    phi, theta = (0.5 - (cols + 0.5) / w) * 2 * math.pi, ((rows + 0.5) / h - 0.5) * math.pi
+    dirs = np.stack([np.cos(theta) * np.cos(phi), np.cos(theta) * np.sin(phi), np.sin(theta)], -1)
+    lum[dirs @ cloud > math.cos(math.radians(2.0))] = 20.0
+    got = direction(*brightest_point(lum))
+    assert math.degrees(math.acos(min(1.0, got @ direction(0.3, 0.62)))) < 0.3
+
+
+def test_an_overflowed_sun_is_still_the_sun():
+    lum = _sky(512, 256, 0.7, 0.6)
+    lum[lum >= 5000.0] = np.inf
+    got = direction(*brightest_point(lum))
+    assert math.degrees(math.acos(min(1.0, got @ direction(0.7, 0.6)))) < 0.5
+
+
+def test_no_sun_to_propose():
+    assert brightest_point(np.full((64, 128), 0.3)) is None
+    assert brightest_point(np.full((64, 128), np.nan)) is None

@@ -309,7 +309,6 @@ _IT = {
         "Punto del sole sull'HDRI scelto da Fit HDRI (0..1, origine in basso a sinistra)"
     ),
     "HDRI image fitted by Fit HDRI": "Immagine HDRI adattata da Fit HDRI",
-    "The World HDRI follows the sun (set by Fit HDRI)": "L'HDRI del World segue il sole (impostato da Fit HDRI)",
     "The World has no nodes: add an Environment Texture with an HDRI": (
         "Il World non ha nodi: aggiungi un'Environment Texture con un HDRI"
     ),
@@ -320,9 +319,6 @@ _IT = {
     ),
     "No sun yet: set Fit Sun first": "Ancora nessun sole: imposta prima Fit Sun",
     "The HDRI image cannot be read": "L'immagine HDRI non si può leggere",
-    "The HDRI's Mapping has an X or Y rotation: its sun is matched about Z only, check it": (
-        "Il Mapping dell'HDRI ha una rotazione X o Y: il sole viene allineato solo attorno a Z, controllalo"
-    ),
     "The HDRI's sun is {:+.0f}° off the photo's in elevation: the shadows will not have the same length": (
         "Il sole dell'HDRI differisce di {:+.0f}° in elevazione da quello della foto: le ombre non avranno la "
         "stessa lunghezza"
@@ -331,6 +327,32 @@ _IT = {
         "Clicca il sole nell'HDRI · Invio: applica · Esc: annulla · la croce è il sole della foto"
     ),
     "HDRI Rotation": "Rotazione HDRI",
+    "Sun Point": "Punto del sole",
+    "The World is linked from a library: make it local to fit its HDRI": (
+        "Il World è collegato da una libreria: rendilo locale per adattarne l'HDRI"
+    ),
+    "The Environment Texture is inside a node group: Fit HDRI needs it in the World's own nodes": (
+        "L'Environment Texture è dentro un gruppo di nodi: Fit HDRI la vuole tra i nodi del World"
+    ),
+    "The HDRI's vector comes from other nodes (not a Mapping): Fit HDRI cannot turn it": (
+        "Il vettore dell'HDRI arriva da altri nodi (non un Mapping): Fit HDRI non può ruotarlo"
+    ),
+    "The rotation of the HDRI's Mapping comes from other nodes: Fit HDRI cannot turn it": (
+        "La rotazione del Mapping dell'HDRI arriva da altri nodi: Fit HDRI non può ruotarlo"
+    ),
+    "The HDRI's Mapping has an X or Y rotation or scale: its sun is matched about Z only, check it": (
+        "Il Mapping dell'HDRI ha rotazione o scala in X o Y: il sole viene allineato solo attorno a Z, controllalo"
+    ),
+    "No clear sun in the HDRI: click it in the Fit HDRI viewer (3D view)": (
+        "Nessun sole evidente nell'HDRI: cliccalo nel visore di Fit HDRI (vista 3D)"
+    ),
+    "The World HDRI changed: Fit HDRI again": "L'HDRI del World è cambiato: rifai Fit HDRI",
+    "Z turn last given to the HDRI by FTC (radians)": "Ultima rotazione Z data all'HDRI da FTC (radianti)",
+    "Keep the World HDRI on the sun when the sun moves (north, time). Fit HDRI turns it on; turning the "
+    "HDRI's Mapping by hand turns it off": (
+        "Tiene l'HDRI del World sul sole quando il sole si muove (nord, ora). Fit HDRI lo accende; ruotare a "
+        "mano il Mapping dell'HDRI lo spegne"
+    ),
     "HDRI Sun Elevation": "Elevazione del sole HDRI",
     "HDRI sun and Sun light both give direct light: lower one of them": (
         "Il sole dell'HDRI e la luce Sole danno entrambi luce diretta: abbassa uno dei due"
@@ -379,6 +401,7 @@ _IT_FTC = {
     "Wall XZ": "Parete XZ",
     "Wall YZ": "Parete YZ",
     "Use Shadow North": "Usa il nord dell'ombra",
+    "Follow the Sun": "Segui il sole",
 }
 
 translations_dict = {"it_IT": {("*", en): it for en, it in _IT.items()}}

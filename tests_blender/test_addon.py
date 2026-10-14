@@ -1543,9 +1543,36 @@ def fit_hdri_needs_an_equirectangular_world():
     mine.vector_type = "TEXTURE"
     mine.inputs["Location"].default_value = (1.0, 2.0, 3.0)
     tree.links.new(mine.outputs["Vector"], env.inputs["Vector"])
+    reroute = tree.nodes.new("NodeReroute")
+    tree.links.new(mine.outputs["Vector"], reroute.inputs[0])
+    tree.links.new(reroute.outputs[0], env.inputs["Vector"])
     assert bpy.ops.ftc.fit_hdri(point=(0.3, 0.6)) == {"FINISHED"}
     assert ops_hdri.mapping_of(env) == mine and tuple(mine.inputs["Location"].default_value) == (1.0, 2.0, 3.0)
-    assert sum(n.type == "MAPPING" for n in tree.nodes) == 1
+    assert sum(n.type == "MAPPING" for n in tree.nodes) == 1, "found behind the reroute"
+    assert s.sun.hdri_fitted
+
+    # Turned by hand: FTC stops following; switched on again, it takes over.
+    mine.inputs["Rotation"].default_value[2] += 0.5
+    s.sun.north_correction = math.radians(5.0)
+    assert not s.sun.hdri_fitted
+    s.sun.hdri_fitted = True
+    assert abs(ops_hdri.get_z(mine) - s.sun.hdri_angle) < 1e-5
+
+    # A second Environment Texture with the same image (camera background) turns too.
+    twin = tree.nodes.new("ShaderNodeTexEnvironment")
+    twin.image = env.image
+    assert bpy.ops.ftc.fit_hdri(point=(0.35, 0.6)) == {"FINISHED"}
+    assert abs(ops_hdri.get_z(ops_hdri.mapping_of(twin)) - ops_hdri.get_z(mine)) < 1e-6
+
+    # Vector or rotation from other nodes: refused, nothing changed.
+    value = tree.nodes.new("ShaderNodeCombineXYZ")
+    tree.links.new(value.outputs[0], mine.inputs["Rotation"])
+    before = ops_hdri.get_z(mine)
+    try:
+        result = bpy.ops.ftc.fit_hdri(point=(0.5, 0.6))
+    except RuntimeError:
+        result = {"CANCELLED"}
+    assert result == {"CANCELLED"} and ops_hdri.get_z(mine) == before
 
 
 @test
