@@ -9,8 +9,10 @@ Extensions audience) and `README.it.md` (Italian); developer docs
 ## Status / next session (bookmark 2026-10-14, evening)
 - **NEXT SESSION: start 1.1** from `docs/SPEC_1.1.md` (phases S1 EXIF date/time
   + `solver/sun.py` -> S2 Sun -> S3 sun from a shadow -> S4 Orient HDRI -> A1
-  extra VP lines -> A2 report). First ask the user the two *Decisioni aperte*
-  of the spec (New Sun button or user's light; HDRI equirectangular only).
+  extra VP lines -> A2 report). Decided 2026-10-14: explicit *New Sun* button,
+  HDRI equirectangular only. No compass is the NORM (Android: none of the
+  `samples/` has GPSImgDirection; all have GPS + UTC GPS time): north from a
+  map bearing / azimuth slider / shadow are first-class, not fallbacks.
   fSpy project import was dropped by the user (2026-10-14): do not propose it. 1.0.x fixes stay separate.
 - **1.0.0 approved on extensions.blender.org (2026-10-14)**, public at
   https://extensions.blender.org/add-ons/fit-the-camera/. The moderator only asked to drop the `3D View` tag in future
@@ -255,7 +257,7 @@ fine dragging (×0.2) the cursor drifts away from the handle. Probe `lens` write
   their untouched hand-made default guides (~22 mm equivalent) may then warn.
 
 ## Open work
-- **Next: 1.1, spec in `docs/SPEC_1.1.md`** (Sun from EXIF / shadow, HDRI rotated about Z onto the sun, extra VP lines, report; a Known Points PnP mode is described but NOT a priority: the user's photo insertions usually have no field survey). Open decisions listed there: ask the user before settling them. 1.0.x bug fixes stay separate.
+- **Next: 1.1, spec in `docs/SPEC_1.1.md`** (Sun from EXIF / shadow, HDRI rotated about Z onto the sun, extra VP lines, report; a Known Points PnP mode is described but NOT a priority: the user's photo insertions usually have no field survey). Open decisions settled 2026-10-14 (New Sun button; HDRI equirectangular only). 1.0.x bug fixes stay separate.
 - Possible: English changelog (docs/CHANGELOG.md is Italian, linked from the Extensions release notes). Add tags only when they really fit (moderators prune them).
 - Possible: more than two lines per VP;
   turn the `paneltest` / `drawall` probes into regular Blender tests.
