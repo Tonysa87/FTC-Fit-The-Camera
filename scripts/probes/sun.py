@@ -1,11 +1,11 @@
-"""Overlay with the north arrow, the sun direction, the landmark handle and a shadow.
+"""Overlay with the north arrow, the sun direction and a shadow.
 
-Writes dist/probes/sun_map.png (north from a map), sun_landmark.png and
-sun_shadow.png (shadow handles, the cross = the tip for the date's sun).
+Writes dist/probes/sun_side.png (sun from the -X side), sun_compass.png and
+sun_shadow.png (shadow handles checking the compass, the cross = the tip for
+the date's sun).
 """
 
 import importlib
-import math
 import os
 import sys
 from types import SimpleNamespace
@@ -31,16 +31,14 @@ view = draw.View(20.0, 20.0, 1180.0, 20.0 + 1160 * 1080 / 1920, (1920, 1080))
 session = SimpleNamespace(active_vp=0, hover=None, drag_key=None)
 from solver.sun import direction_enu  # noqa: E402
 
-for name, source in (("sun_map", "MAP"), ("sun_landmark", "LANDMARK"), ("sun_shadow", "MAP")):
+for name, source in (("sun_side", "SIDE"), ("sun_compass", "COMPASS"), ("sun_shadow", "COMPASS")):
     s.sun.north_source = source
+    s.sun.sun_side = "-X"
     s.sun.use_shadow = name == "sun_shadow"
     if s.sun.use_shadow:
         calibrate.refresh(cam.data)
         # Shadow of the sun 8° off the date's: the cross shows where it should be.
         g["set_shadow"](s, direction_enu(g["SUN_AZIMUTH"] + 8.0, g["SUN_ELEVATION"]), (0.0, 1.0, 0.0), 4.0)
-    s.sun.map_axis, s.sun.map_bearing = "+X", math.radians(90.0)
-    s.sun.landmark_bearing = math.radians(200.0)
-    calibrate.set_handle(s, "landmark", (0.7, 0.62))
     sol = calibrate.refresh(cam.data)
     state = ops_sun.evaluate(s, sol)
     print(name, "error:", state.error or "-", "y bearing:", state.y_bearing)

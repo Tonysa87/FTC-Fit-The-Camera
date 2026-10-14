@@ -1,10 +1,11 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Sun of the photo -> a Sun light.
 
-The sun comes from the shooting time and place (with the scene north from the
-compass of the photo, the map bearing of a scene axis, a distant landmark or a
-shadow), or straight from a shadow in the photo. The scene is Z up. FTC only
-turns the light: its strength, colour and angle stay the user's.
+The sun comes from the shooting time and place (its height; around the scene it
+is placed by the compass of the photo, by a shadow, or by the user: the scene
+axis it comes from, turned by eye), or straight from a shadow in the photo. The
+scene is Z up. FTC only turns the light: its strength, colour and angle stay the
+user's.
 """
 
 from __future__ import annotations
@@ -21,7 +22,7 @@ from mathutils import Matrix, Vector
 
 from . import calibrate, ops_load
 from .exif import read_exif
-from .solver.common import SolverError, ray
+from .solver.common import SolverError
 from .solver.sun import (
     Shadow,
     SunPosition,
@@ -36,15 +37,12 @@ from .solver.sun import (
 
 SUN_NAME = "FTC Sun"
 AXIS_VECTORS = {"+X": (1.0, 0.0, 0.0), "+Y": (0.0, 1.0, 0.0), "-X": (-1.0, 0.0, 0.0), "-Y": (0.0, -1.0, 0.0)}
-LANDMARK_KEY = "landmark"
 SHADOW_KEYS = ("shadow_foot", "shadow_top", "shadow_tip")
 # Handles that are sun inputs, not calibration guides.
-SUN_KEYS = {LANDMARK_KEY, *SHADOW_KEYS}
+SUN_KEYS = set(SHADOW_KEYS)
 # Shadow and date/place disagreeing beyond these (degrees) is worth a red value.
 SHADOW_NORTH_ALERT = 5.0
 SHADOW_ELEVATION_ALERT = 2.0
-# Shadow and map north this far apart: the map bearing was read the other way.
-REVERSED_MAP_DEG = 150.0
 
 
 @dataclass
@@ -69,9 +67,18 @@ class SunState:
     shadow_elevation_offset: float | None = None
 
 
+def north_source(settings) -> str:
+    """COMPASS, SHADOW or SIDE (the development builds' MAP and LANDMARK read as SIDE)."""
+    source = settings.sun.north_source
+    return source if source in ("COMPASS", "SHADOW") else "SIDE"
+
+
 def shadow_in_use(settings) -> bool:
     sun = settings.sun
-    return sun.source == "SHADOW" or sun.use_shadow or sun.north_source == "SHADOW"
+    if sun.source == "SHADOW":
+        return True
+    north = north_source(settings)
+    return north == "SHADOW" or (north == "COMPASS" and sun.use_shadow)
 
 
 def shadow_of(settings) -> Shadow:
@@ -134,57 +141,39 @@ def scene_rotation(settings) -> np.ndarray:
     return np.array([list(row) for row in m])
 
 
-def scene_north(settings, solution) -> tuple[float | None, str]:
-    """Compass bearing of the scene +Y (degrees), or ``None`` and why."""
-    sun = settings.sun
+def compass_north(settings, solution) -> tuple[float | None, str]:
+    """Compass bearing of the scene +Y (degrees) from the photo's compass, or
+    ``None`` and why."""
     data = settings.camera_data
-    source = sun.north_source
-    if source == "SHADOW":
-        return None, ""  # needs the sun of the date and place: see evaluate()
-    if source == "MAP":
-        if not sun.map_bearing_set and sun.map_bearing == 0.0:
-            return None, "Map: enter the bearing of the axis, read on a map (where its arrow points)"
-        bearing = y_bearing(math.degrees(sun.map_bearing), AXIS_VECTORS[sun.map_axis])
-        return bearing, ""
+    if data.direction_state == "MISSING":
+        return None, "No compass direction in the photo: use Side or Shadow"
     if solution is None:
         return None, "Calibrate the camera first: the north is found from its view"
-    rotation = scene_rotation(settings) @ solution.rotation
-    if source == "COMPASS":
-        if data.direction_state == "MISSING":
-            return None, "No compass direction in the photo: use Map, Landmark or Shadow"
-        bearing = data.direction
-        if data.direction_ref.upper().startswith("M"):
-            bearing += math.degrees(sun.declination)
-        view = rotation @ np.array([0.0, 0.0, -1.0])
-        result = y_bearing(bearing, view)
-        return result, "" if result is not None else "The camera looks straight up or down: no north from its compass"
-    w, h = solution.image_size
-    co = calibrate.handle(settings, LANDMARK_KEY)
-    direction = rotation @ ray((co[0] * w, co[1] * h), solution.principal_point, solution.focal_px)
-    result = y_bearing(math.degrees(sun.landmark_bearing), direction)
-    return result, "" if result is not None else "The landmark is straight above or below the camera: move it"
+    bearing = data.direction
+    if data.direction_ref.upper().startswith("M"):
+        bearing += math.degrees(settings.sun.declination)
+    view = scene_rotation(settings) @ solution.rotation @ np.array([0.0, 0.0, -1.0])
+    result = y_bearing(bearing, view)
+    return result, "" if result is not None else "The camera looks straight up or down: no north from its compass"
 
 
 # Steeper than this (degrees from the horizon) a phone's compass heading is unreliable.
 STEEP_VIEW_DEG = 70.0
 
 
-def _landmark_untouched(settings) -> bool:
-    return math.dist(calibrate.handle(settings, LANDMARK_KEY), calibrate.HANDLE_DEFAULTS[LANDMARK_KEY]) < 1e-6
-
-
 def evaluate(settings, solution=None) -> SunState:
-    """Sun of the photo for ``settings``. Never writes: safe in draw callbacks.
-    The scene north is filled in even when the time or place is missing."""
+    """Sun of the photo for ``settings``. Never writes: safe in draw callbacks."""
     state = SunState()
     data = settings.camera_data
     sun = settings.sun
+    north = north_source(settings)
     if solution is None:
         solution = calibrate.current_solution(settings.id_data)
     correction = math.degrees(sun.north_correction)
-    bearing, north_error = scene_north(settings, solution)
-    if bearing is not None:
-        state.y_bearing = (bearing + correction) % 360.0
+    if north == "COMPASS":
+        bearing, north_error = compass_north(settings, solution)
+        if bearing is not None:
+            state.y_bearing = (bearing + correction) % 360.0
     if shadow_in_use(settings):
         measure_shadow(settings, solution, state)
 
@@ -220,38 +209,33 @@ def evaluate(settings, solution=None) -> SunState:
             state.warnings.append(
                 "The GPS time and the camera clock disagree: check the time (camera clock and its time zone used)"
             )
-    if sun.north_source == "COMPASS" and data.direction_state != "MISSING" and solution is not None:
+    if north == "COMPASS" and data.direction_state != "MISSING" and solution is not None:
         if data.direction_ref.upper().startswith("M") and sun.declination == 0.0:
             state.warnings.append("Magnetic compass: enter the declination of the place")
         view = scene_rotation(settings) @ solution.forward
         if abs(math.degrees(math.asin(max(-1.0, min(1.0, float(view[2])))))) > STEEP_VIEW_DEG:
             state.warnings.append("The camera looks steeply up or down: its compass is unreliable, check the north")
-    if sun.north_source == "LANDMARK" and _landmark_untouched(settings):
-        state.warnings.append("Place the Landmark handle on the landmark (Calibrate)")
 
     # North implied by the shadow: the sun's bearing minus the shadow's heading.
     shadow_bearing = None
     if state.shadow is not None and heading(state.shadow) is not None:
         shadow_bearing = y_bearing(state.sun.azimuth, state.shadow)
         state.shadow_elevation_offset = elevation_of(state.shadow) - state.sun.elevation
-    if sun.north_source == "SHADOW":
+    if north == "SHADOW":
         if shadow_bearing is None:
             state.error = state.shadow_error or "The sun is almost overhead: its shadow gives no north"
             return state
-        # Measured, not estimated: the north correction does not apply.
-        bearing = shadow_bearing
-        state.y_bearing = bearing % 360.0
-    elif shadow_bearing is not None and state.y_bearing is not None:
-        state.shadow_north_offset = (shadow_bearing - state.y_bearing + 180.0) % 360.0 - 180.0
-        state.shadow_north_spread = azimuth_spread(state.shadow_spread, state.shadow)
-        if sun.north_source == "MAP" and abs(state.shadow_north_offset) > REVERSED_MAP_DEG:
-            state.warnings.append(
-                "The shadow puts the north about 180° off the map: the bearing probably runs the other way along "
-                "the facade or street"
-            )
-    if bearing is None:
+        # Measured, not estimated: no turn by eye.
+        state.y_bearing = shadow_bearing % 360.0
+    elif north == "SIDE":
+        # The sun comes from the chosen axis, turned by eye: the north follows.
+        state.y_bearing = (y_bearing(state.sun.azimuth, AXIS_VECTORS[sun.sun_side]) + correction) % 360.0
+    elif state.y_bearing is None:
         state.error = north_error
         return state
+    elif shadow_bearing is not None:
+        state.shadow_north_offset = (shadow_bearing - state.y_bearing + 180.0) % 360.0 - 180.0
+        state.shadow_north_spread = azimuth_spread(state.shadow_spread, state.shadow)
     state.direction = Vector(scene_direction(state.sun, state.y_bearing).tolist())
     return state
 

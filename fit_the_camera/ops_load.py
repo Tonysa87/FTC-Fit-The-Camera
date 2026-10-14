@@ -173,7 +173,7 @@ def load_camera_data(settings, exif, size) -> None:
         if exif.gps_direction is not None:
             settings.sun.north_source = "COMPASS"
         elif settings.sun.north_source == "COMPASS":
-            settings.sun.north_source = "MAP"
+            settings.sun.north_source = "SIDE"
 
 
 def load_time_place(data, exif) -> None:

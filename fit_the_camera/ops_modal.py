@@ -617,7 +617,7 @@ class FTC_OT_reset(Operator):
         kept = {key: calibrate.handle(settings, key) for key in ops_sun.SUN_KEYS}
         with calibrate.suspended():
             calibrate.reset_handles(settings)
-            # Sun inputs, not guides: they stay on the landmark and the shadow.
+            # Sun inputs, not guides: they stay on the shadow.
             for key, co in kept.items():
                 calibrate.set_handle(settings, key, co)
             settings.pitch_offset = 0.0

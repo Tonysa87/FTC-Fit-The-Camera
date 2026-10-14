@@ -111,11 +111,6 @@ def _sun_changed(self, context):
     ops_sun.settings_changed(self.id_data, context)
 
 
-def _map_bearing_changed(self, context):
-    self.map_bearing_set = True
-    _sun_changed(self, context)
-
-
 def _hdri_follow_changed(self, context):
     if self.hdri_fitted and not calibrate.updating():
         from . import ops_hdri, ops_sun
@@ -314,11 +309,10 @@ class FTC_Sun(PropertyGroup):
         update=_sun_changed,
     )
     use_shadow: BoolProperty(
-        name="Measure Shadow",
+        name="Check with a Shadow",
         translation_context=FTC_CONTEXT,
         description=(
-            "Show the shadow handles (foot and top of something vertical, tip of its shadow) to check the sun "
-            "of the date and place, and the north"
+            "Show the shadow handles (foot and top of something vertical, tip of its shadow) to check the compass"
         ),
         update=_sun_changed,
     )
@@ -346,57 +340,41 @@ class FTC_Sun(PropertyGroup):
     north_source: EnumProperty(
         name="North",
         translation_context=FTC_CONTEXT,
-        description="How the north of the scene is found",
+        description="How the sun is placed around the scene (its height comes from the date)",
         items=[
             ("COMPASS", "Compass", "From the compass direction of the photo (EXIF), rarely written by Android phones"),
-            ("MAP", "Map", "From the compass bearing of a scene axis, read on a map along a facade or a street"),
-            (
-                "LANDMARK",
-                "Landmark",
-                "From a distant landmark in the photo (Landmark handle in Calibrate) and its bearing on a map",
-            ),
+            # MAP and LANDMARK: 1.1 development builds only, read as SIDE (enum
+            # items are stored by index: never remove or reorder them).
+            ("MAP", "Map", "Replaced by Side"),
+            ("LANDMARK", "Landmark", "Replaced by Side"),
             (
                 "SHADOW",
                 "Shadow",
                 "From a shadow in the photo (shadow handles in Calibrate) and the sun of the date and place",
             ),
+            (
+                "SIDE",
+                "Side",
+                "Pick the scene axis the sun comes from, then turn it by eye until the CG shadows match the photo",
+            ),
         ],
-        default="COMPASS",
+        default="SIDE",
         update=_sun_changed,
     )
-    map_axis: EnumProperty(
-        name="Axis",
-        translation_context=FTC_CONTEXT,
-        description="Scene axis whose bearing is read on the map",
-        items=[
-            ("+X", "+X", "Positive X axis"),
-            ("+Y", "+Y", "Positive Y axis"),
-            ("-X", "-X", "Negative X axis"),
-            ("-Y", "-Y", "Negative Y axis"),
-        ],
-        default="+X",
-        update=_sun_changed,
-    )
-    map_bearing: FloatProperty(
-        name="Bearing",
+    sun_side: EnumProperty(
+        name="Sun From Axis",
         translation_context=FTC_CONTEXT,
         description=(
-            "Compass bearing the scene axis points to, clockwise from true north, read on a map: a facade or a "
-            "street runs two ways, take the one its arrow points to in Calibrate"
+            "Scene axis the sun comes from: the shadows in the photo fall the other way "
+            "(-Y is usually behind the camera)"
         ),
-        subtype="ANGLE",
-        min=0.0,
-        max=2.0 * 3.141592653589793,
-        update=_map_bearing_changed,
-    )
-    map_bearing_set: BoolProperty(description="A map bearing was entered (0° is a real north, not a default)")
-    landmark_bearing: FloatProperty(
-        name="Landmark Bearing",
-        translation_context=FTC_CONTEXT,
-        description="Compass bearing from the camera to the landmark, read on a map, clockwise from true north",
-        subtype="ANGLE",
-        min=0.0,
-        max=2.0 * 3.141592653589793,
+        items=[
+            ("+X", "+X", "The sun comes from the +X side"),
+            ("-X", "-X", "The sun comes from the -X side"),
+            ("+Y", "+Y", "The sun comes from the +Y side"),
+            ("-Y", "-Y", "The sun comes from the -Y side"),
+        ],
+        default="-Y",
         update=_sun_changed,
     )
     declination: FloatProperty(
@@ -415,8 +393,8 @@ class FTC_Sun(PropertyGroup):
         name="North Correction",
         translation_context=FTC_CONTEXT,
         description=(
-            "Turns the scene north, and the sun with it, about the vertical: phone compasses are often "
-            "5-15° off; adjust it until the CG shadows match the photo"
+            "Turns the sun about the vertical (with the compass: the scene north): adjust it until the CG "
+            "shadows match the photo; phone compasses are often 5-15° off"
         ),
         subtype="ANGLE",
         soft_min=-3.141592653589793,
