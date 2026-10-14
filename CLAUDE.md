@@ -238,7 +238,7 @@ fine dragging (×0.2) the cursor drifts away from the handle. Probe `lens` write
   their untouched hand-made default guides (~22 mm equivalent) may then warn.
 
 ## Open work
-- **Next: 1.1, spec in `docs/SPEC_1.1.md`** (Sun from EXIF / shadow, HDRI rotated about Z onto the sun, Known Points PnP mode, extra VP lines, fSpy import, report). Open decisions listed there: ask the user before settling them. 1.0.x bug fixes stay separate.
+- **Next: 1.1, spec in `docs/SPEC_1.1.md`** (Sun from EXIF / shadow, HDRI rotated about Z onto the sun, extra VP lines, fSpy import, report; a Known Points PnP mode is described but NOT a priority: the user's photo insertions usually have no field survey). Open decisions listed there: ask the user before settling them. 1.0.x bug fixes stay separate.
 - Possible: English changelog (docs/CHANGELOG.md is Italian, linked from the Extensions release notes). Add tags only when they really fit (moderators prune them).
 - Possible: more than two lines per VP;
   turn the `paneltest` / `drawall` probes into regular Blender tests.
