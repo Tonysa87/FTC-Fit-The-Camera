@@ -439,10 +439,14 @@ class FTC_PT_main(Panel):
                 row = col.row(align=True)
                 row.prop(sun, "sun_side", expand=True)
                 col.prop(sun, "north_correction", text=iface_("Turn", "FTC"))
+            col.prop(sun, "elevation_correction", text=iface_("Raise", "FTC"))
             if state.sun is not None:
                 col = body.column(align=True)
                 info_row(col, iface_("Sun Azimuth"), f"{state.sun.azimuth:.1f}°")
-                info_row(col, iface_("Sun Elevation"), f"{state.sun.elevation:.1f}°", alert=state.sun.elevation <= 0)
+                elevation = f"{state.sun.elevation:.1f}°"
+                if sun.elevation_correction and state.sun.above_horizon:
+                    elevation += f" → {ops_sun.raised(state.sun, sun).elevation:.1f}°"
+                info_row(col, iface_("Sun Elevation"), elevation, alert=state.sun.elevation <= 0)
 
         self.draw_shadow(context, body, sun, state)
 

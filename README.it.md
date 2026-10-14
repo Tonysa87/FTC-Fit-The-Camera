@@ -232,7 +232,10 @@ quelle vere. *Sole da* sceglie la fonte:
 
   Con la bussola, *Correzione del nord* ruota nord e sole insieme: le bussole
   dei telefoni sbagliano spesso di 5–15°. Una camera molto inclinata in alto o in
-  basso rende la bussola inaffidabile (avviso).
+  basso rende la bussola inaffidabile (avviso). Con data e luogo, **Alza** alza o
+  abbassa il sole a occhio finché le ombre della CG sono lunghe come nella foto
+  (compensa piccoli errori di calibrazione o di orologio; il pannello mostra
+  l'elevazione della data → quella usata).
 - **Ombra**: in *Calibra* tre maniglie arancioni vanno sul **piede** e sulla
   **cima** di qualcosa di verticale (un palo, un montante, uno stipite) e sulla
   **punta della sua ombra**. Il piede sta a terra; la punta a terra o su una

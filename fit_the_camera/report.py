@@ -171,6 +171,7 @@ def sun_report(settings, scene) -> dict | None:
         out["longitude"] = _field(data.gps_longitude, place)
         out["north_from"] = sun.north_source
         out["north_correction_deg"] = _deg(sun.north_correction)
+        out["elevation_correction_deg"] = _deg(sun.elevation_correction)
     if state.sun is not None:
         out["azimuth_deg"] = round(state.sun.azimuth, 3)
         out["elevation_deg"] = round(state.sun.elevation, 3)

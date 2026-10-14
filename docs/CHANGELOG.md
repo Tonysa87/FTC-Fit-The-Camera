@@ -22,7 +22,8 @@ release since 0.1, is in [`CHANGELOG.it.md`](CHANGELOG.it.md).
   (pick the scene axis +X −X +Y −Y, then *Turn* it by eye; the default without a
   compass), or from a **shadow**. Most Android phones write no compass: no map
   or measuring is needed (an early map/landmark design was dropped after the
-  first GUI test as too complex).
+  first GUI test as too complex). **Raise** lifts or lowers the date's sun by
+  eye when the CG shadows come out shorter or longer than in the photo.
 - **Sun from a shadow**: three handles on the foot and top of something vertical
   and on the tip of its shadow, on the ground or on a wall through the origin.
   They give the sun with no EXIF, date or north, with a ± from the handles.

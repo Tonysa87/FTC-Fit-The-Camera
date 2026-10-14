@@ -249,7 +249,10 @@ the real ones. *Sun From* picks the source:
 
   With the compass, *North Correction* turns the north and the sun together:
   phone compasses are often 5–15° off. A camera looking steeply up or down makes
-  the compass unreliable (warning).
+  the compass unreliable (warning). With the date and place, **Raise** lifts or
+  lowers the sun by eye until the CG shadows are as long as in the photo (it makes
+  up for small calibration or clock errors; the panel shows the date's elevation
+  → the one used).
 - **Shadow**: in *Calibrate* three orange handles go on the **foot** and the
   **top** of something vertical (a pole, a post, a door jamb) and on the **tip of
   its shadow**. The foot is on the ground; the tip on the ground or on a wall

@@ -11,6 +11,9 @@ Storia completa in italiano. Dalla 1.1 il changelog principale è in inglese:
   −Y) o **Ombra** (il nord dall'ombra si applica scegliendo *Ombra*, senza *Usa
   il nord dell'ombra*). *Fit HDRI* entra nei gruppi di nodi (gli add-on per HDRI
   costruiscono così il World).
+- Dal test GUI della alpha.8: **Alza** (*Raise*) corregge a occhio l'elevazione
+  del sole di data e ora, quando le ombre della CG vengono più corte o più lunghe
+  che nella foto (cabina: lato −Y, Ruota −16°, ombra del cartello troppo corta).
 - **Report di calibrazione** (1.1 A2): *Esporta report* in *Risultati*, in
   Markdown o JSON: focale, sensore, campo visivo, posizione e rotazione,
   incertezza, aderenza delle guide, fonte di ogni dato (EXIF o manuale) e sole.

@@ -388,6 +388,11 @@ _IT = {
         "Ruota il sole attorno alla verticale (con la bussola: il nord della scena): regolala finché le ombre "
         "della CG coincidono con la foto; le bussole dei telefoni sbagliano spesso di 5-15°"
     ),
+    "Raises (or lowers) the sun from the height of the date and time: adjust it until the CG "
+    "shadows are as long as in the photo (it makes up for small calibration and clock errors)": (
+        "Alza (o abbassa) il sole rispetto all'altezza di data e ora: regolala finché le ombre della CG "
+        "sono lunghe come nella foto (compensa piccoli errori di calibrazione e di orologio)"
+    ),
     "No compass direction in the photo: use Side or Shadow": "Nessuna bussola nella foto: usa Lato o Ombra",
     "Shadow vs Compass": "Ombra / bussola",
     "Show the shadow handles (foot and top of something vertical, tip of its shadow) to check the compass": (
@@ -423,10 +428,12 @@ _IT_FTC = {
     "Compass": "Bussola",
     "Declination": "Declinazione",
     "North Correction": "Correzione del nord",
+    "Elevation Correction": "Correzione dell'elevazione",
     "Sun": "Sole",
     "Side": "Lato",
     "Sun From Axis": "Sole dall'asse",
     "Turn": "Ruota",
+    "Raise": "Alza",
     "Check with a Shadow": "Verifica con un'ombra",
     "Sun From": "Sole da",
     "Date and Place": "Data e luogo",

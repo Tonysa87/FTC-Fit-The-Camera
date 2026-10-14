@@ -401,6 +401,18 @@ class FTC_Sun(PropertyGroup):
         soft_max=3.141592653589793,
         update=_sun_changed,
     )
+    elevation_correction: FloatProperty(
+        name="Elevation Correction",
+        translation_context=FTC_CONTEXT,
+        description=(
+            "Raises (or lowers) the sun from the height of the date and time: adjust it until the CG "
+            "shadows are as long as in the photo (it makes up for small calibration and clock errors)"
+        ),
+        subtype="ANGLE",
+        soft_min=-0.17453292519943295,
+        soft_max=0.17453292519943295,
+        update=_sun_changed,
+    )
     # Fit HDRI: the sun's point on the World HDRI, kept on the sun when it moves.
     hdri_point: FloatVectorProperty(
         size=2,

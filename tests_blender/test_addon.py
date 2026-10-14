@@ -1167,6 +1167,13 @@ def sun_from_exif_time_place_and_compass():
     s.sun.north_correction = math.radians(10.0)
     assert angle_diff(heading_deg(light_dir(light)), 260.0) < 0.05
     s.sun.north_correction = 0.0
+    # Raise: the height only, kept above the horizon.
+    s.sun.elevation_correction = math.radians(-3.0)
+    assert abs(math.degrees(math.asin(light_dir(light).z)) - (SUN_ELEVATION - 3.0)) < 0.05
+    assert angle_diff(heading_deg(light_dir(light)), 270.0) < 0.05
+    s.sun.elevation_correction = math.radians(-120.0)
+    assert abs(light_dir(light).z) < 1e-6
+    s.sun.elevation_correction = 0.0
 
     # The north correction turns the sun about Z; the light stays where it is.
     light.location = (1.0, 2.0, 3.0)
