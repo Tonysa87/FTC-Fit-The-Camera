@@ -7,44 +7,41 @@ Extensions audience) and `README.it.md` (Italian); developer docs
 "Camera Match": the final name is **FTC**, package `fit_the_camera`, tab "FTC").
 
 ## Status / next session (bookmark 2026-10-14, evening)
-- **1.1 in progress** from `docs/SPEC_1.1.md`. S1 DONE (2026-10-14): `exif.capture_time()`
-  (GPS UTC > camera clock + OffsetTimeOriginal > bare local time; GPS vs clock
-  checked against real zones, `clock_mismatch` = stale GPS fix) and `solver/sun.py`
-  (NOAA, < 0.013° vs NREL SPA in `tests/test_sun.py`). S2 built as 1.1.0-alpha.1
-  (2026-10-14), awaiting the user's GUI test: section **Fit Sun** (`ops_sun.py`,
-  `FTC_Sun` on `settings.sun`), north from COMPASS / MAP / LANDMARK (handle
-  `landmark`, pose-only) + `north_correction`; the light follows on sun changes
-  and in `calibrate.apply_solution`. Names chosen by the user: *Fit Sun*, *Fit
-  HDRI* (S4 button), never translated. 1.1.0-alpha.2 = alpha.1 + audit fixes (2026-10-14).
-  Sun lessons: a deleted object stays alive while a PointerProperty holds it
-  (`users_scene` empty: skip + warn); write `matrix_basis` (matrix_world lags) and
-  solve in the parent's space with the scale sign (mirrored lights); a label given
-  an already-translated string is translated again ("Data"->"Dati"): pass
-  `text_ctxt`; GPS time vs camera clock: clock+offset wins on disagreement (stale
-  fix), GPS only without offset; panels use `calibrate.current_solution` (solves
-  lazily without writing, cache cleared on undo outside a session).
-  S3 DONE (1.1.0-alpha.3, audited): `sun.source` TIME/SHADOW, `use_shadow`,
-  `shadow_plane`, north_source SHADOW (appended); handles shadow_foot/top/tip
-  (`ops_sun.SUN_KEYS`: pose-only, kept by Reset Guides, drag only orients);
-  ground shadows are scale-invariant (plane below the camera if the origin is
-  above it), wall tips need the origin on the wall's foot; shadow north ignores
-  north_correction; heading spread = spread / cos(elevation).
-  S4 DONE (1.1.0-alpha.4, audited): `ops_hdri.py` + `solver/hdri.py`, Cycles
-  equirect convention checked by renders (u=0.5 -> +X, clockwise; Mapping
-  Point/Vector: lookup = Rz(angle) d, Texture type inverse). `Image.copy()` of
-  a generated/edited image comes back regenerated (blank): read those
-  directly. `hdri_fitted` = *Follow the Sun*, off when the Mapping's Z differs
-  from `hdri_angle`. Viewer closed on cancel()/load_pre.
-  A1 DONE (1.1.0-alpha.5, audited): `vpN_lines` 2..6, handles vpN_3a..6b,
-  `calibrate.group_keys/group_lines`; a new line starts between the first two and
-  aims at their meeting point (`extra_line`); session snapshots keep the counts.
-  Operator tooltips: one-line `bl_description` (docstring line breaks reach the
-  tooltip and miss the translation); `description()` callbacks return `tip_(...)`.
-  Display > North off by default. Next: A2 report + English changelog. Decided 2026-10-14: explicit *New Sun* button,
-  HDRI equirectangular only. No compass is the NORM (Android: none of the
-  `samples/` has GPSImgDirection; all have GPS + UTC GPS time): north from a
-  map bearing / azimuth slider / shadow are first-class, not fallbacks.
-  fSpy project import was dropped by the user (2026-10-14): do not propose it. 1.0.x fixes stay separate.
+- **1.1 developed (2026-10-14): all phases S1–S4, A1, A2 done, audited, pushed.**
+  Build 1.1.0-alpha.6 awaits the user's GUI test (`docs/TEST_GUI_1.1.md`, items
+  1–16, photos in `samples/`); then release 1.1.0: drop "(1.1, in development)"
+  from the READMEs, version 1.1.0, CHANGELOG headings, GitHub release, Extensions
+  *Upload New Version* (release notes link docs/CHANGELOG.md, now English).
+  Spec status in `docs/SPEC_1.1.md` (*Stato*). Workflow asked by the user: per
+  phase develop -> audit -> docs -> commit + push.
+  - **Fit Sun** (`ops_sun.py`, `FTC_Sun` on `settings.sun`): `sun.source` TIME
+    (EXIF time/place: `exif.capture_time()`, NOAA `solver/sun.py` < 0.013° vs SPA)
+    or SHADOW (`solver/sun.shadow_*`); north COMPASS / MAP / LANDMARK / SHADOW
+    (appended) + `north_correction` (ignored for SHADOW). Light via `orient()`
+    (matrix_basis, parent space, scale sign); follows in `apply_solution`.
+    No compass is the NORM on Android. Names *Fit Sun* / *Fit HDRI* (user's
+    choice, never translated); shadow is a source inside Fit Sun (user OK'd).
+  - **Fit HDRI** (`ops_hdri.py`, `solver/hdri.py`): Cycles equirect convention
+    checked by renders (u=0.5 -> +X, clockwise; Mapping Point/Vector lookup =
+    Rz(angle) d, Texture type inverse); viewer modal; `hdri_fitted` = *Follow
+    the Sun*, off when the Mapping's Z differs from `hdri_angle`.
+  - **A1** `vpN_lines` 2..6 (`calibrate.group_keys`, `extra_line` aims at the
+    meeting point of lines 1–2). **A2** `report.py` (Markdown/JSON; sun block only
+    when Fit Sun is used: GPS privacy), manifest permission (<= 64 chars).
+  - Handles that are sun inputs (`ops_sun.SUN_KEYS`): pose-only, kept by Reset
+    Guides, dragging them only orients. Display > North off by default.
+  - Lessons: a deleted object lives on while a PointerProperty holds it
+    (`users_scene` empty); matrix_world lags behind a location just set; a label
+    given a translated string is translated again ("Data"->"Dati": pass
+    `text_ctxt`); operator docstring line breaks reach the tooltip and miss the
+    translation (one-line `bl_description`; `description()` returns `tip_()`);
+    `Image.copy()` of a generated/edited image comes back blank; phones write the
+    time of the last GPS fix (clock gives the instant, clock+offset beats a
+    disagreeing GPS time); panels use `calibrate.current_solution` (lazy, no
+    writes; cache cleared on undo outside a session).
+  - fSpy project import dropped by the user: do not propose it. 1.0.x fixes stay
+    separate. Known pre-existing: Reset Guides in 3 VP warns ~2.4° misfit
+    (default group-3 verticals vs the focal-based layout).
 - **1.0.0 approved on extensions.blender.org (2026-10-14)**, public at
   https://extensions.blender.org/add-ons/fit-the-camera/. The moderator only asked to drop the `3D View` tag in future
   versions: done in the manifest (Camera, Render), it ships with the next
@@ -119,7 +116,7 @@ Extensions audience) and `README.it.md` (Italian); developer docs
   864 configs), `dragsim` (modal drag code on the cube handles), `planes`,
   `timing`, `snap` (overlay PNGs), `render` (Cycles render through Prepare
   Render), `lens` (magnifier snapshot), `sun` (north arrow, sun direction,
-  landmark handle). Panels cannot be drawn headless otherwise; set ui_scale in mocks (it is
+  landmark and shadow), `hdri` (Fit HDRI viewer), `report` (sample report). Panels cannot be drawn headless otherwise; set ui_scale in mocks (it is
   0 in background mode).
 
 ## Architecture
@@ -289,7 +286,7 @@ fine dragging (×0.2) the cursor drifts away from the handle. Probe `lens` write
   their untouched hand-made default guides (~22 mm equivalent) may then warn.
 
 ## Open work
-- **Next: 1.1, spec in `docs/SPEC_1.1.md`** (Sun from EXIF / shadow, HDRI rotated about Z onto the sun, extra VP lines, report; a Known Points PnP mode is described but NOT a priority: the user's photo insertions usually have no field survey). Open decisions settled 2026-10-14 (New Sun button; HDRI equirectangular only). 1.0.x bug fixes stay separate.
+- 1.1 release after the user's GUI test (see Status). PnP "Known Points" mode
+  described in the spec, NOT a priority.
 - Add tags only when they really fit (moderators prune them).
-- Possible: more than two lines per VP;
-  turn the `paneltest` / `drawall` probes into regular Blender tests.
+- Possible: turn the `paneltest` / `drawall` probes into regular Blender tests.

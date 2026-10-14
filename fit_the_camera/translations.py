@@ -183,8 +183,8 @@ _IT = {
         "Ruota il nord della scena, e il sole con lui, attorno alla verticale: le bussole dei telefoni "
         "sbagliano spesso di 5-15°; regolala finché le ombre del CG coincidono con la foto"
     ),
-    "Show the scene north and the sun direction on the reference plane while calibrating": (
-        "Mostra il nord della scena e la direzione del sole sul piano di riferimento durante la calibrazione"
+    "Show the scene north and the sun direction on the ground through the origin while calibrating": (
+        "Mostra il nord della scena e la direzione del sole sul suolo per l'origine durante la calibrazione"
     ),
     "No compass direction in the photo: use Map, Landmark or Shadow": (
         "Nessuna bussola nella foto: usa Mappa, Riferimento o Ombra"

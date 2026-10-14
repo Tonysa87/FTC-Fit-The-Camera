@@ -1628,6 +1628,11 @@ def export_report_json_and_markdown():
 
     cam = _sun_camera(sun_tiff())
     s = cam.data.ftc
+    # GPS in the EXIF but Fit Sun not used: the place is not written.
+    path = os.path.join(SCRATCH, "private.md")  # .md asked, JSON chosen: report.json, not .md.json
+    assert bpy.ops.ftc.export_report(filepath=path, format="JSON") == {"FINISHED"}
+    with open(os.path.join(SCRATCH, "private.json"), encoding="utf-8") as f:
+        assert "sun" not in json.load(f)
     s.sun.north_source = "MAP"
     s.sun.map_axis, s.sun.map_bearing = "+X", math.radians(90.0)
     assert bpy.ops.ftc.new_sun() == {"FINISHED"}
@@ -1639,17 +1644,18 @@ def export_report_json_and_markdown():
     assert report["camera_data"]["focal_35mm"] == {"value": 36.0, "source": "EXIF"}
     res = report["results"]
     assert res["valid"] and abs(res["focal_px"] - s.results.focal_px) < 1e-2
-    assert res["location"] == [round(v, 6) for v in cam.matrix_world.translation]
+    assert res["location"] == [round(v, 6) for v in cam.matrix_world.translation] and res["applied_to_camera"]
     assert report["calibration"]["lines_per_vanishing_point"] == [2, 2]
     sun = report["sun"]
     assert abs(sun["azimuth_deg"] - SUN_AZIMUTH) < 0.05 and sun["light"] == s.sun.light.name
     assert sun["utc"].startswith("2026-06-21T10:30:00") and sun["latitude"]["source"] == "EXIF"
 
+    cam.name = "cam|one"
     path = os.path.join(SCRATCH, "report")
     assert bpy.ops.ftc.export_report(filepath=path, format="MARKDOWN") == {"FINISHED"}
     with open(path + ".md", encoding="utf-8") as f:
         text = f.read()
-    assert text.startswith("# FTC calibration report") and "## Sun" in text and "| focal px |" in text
+    assert text.startswith("# FTC calibration report: cam\\|one") and "## Sun" in text and "| focal px |" in text
 
     # A failed calibration still gives a report, with the error.
     fresh_scene()

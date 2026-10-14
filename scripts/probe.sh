@@ -2,13 +2,16 @@
 # Run a diagnostic probe from scripts/probes/ in headless Blender against the
 # latest build, in a throw-away user profile. Usage: bash scripts/probe.sh <name>
 #   dragsim   drives the modal operator's drag code on the scale cube handles
-#   paneltest draws every panel section with a validating mock layout (432 configs)
+#   paneltest draws every panel section with a validating mock layout (2736 configs)
 #   drawall   draws the overlay offscreen in 864 configurations
 #   planes    default calibration validity per reference plane
 #   timing    refresh time per mode and focal option
 #   snap      renders overlay snapshots (vp.png, rect.png) into the output dir
 #   render    renders a CG cube over a calibrated photo via Prepare Render
 #   lens      magnifier snapshot (lens.png) on the elevator photo
+#   sun       north arrow, sun direction, landmark and shadow overlays (sun_*.png)
+#   hdri      the Fit HDRI viewer over a synthetic sky (hdri_viewer.png)
+#   report    a sample calibration report (report.md, report.json)
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 NAME="${1:?probe name}"

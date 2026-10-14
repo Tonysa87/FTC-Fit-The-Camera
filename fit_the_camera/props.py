@@ -433,7 +433,7 @@ class FTC_Sun(PropertyGroup):
     show_north: BoolProperty(
         name="North",
         translation_context=FTC_CONTEXT,
-        description="Show the scene north and the sun direction on the reference plane while calibrating",
+        description="Show the scene north and the sun direction on the ground through the origin while calibrating",
         default=False,
     )
 

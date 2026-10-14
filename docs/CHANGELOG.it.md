@@ -23,7 +23,7 @@ Storia completa in italiano. Dalla 1.1 il changelog principale è in inglese:
   nella calibrazione + sua direzione sulla mappa); *North Correction* per
   ruotarlo a occhio. FTC orienta la luce Sole scelta, o una nuova con *New Sun*;
   intensità e colore restano dell'utente. Freccia del nord e direzione del sole
-  sul piano di riferimento (*Display > North*).
+  sul suolo per l'origine (*Display > North*, spento di default).
   Audit (alpha.2): orologio + fuso battono un'ora GPS discordante (fix vecchio);
   luce specchiata/genitori specchiati, luce cancellata o non modificabile,
   vincoli che sovrascrivono la rotazione (avviso); nord visibile anche senza ora;

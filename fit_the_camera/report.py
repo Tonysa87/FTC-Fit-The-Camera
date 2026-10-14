@@ -14,6 +14,7 @@ import bpy
 from bpy.props import EnumProperty, StringProperty
 from bpy.types import Operator
 from bpy_extras.io_utils import ExportHelper
+from mathutils import Matrix
 
 from . import calibrate, ops_sun
 
@@ -28,12 +29,19 @@ def addon_version() -> str:
         return ""
 
 
+def _num(value, digits: int = 6):
+    """A float rounded for reading (float32 noise, -0.0 gone); others unchanged."""
+    if isinstance(value, float):
+        return round(value, digits) + 0.0
+    return value
+
+
 def _field(value, state):
-    return {"value": round(value, 6) if isinstance(value, float) else value, "source": state}
+    return {"value": _num(value), "source": state}
 
 
 def _deg(radians: float, digits: int = 3) -> float:
-    return round(math.degrees(radians), digits)
+    return round(math.degrees(radians), digits) + 0.0
 
 
 def build(cam_obj, scene) -> dict:
@@ -51,7 +59,7 @@ def build(cam_obj, scene) -> dict:
             "width": data.image_width,
             "height": data.image_height,
         },
-        "units": {"system": scene.unit_settings.system, "scale_length": scene.unit_settings.scale_length},
+        "units": {"system": scene.unit_settings.system, "scale_length": _num(scene.unit_settings.scale_length)},
         "camera_data": {
             "make": data.make,
             "model": data.model,
@@ -78,7 +86,7 @@ def calibration(settings) -> dict:
         out["axes"] = [settings.vp1_axis, settings.vp2_axis, settings.vp3_axis][: max(count, 2)]
         out["lines_per_vanishing_point"] = [calibrate.line_count(settings, i) for i in range(1, count + 1)]
         out["third_axis_line"] = count == 2 and settings.use_third_line
-        out["focal_mode"] = settings.focal_mode
+        out["focal"] = calibrate.focal_source(settings)
         if settings.scale_mode == "CUBE":
             out["scale"] = {"from": "SCALE_CUBE", "size": round(calibrate.cube_size(settings), 6)}
         else:
@@ -89,11 +97,18 @@ def calibration(settings) -> dict:
                 "measured_on": settings.ref_measure_plane,
             }
     elif settings.mode == "RECT":
-        out["focal_mode"] = settings.focal_mode
-        out["rectangle"] = {"plane": settings.ref_plane, "sides": [settings.rect_width, settings.rect_height]}
+        out["focal"] = calibrate.focal_source(settings)
+        out["rectangle"] = {
+            "plane": settings.ref_plane,
+            "sides": [_num(settings.rect_width), _num(settings.rect_height)],
+        }
     else:
-        out["camera_height"] = round(settings.camera_height, 6)
-        out["yaw_from"] = settings.yaw_source
+        out["camera_height"] = _num(settings.camera_height)
+        compass = settings.yaw_source == "EXIF" and settings.camera_data.direction_state != "MISSING"
+        out["yaw"] = _field(
+            _num(settings.camera_data.direction if compass else math.degrees(settings.yaw)),
+            "EXIF" if compass else "MANUAL",
+        )
     out["reference_plane"] = calibrate.reference_plane(settings)
     if settings.use_anchor:
         out["aligned_to"] = settings.align_source
@@ -104,7 +119,14 @@ def results(settings, cam_obj) -> dict:
     res = settings.results
     if not res.valid:
         return {"valid": False, "error": res.error}
-    m = cam_obj.matrix_world
+    # The pose of the calibration (what Apply writes), not the camera object's,
+    # which changes only on Apply or in a session (or by animation).
+    solution = calibrate.current_solution(cam_obj.data)
+    if solution is None:
+        return {"valid": False, "error": res.error}
+    bc = calibrate.to_blender(solution, calibrate.image_sensor_mm(settings))
+    m = calibrate.alignment_matrix(settings) @ Matrix(bc.matrix_world.tolist())
+    applied = all(abs(a - b) < 1e-4 for ra, rb in zip(m, cam_obj.matrix_world) for a, b in zip(ra, rb))
     return {
         "valid": True,
         "warnings": [w for w in res.warnings.splitlines() if w],
@@ -120,25 +142,28 @@ def results(settings, cam_obj) -> dict:
         "pitch_deg": _deg(res.pitch),
         "roll_deg": _deg(res.roll),
         "yaw_deg": _deg(res.yaw),
-        "location": [round(v, 6) for v in m.translation],
+        "location": [_num(v) for v in m.translation],
         "rotation_euler_xyz_deg": [_deg(a) for a in m.to_euler("XYZ")],
+        "applied_to_camera": applied,
     }
 
 
 def sun_report(settings, scene) -> dict | None:
-    """The sun block, when Fit Sun is in use (a sun, a light or a shadow)."""
+    """The sun block, only when Fit Sun is in use (a light, a fitted HDRI or a
+    shadow): the place of the shot is not written for photos that merely carry
+    GPS in their EXIF."""
     sun = settings.sun
     data = settings.camera_data
-    state = ops_sun.evaluate(settings)
-    if state.direction is None and sun.light is None and not ops_sun.shadow_in_use(settings):
+    if sun.light is None and not sun.hdri_image and not ops_sun.shadow_in_use(settings):
         return None
+    state = ops_sun.evaluate(settings)
     out = {"from": sun.source}
     if sun.source == "TIME":
         out["local_time"] = _field(
             f"{data.year:04d}-{data.month:02d}-{data.day:02d} {data.hour:02d}:{data.minute:02d}:{data.second:02d}",
             data.time_state,
         )
-        out["utc_offset_hours"] = _field(data.utc_offset, data.offset_state)
+        out["utc_offset_hours"] = _field(_num(data.utc_offset, 2), data.offset_state)
         if state.utc is not None:
             out["utc"] = state.utc.astimezone(UTC).isoformat()
         place = ops_sun.location_state(data)
@@ -158,8 +183,8 @@ def sun_report(settings, scene) -> dict | None:
             "plane": sun.shadow_plane,
             "elevation_deg": round(ops_sun.elevation_of(state.shadow), 3),
             "spread_deg": round(state.shadow_spread, 3) if math.isfinite(state.shadow_spread) else None,
-            "vs_date_elevation_deg": state.shadow_elevation_offset,
-            "vs_north_deg": state.shadow_north_offset,
+            "vs_date_elevation_deg": _num(state.shadow_elevation_offset, 3),
+            "vs_north_deg": _num(state.shadow_north_offset, 3),
         }
     if state.error:
         out["error"] = state.error
@@ -177,9 +202,14 @@ def sun_report(settings, scene) -> dict | None:
     return out
 
 
+def _cell(value) -> str:
+    """Text safe inside a Markdown table cell."""
+    return str(value).replace("\\", "\\\\").replace("|", "\\|").replace("\r", "").replace("\n", "<br>")
+
+
 def to_markdown(report: dict) -> str:
     """The report as a readable Markdown page."""
-    lines = [f"# FTC calibration report: {report['camera']}", ""]
+    lines = [f"# FTC calibration report: {_cell(report['camera'])}", ""]
     lines.append(f"FTC {report['ftc_version']} · Blender {report['blender_version']} · {report['created']}")
     lines.append("")
 
@@ -190,11 +220,13 @@ def to_markdown(report: dict) -> str:
                 value = f"{value['value']} ({value['source']})"
             elif isinstance(value, dict):
                 value = ", ".join(f"{k}: {v}" for k, v in value.items())
+            elif key == "warnings" and isinstance(value, list):
+                value = "<br>".join(str(v) for v in value) if value else "—"
             elif isinstance(value, list):
                 value = ", ".join(str(v) for v in value) if value else "—"
             elif value in ("", None):
                 value = "—"
-            lines.append(f"| {key.replace('_', ' ')} | {value} |")
+            lines.append(f"| {key.replace('_', ' ')} | {_cell(value)} |")
         lines.append("")
 
     table("Image", report["image"])
@@ -237,17 +269,32 @@ class FTC_OT_export_report(Operator, ExportHelper):
         self.filename_ext = ".json" if self.format == "JSON" else ".md"
         return super().check(context)
 
+    def _ext(self) -> str:
+        return ".json" if self.format == "JSON" else ".md"
+
     def invoke(self, context, event):
         cam = calibrate.view_camera(context)
+        self.filename_ext = self._ext()
         if not self.filepath:
-            self.filepath = bpy.path.clean_name(cam.name) + "_ftc_report.md"
+            name = bpy.path.clean_name(cam.name) + "_ftc_report" + self._ext()
+            folder = os.path.dirname(bpy.data.filepath) if bpy.data.filepath else ""
+            self.filepath = os.path.join(folder, name) if folder else name
         return super().invoke(context, event)
 
     def execute(self, context):
         cam = calibrate.view_camera(context)
         report = build(cam, context.scene)
-        path = bpy.path.ensure_ext(self.filepath, ".json" if self.format == "JSON" else ".md")
-        text = json.dumps(report, indent=2, ensure_ascii=False) if self.format == "JSON" else to_markdown(report)
+        root, ext = os.path.splitext(self.filepath)
+        path = (root if ext.lower() in (".md", ".json") else self.filepath) + self._ext()
+        try:
+            text = (
+                json.dumps(report, indent=2, ensure_ascii=False, allow_nan=False)
+                if self.format == "JSON"
+                else to_markdown(report)
+            )
+        except ValueError as exc:  # a NaN or infinity would be invalid JSON
+            self.report({"ERROR"}, str(exc))
+            return {"CANCELLED"}
         try:
             with open(path, "w", encoding="utf-8") as f:
                 f.write(text)
