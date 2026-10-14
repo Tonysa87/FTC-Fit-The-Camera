@@ -111,6 +111,11 @@ def _sun_changed(self, context):
     ops_sun.settings_changed(self.id_data, context)
 
 
+def _map_bearing_changed(self, context):
+    self.map_bearing_set = True
+    _sun_changed(self, context)
+
+
 def _hdri_follow_changed(self, context):
     if self.hdri_fitted and not calibrate.updating():
         from . import ops_hdri, ops_sun
@@ -375,12 +380,16 @@ class FTC_Sun(PropertyGroup):
     map_bearing: FloatProperty(
         name="Bearing",
         translation_context=FTC_CONTEXT,
-        description="Compass bearing of the scene axis, clockwise from true north",
+        description=(
+            "Compass bearing the scene axis points to, clockwise from true north, read on a map: a facade or a "
+            "street runs two ways, take the one its arrow points to in Calibrate"
+        ),
         subtype="ANGLE",
         min=0.0,
         max=2.0 * 3.141592653589793,
-        update=_sun_changed,
+        update=_map_bearing_changed,
     )
+    map_bearing_set: BoolProperty(description="A map bearing was entered (0° is a real north, not a default)")
     landmark_bearing: FloatProperty(
         name="Landmark Bearing",
         translation_context=FTC_CONTEXT,

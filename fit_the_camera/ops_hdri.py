@@ -27,18 +27,10 @@ ELEVATION_WARNING = 10.0
 VIEWER_MARGIN = 40.0
 
 
-def environment(world):
-    """The World's Environment Texture node that reaches the output, and why
-    not (empty when usable). Several: the first by name, with a warning."""
-    if world is None or world.node_tree is None:
-        return None, "The World has no nodes: add an Environment Texture with an HDRI"
-    if not world.is_editable:
-        return None, "The World is linked from a library: make it local to fit its HDRI"
-    tree = world.node_tree
-    output = next((n for n in tree.nodes if n.type == "OUTPUT_WORLD" and n.is_active_output), None)
-    found, grouped = [], False
-    seen = set()
-    stack = [output] if output is not None else []
+def _environments(tree, start, found, seen) -> None:
+    """Environment Textures upstream of the nodes ``start`` of ``tree``, inside
+    node groups too (from their active Group Output)."""
+    stack = list(start)
     while stack:
         node = stack.pop()
         if node.as_pointer() in seen:
@@ -47,29 +39,47 @@ def environment(world):
         if node.type == "TEX_ENVIRONMENT":
             found.append(node)
         elif node.type == "GROUP" and node.node_tree is not None:
-            grouped |= any(n.type == "TEX_ENVIRONMENT" for n in node.node_tree.nodes)
+            inner = node.node_tree
+            outputs = [n for n in inner.nodes if n.type == "GROUP_OUTPUT" and n.is_active_output]
+            _environments(inner, outputs, found, seen)
         for socket in node.inputs:
             for link in socket.links:
                 if link.is_valid and not link.is_muted:
                     stack.append(link.from_node)
+
+
+def environment(world):
+    """The World's Environment Texture node that reaches the output (also inside
+    node groups), and why not (empty when usable). Several: the first by name,
+    with a warning."""
+    if world is None or world.node_tree is None:
+        return None, "The World has no nodes: add an Environment Texture with an HDRI"
+    if not world.is_editable:
+        return None, "The World is linked from a library: make it local to fit its HDRI"
+    tree = world.node_tree
+    output = next((n for n in tree.nodes if n.type == "OUTPUT_WORLD" and n.is_active_output), None)
+    found = []
+    _environments(tree, [output] if output is not None else [], found, set())
     if not found:
-        if grouped:
-            return None, "The Environment Texture is inside a node group: Fit HDRI needs it in the World's own nodes"
         return None, "No Environment Texture reaches the World output"
-    node = sorted(found, key=lambda n: n.name)[0]
+    node = sorted(found, key=lambda n: (n.id_data != tree, n.name))[0]
     if node.image is None:
         return None, "The Environment Texture has no image"
     if node.projection != "EQUIRECTANGULAR":
         return None, "The Environment Texture is not equirectangular: Fit HDRI needs an equirectangular HDRI"
+    if not node.id_data.is_editable:
+        return None, "The HDRI's node group is linked from a library: make it local to fit its HDRI"
     if any(n.image != node.image for n in found):
         return node, "Several Environment Textures reach the World output: using the first by name"
+    if node.id_data != tree and node.id_data.users > 1:
+        return node, "The HDRI's node group is used elsewhere too: it turns there as well"
     return node, ""
 
 
-def same_image(world, env):
-    """Every Environment Texture of ``world`` showing ``env``'s image (e.g. one
-    for the light and one for the camera): they turn together."""
-    return [n for n in world.node_tree.nodes if n.type == "TEX_ENVIRONMENT" and n.image == env.image]
+def same_image(env):
+    """Every Environment Texture next to ``env`` (same node tree) showing its
+    image (e.g. one for the light and one for the camera): they turn together."""
+    return [n for n in env.id_data.nodes if n.type == "TEX_ENVIRONMENT" and n.image == env.image]
 
 
 def _upstream(socket):
@@ -200,14 +210,14 @@ def fit(settings, scene, uv, state=None):
     env, problem = environment(world)
     if env is None:
         raise ValueError(problem)
-    nodes = same_image(world, env)
+    nodes = same_image(env)
     for node in nodes:
         if why := vector_problem(node):
             raise ValueError(why)
     angle = z_rotation(uv[0], state.direction)
     warning = problem
     for node in nodes:
-        mapping = ensure_mapping(world.node_tree, node)
+        mapping = ensure_mapping(node.id_data, node)
         set_z(mapping, angle)
         if tilted(mapping):
             warning = "The HDRI's Mapping has an X or Y rotation or scale: its sun is matched about Z only, check it"
@@ -233,7 +243,7 @@ def follow(settings, scene, state, *, force=False) -> None:
         return
     angle = z_rotation(sun.hdri_point[0], state.direction)
     if abs(_wrap(angle - current)) > 1e-7:
-        for node in same_image(scene.world, env):
+        for node in same_image(env):
             other = mapping_of(node)
             if other is not None and not vector_problem(node):
                 set_z(other, angle)
