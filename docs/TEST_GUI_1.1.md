@@ -43,21 +43,25 @@ Zip: `\\wsl.localhost\Ubuntu-24.04\home\tony\Projects\FTC\dist\fit_the_camera-<v
    toccare la camera. *Calibrate* mentre gira passa alla calibrazione completa
    (e viceversa).
 9. Torna a *Date and Place* e scegli *North* = **Shadow**: stesse maniglie, il
-   nord viene dall'ombra; *Shadow vs Date* confronta l'elevazione e la crocetta
-   bianca segna dove il sole della data metterebbe la punta.
-10. **Cabina**: ombra del cartello sul muro: *Shadow On* = parete (XZ o YZ),
-    origine nello spigolo muro–marciapiede.
-
+   nord viene dall'ombra; *Shadow vs Date* confronta l'elevazione e la **×
+   "Fit Sun"** segna dove il sole di Fit Sun (con Raise) mette la punta: Raise
+   la sposta lungo l'ombra.
 9b. **Cabina**, *North* = *Side* −Y: spunta **Check with a Shadow**, Calibrate
-    Shadow sul cartello e la sua ombra sul muro. Accanto alla punta compare la
-    **× "Fit Sun"**: con *Turn* si sposta di lato, con *Raise* lungo l'ombra;
-    portala sulla maniglia della punta. *Shadow vs Turn* dice quanto aggiungere
-    a Turn, *Shadow vs Date* il Raise che combacia.
+    Shadow sul cartello e la sua ombra sul muro (*Shadow On* = parete, origine
+    nello spigolo muro–marciapiede). Accanto alla punta compare la **× "Fit
+    Sun"**: con *Turn* si sposta di lato, con *Raise* lungo l'ombra; portala
+    sulla maniglia della punta. *Shadow vs Turn* dice quanto aggiungere a Turn,
+    *Shadow vs Date* il Raise che combacia (resta rosso finché Raise non lo
+    raggiunge). Togliendo la spunta durante Calibrate Shadow la sessione si
+    chiude da sola.
+10. Calibrate Shadow aperto, poi *Reset Guides* o ⇄ nel pannello, poi Ctrl+Z
+    nella vista: le guide tornano e la luce segue la calibrazione ripristinata.
 
 ## Fit HDRI
 11. World con un HDRI equirettangolare (Environment Texture). Con il sole
     impostato, **Fit HDRI**: si apre il visore sull'HDRI, anello bianco sul punto
-    più luminoso, crocetta dove cade il sole della foto. Clic sul sole, **Invio**:
+    più luminoso, **× "Fit Sun"** (etichetta a sinistra) dove cade il sole della
+    foto. Clic sul sole, **Invio**:
     l'HDRI ruota (nei nodi del World compare *FTC HDRI* o cambia solo la Z del
     tuo Mapping). Esc annulla senza cambiare nulla. Il visore occupa metà
     vista; tenendo **Shift** compare la lente ×4 sul mouse (cursore nascosto,
@@ -68,7 +72,8 @@ Zip: `\\wsl.localhost\Ubuntu-24.04\home\tony\Projects\FTC\dist\fit_the_camera-<v
     Mapping: *Follow the Sun* si spegne.
     World di **Poly Haven** (gruppo con input *Rotation*): Fit HDRI cambia
     l'input *Rotation* del gruppo (in gradi), non il Mapping; il render segue;
-    cambiando *Turn* il valore del gruppo si aggiorna.
+    cambiando *Turn* il valore del gruppo si aggiorna. Disattiva (M) il nodo
+    Multiply del gruppo: Fit HDRI rifiuta con un messaggio e non cambia nulla.
 13. HDRI non equirettangolare (Mirror Ball) o senza World: il pulsante è
     disattivato e un messaggio spiega perché.
 
@@ -81,8 +86,8 @@ Zip: `\\wsl.localhost\Ubuntu-24.04\home\tony\Projects\FTC\dist\fit_the_camera-<v
 15. *Results* › **Export Report**: Markdown e JSON (il formato cambia
     l'estensione). Apri il .md: tabelle leggibili, sezione *Sun* se usata.
 16. Interfaccia in italiano: *Fit Sun* e *Fit HDRI* restano in inglese; "Data",
-    "Ora", "Sole da", "Lato", "Ruota", tooltip di *Fit HDRI* e dei pulsanti − / +
-    tradotti.
+    "Ora", "Sole da", "Lato", "Ruota", "Alza", "Calibra ombra", "Ombra / Ruota",
+    tooltip di *Fit HDRI* e dei pulsanti − / + tradotti.
 
 ## Da riportare
 Comportamenti strani, errori in console (Window › Toggle System Console),
