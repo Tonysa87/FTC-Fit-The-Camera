@@ -6,7 +6,12 @@ Extensions audience) and `README.it.md` (Italian); developer docs
 `docs/PUBLISHING.md`. History: `docs/CHANGELOG.md`. Original spec: `FTC – Specifica addon Blender 5.2+.md` (says
 "Camera Match": the final name is **FTC**, package `fit_the_camera`, tab "FTC").
 
-## Status / next session (bookmark 2026-10-14)
+## Status / next session (bookmark 2026-10-14, evening)
+- **NEXT SESSION: start 1.1** from `docs/SPEC_1.1.md` (phases S1 EXIF date/time
+  + `solver/sun.py` -> S2 Sun -> S3 sun from a shadow -> S4 Orient HDRI -> A1
+  extra VP lines -> A2 fSpy import, A3 report). First ask the user the three
+  *Decisioni aperte* of the spec (New Sun button or user's light; fSpy import
+  in 1.1 or later; HDRI equirectangular only). 1.0.x fixes stay separate.
 - **1.0.0 approved on extensions.blender.org (2026-10-14)**, public at
   https://extensions.blender.org/add-ons/fit-the-camera/. The moderator only asked to drop the `3D View` tag in future
   versions: done in the manifest (Camera, Render), it ships with the next
@@ -19,15 +24,20 @@ Extensions audience) and `README.it.md` (Italian); developer docs
   (`extensions_listing/FTC_scene1-3_v2.png` + two new viewport screenshots) by
   `extensions_listing/scripts/scenes.py`. Replaced on the Extensions listing
   (icon, featured, previews) and as GitHub social preview the same day.
+- **Credits** (asked after Reddit remarks): README / README.it *Credits* section
+  (fSpy as inspiration, own code not a fork; Perspective Plotter for the guides;
+  papers; Claude as coding assistant) and a closing "Inspired by fSpy… Perspective
+  Plotter" line in the Extensions description (`extensions_listing/description.md`
+  = the live text). Keep both in every future listing / README rewrite.
 - **v1.0.0 released on GitHub** (2026-10-11) after the user's full GUI test
-  (`docs/TEST_GUI.md` 1–49) and **submitted to extensions.blender.org the same
-  day: status "Awaiting Review"** (developer account TonyS87). Listing: icon,
+  (`docs/TEST_GUI.md` 1–49) and submitted to extensions.blender.org the same
+  day (developer account TonyS87). Listing: icon,
   featured `00_featured.jpg`, 4 previews (elevator result, calibration composite
   `06_calibration_16x9.jpg`, fountain viewport `08_fountain_view.png`, gallery),
   text from `extensions_listing/description.md`, release notes "V1.0.0".
-  Next: moderators' comments (on the extension page / email) -> fix, bump to
-  1.0.1 (manifest + pixi.toml), GitHub release, *Upload New Version* (do not use
-  *Convert to Draft*). Screenshots with the GPS visible are in
+  Updates: bump version (manifest + pixi.toml), GitHub release, *Upload New
+  Version* (do not use *Convert to Draft*); icon, images and text are edited on
+  the page without a new version. Screenshots with the GPS visible are in
   `extensions_listing/screenshots_originali/`: never upload them.
 - 1.0.0 contents beyond 0.6.1: Render section, two audit rounds, Transform
   Orientation "FTC" (`ops_orientation.py`: calibrated axes = rotation of
