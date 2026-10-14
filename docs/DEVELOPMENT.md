@@ -41,6 +41,7 @@ LICENSE                  # GPL-3.0-or-later
 docs/CHANGELOG.md
 docs/DEVELOPMENT.md      # questo file
 docs/PUBLISHING.md       # pubblicazione su extensions.blender.org
+docs/SPEC_1.1.md         # specifica della versione 1.1
 docs/TEST_GUI.md         # checklist del test a mano in Blender (da fare: 1.0.0)
 ```
 
