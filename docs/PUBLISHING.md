@@ -31,6 +31,10 @@ Riassunto delle regole di [extensions.blender.org](https://extensions.blender.or
   versioni. Fatto nel manifest (`tags = ["Camera", "Render"]`): esce con la
   prossima versione caricata. I tag si cambiano solo dal manifest, non dal
   sito; la 1.0.0 online li tiene com'erano.
+- 2026-10-14: **nuovo logo** (su Reddit il vecchio sembrava quello di fSpy):
+  sostituiti icona, immagine in evidenza e anteprime dalla pagina *Edit*, senza
+  caricare una nuova versione (lo zip non contiene il logo). In fondo alla
+  descrizione aggiunta la riga dei crediti a fSpy e Perspective Plotter.
 
 ## Materiale
 
@@ -43,10 +47,15 @@ il suo README): immagini in `extensions_listing/upload/`, testi e didascalie in
 | Zip | `pixi run build` (manifest validato) | pronto: `dist/fit_the_camera-1.0.0.zip`, uguale a quello della release GitHub |
 | Icona | PNG, al massimo 256 × 256 (obbligatoria) | `upload/icon.png` |
 | Immagine in evidenza | JPEG, PNG o WebP (obbligatoria; in home in un riquadro 16:9) | `upload/00_featured.jpg` (1920 × 1080) |
-| Anteprime | almeno 1: JPEG, PNG, WebP o MP4, didascalia ≤ 255 caratteri; ridotte senza ritaglio | `upload/01…05_*.jpg` |
-| Descrizione | deve elencare tutto ciò che fa l'estensione | `description.md` |
+| Anteprime | almeno 1: JPEG, PNG, WebP o MP4, didascalia ≤ 255 caratteri; ridotte senza ritaglio | online, nell'ordine: `02_scene_elevator.jpg`, `06_calibration_16x9.jpg`, `08_fountain_view.png`, `03_scene_gallery.jpg` |
+| Descrizione | deve elencare tutto ciò che fa l'estensione | `description.md` (uguale al testo online, crediti in fondo) |
 | Support URL | issue tracker del repository | `https://github.com/Tonysa87/FTC-Fit-The-Camera/issues` |
 | Website | nel manifest | GitHub |
+
+Le immagini si rigenerano con `extensions_listing/scripts/scenes.py` dai render
+`FTC_scene1-3_v2.png` e dagli screenshot del viewport (scrive anche
+`docs/images/` per i README). Icona, immagini, descrizione e didascalie si
+cambiano dalla pagina *Edit* dell'estensione, senza nuova versione.
 
 Immagini: niente logo di Blender, niente GIF pesanti nella descrizione. Le
 immagini incluse nello zip devono essere CC0 (FTC non ne include).

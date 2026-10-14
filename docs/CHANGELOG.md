@@ -1,5 +1,15 @@
 # Changelog
 
+## Non rilasciato
+- Manifest: tag `Camera`, `Render` (tolto `3D View`, chiesto dal moderatore di
+  Blender Extensions all'approvazione della 1.0.0).
+- Nuovo logo (mirino in una cornice): il precedente somigliava a quello di fSpy.
+  Cambiano solo README, pagina su Extensions e anteprima di GitHub: lo zip non
+  contiene il logo.
+- README: sezione *Credits* (fSpy come ispirazione, Perspective Plotter per le
+  guide, articoli di riferimento); la stessa riga di crediti nella pagina su
+  Extensions.
+
 ## 1.0.0 – 2026-10-11
 - **Orientamento "FTC"** (Transform Orientation): gli assi calibrati della foto
   nella scena, creato/aggiornato da *Apply*, da Invio a fine sessione e dagli
