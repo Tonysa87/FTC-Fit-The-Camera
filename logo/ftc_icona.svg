@@ -7,24 +7,18 @@
     <path d="M220 184V220H184"/>
     <path d="M72 220H36V184"/>
   </g>
-  <g stroke="#8B949E" stroke-width="2.5" stroke-dasharray="5 6">
-    <line x1="88.4" y1="153.2" x2="40" y2="96"/>
-    <line x1="128" y1="135.5" x2="40" y2="96"/>
-    <line x1="167.6" y1="153.2" x2="216" y2="96"/>
-    <line x1="128" y1="135.5" x2="216" y2="96"/>
-  </g>
-  <polygon points="128,200 88.4,153.2 128,135.5 167.6,153.2" fill="#E6E8EB" fill-opacity="0.12"/>
-  <line x1="128" y1="135.5" x2="88.4" y2="153.2" stroke="#6BBF3A" stroke-width="4" stroke-opacity="0.55"/>
-  <line x1="128" y1="135.5" x2="167.6" y2="153.2" stroke="#E5484D" stroke-width="4" stroke-opacity="0.55"/>
-  <line x1="128" y1="200" x2="88.4" y2="153.2" stroke="#E5484D" stroke-width="6" stroke-linecap="round"/>
-  <line x1="128" y1="200" x2="167.6" y2="153.2" stroke="#6BBF3A" stroke-width="6" stroke-linecap="round"/>
-  <line x1="128" y1="135.5" x2="128" y2="70" stroke="#3B82F6" stroke-width="6" stroke-linecap="round"/>
-  <circle cx="40" cy="96" r="6" fill="#E5484D"/>
-  <circle cx="216" cy="96" r="6" fill="#6BBF3A"/>
-  <g fill="#FFFFFF" stroke="#1E2327" stroke-width="2.5">
-    <circle cx="128" cy="200" r="7"/>
-    <circle cx="88.4" cy="153.2" r="7"/>
-    <circle cx="167.6" cy="153.2" r="7"/>
-    <circle cx="128" cy="135.5" r="7"/>
-  </g>
+  <circle cx="128" cy="128" r="46" fill="none" stroke="#E6E8EB" stroke-width="6"/>
+    <g stroke-width="6" stroke-linecap="round">
+      <line x1="76" y1="128" x2="100" y2="128" stroke="#E5484D"/>
+      <line x1="156" y1="128" x2="180" y2="128" stroke="#E5484D"/>
+      <line x1="128" y1="76" x2="128" y2="100" stroke="#6BBF3A"/>
+      <line x1="128" y1="156" x2="128" y2="180" stroke="#6BBF3A"/>
+    </g>
+    <g stroke-width="3" stroke-dasharray="5 6" stroke-linecap="round">
+      <line x1="190" y1="128" x2="214" y2="128" stroke="#E5484D"/>
+      <line x1="128" y1="66" x2="128" y2="44" stroke="#6BBF3A"/>
+    </g>
+    <circle cx="222" cy="128" r="7" fill="#E5484D"/>
+    <circle cx="128" cy="36" r="7" fill="#6BBF3A"/>
+    <circle cx="128" cy="128" r="8" fill="#3B82F6"/>
 </svg>
