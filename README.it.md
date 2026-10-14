@@ -187,6 +187,47 @@ creato). Gli oggetti senza ruolo sono la CG, renderizzata normalmente.
 Un clic su una riga seleziona l'oggetto. *Set Role of Selected* assegna *Shadow
 Catcher*, *Holdout* o *No Role* a tutti gli oggetti selezionati.
 
+### Fit Sun (1.1, in sviluppo)
+
+> Non c'è nella 1.0 su Blender Extensions: arriva con la 1.1 (per ora build di
+> prova).
+
+Orienta una luce Sole come il sole della foto, così le ombre della CG cadono come
+quelle vere. La calibrazione conosce già la verticale: l'altezza del sole (la
+lunghezza delle ombre) è giusta qualunque sia il nord.
+
+- **Quando e dove**: data, ora, fuso UTC, latitudine e longitudine dello scatto,
+  lette dall'EXIF. L'ora GPS è UTC; se l'orologio della fotocamera concorda,
+  l'istante viene dall'orologio e dal GPS solo il fuso (i telefoni scrivono l'ora
+  dell'ultimo fix GPS). Se non concordano un avviso dice quale viene usata. I dati
+  mancanti si inseriscono a mano: basta la città più vicina (100 km ≈ 1° sul
+  sole). Il fuso non viene mai dedotto dalla longitudine: l'ora legale lo
+  falserebbe. *Rileggi dalla foto* li ricarica.
+- **Il sole**: equazioni NOAA, entro 0,013° dallo SPA del NREL, come si vede
+  (con la rifrazione atmosferica). Sotto l'orizzonte (foto notturna, ora
+  sbagliata) è un errore e la luce non viene toccata.
+- **Nord della scena**, l'unico dato che la foto può non dire:
+
+  | Nord | Da | Quando |
+  | --- | --- | --- |
+  | Bussola | la direzione dell'immagine nell'EXIF (magnetica: inserisci la *Declinazione*) | gli iPhone la scrivono, quasi tutti gli Android no |
+  | Mappa | la direzione di un asse della scena (+X, +Y, −X, −Y) letta su una mappa lungo una facciata o una strada | edifici, strade |
+  | Riferimento | una maniglia arancione (in *Calibra*) su un elemento lontano e la sua direzione dalla camera su una mappa (il righello di Google Earth la chiama *Heading*) | paesaggi: un'isola, un campanile, una cima |
+
+  *Correzione del nord* ruota nord e sole insieme attorno alla verticale: le
+  bussole dei telefoni sbagliano spesso di 5–15°, quindi regolala finché le ombre
+  della CG coincidono con la foto. Una camera molto inclinata in alto o in basso
+  rende la bussola inaffidabile (avviso).
+- **La luce**: scegli una luce Sole o premi *Nuovo sole*. FTC ne imposta solo la
+  rotazione: intensità, colore e angolo restano tuoi. Segue la camera con
+  *Applica* e durante la calibrazione. Una luce cancellata o collegata, o vincoli
+  e keyframe che ne sovrascrivono la rotazione, vengono segnalati.
+- *Visualizzazione › Nord* disegna il nord (N) e la direzione del sole
+  (tratteggiata) sul suolo per l'origine durante la calibrazione.
+
+Prossimi nella 1.1: il sole da un'ombra nella foto e *Fit HDRI* (l'HDRI del
+World ruotato attorno a Z sul sole).
+
 ### Consigli (verificati su foto reali, vedi `tests/data`)
 
 - Il verso **+** di un asse va lungo la **prima** guida del gruppo, dalla prima alla

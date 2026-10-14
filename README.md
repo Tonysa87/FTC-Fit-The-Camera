@@ -82,6 +82,9 @@ The rest of this page explains every option.
 - **Render over the photo**: one button sets colour management, transparent film
   and the compositor; shadow catcher and holdout roles for the objects that
   stand in for real surfaces and objects of the photo.
+- **Fit Sun** (1.1, in development): a Sun light turned like the sun of the
+  photo, from the EXIF date, time and GPS (or entered by hand), with the north
+  from the compass, a map or a distant landmark.
 - Interface in English and Italian.
 
 ## Install
@@ -199,6 +202,47 @@ rendered normally.
 
 A click on a row selects the object; *Set Role of Selected* gives *Shadow
 Catcher*, *Holdout* or *No Role* to all the selected objects.
+
+### Fit Sun (1.1, in development)
+
+> Not in the 1.0 release on Blender Extensions: it comes with 1.1 (test builds
+> for now).
+
+Turns a Sun light towards the sun of the photo, so that the CG shadows fall like
+the real ones. The calibration already knows the vertical, so the height of the
+sun (the length of the shadows) is right whatever the north.
+
+- **When and where**: date, time, UTC offset, latitude and longitude of the shot,
+  read from the EXIF. The GPS time is UTC; when the camera clock agrees with it,
+  the clock gives the instant and the GPS only the time zone (phones write the
+  time of the last GPS fix). When they disagree a warning says which one is used.
+  Missing values are entered by hand: the nearest town is close enough (100 km
+  ≈ 1° on the sun). The time zone is never guessed from the longitude: daylight
+  saving time would break it. *Read from Photo* reads them again.
+- **The sun**: NOAA's equations, within 0.013° of NREL's SPA, as seen (with the
+  atmospheric refraction). Below the horizon (a night shot, a wrong time) is an
+  error and the light is left alone.
+- **North of the scene**, the one thing the photo may not tell:
+
+  | North | From | When |
+  | --- | --- | --- |
+  | Compass | the EXIF image direction (magnetic: enter the *Declination*) | iPhones write it, most Android phones don't |
+  | Map | the bearing of a scene axis (+X, +Y, −X, −Y) read on a map along a facade or a street | buildings, streets |
+  | Landmark | an orange handle (in *Calibrate*) on a distant feature and its bearing from the camera on a map (Google Earth's ruler shows it as *Heading*) | landscapes: an island, a bell tower, a peak |
+
+  *North Correction* turns the north and the sun together about the vertical:
+  phone compasses are often 5–15° off, so turn it until the CG shadows match the
+  photo. A camera looking steeply up or down makes the compass unreliable
+  (warning).
+- **The light**: pick a Sun light or press *New Sun*. FTC only sets its
+  rotation: strength, colour and angle stay yours. It follows the camera on
+  *Apply* and while calibrating. A deleted or linked light, or constraints and
+  keyframes that override the rotation, are reported.
+- *Display › North* draws the north (N) and the sun direction (dashed) on the
+  ground through the origin while calibrating.
+
+Next in 1.1: the sun from a shadow in the photo, and *Fit HDRI* (the World HDRI
+turned about Z onto the sun).
 
 ## Tips
 
