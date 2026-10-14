@@ -110,8 +110,64 @@ calcolato meno l'azimut dell'ombra misurato. Il pannello mostra la
 - Il nord della scena si disegna come freccia sul piano di riferimento nella
   sezione *Display*.
 
+### Orientare l'HDRI sul sole
+
+Con un HDRI equirettangolare nel World, FTC lo ruota **solo attorno a Z**
+finché il sole dell'HDRI coincide in azimut con il sole calcolato. Così luce
+ambiente, riflessi e luce diretta arrivano dalla stessa parte della foto.
+
+**Scelta del sole nell'HDRI**
+- Pulsante *Orient HDRI* nella sezione *Sun*, attivo quando il sole è già
+  calcolato (da EXIF o da ombra) e il World ha un nodo *Environment Texture*
+  in proiezione equirettangolare.
+- Si apre un **visore**: una miniatura dell'HDRI (~1024 px di lato lungo)
+  disegnata in sovrimpressione nel viewport con `gpu`, come la lente. È più
+  semplice che aprire una finestra Image Editor e resta nello stesso operatore
+  modale.
+- **Proposta automatica**: FTC marca il punto più luminoso (baricentro dei
+  pixel oltre il 99,9° percentile di luminanza, sulla miniatura). Di solito è
+  il sole.
+- L'utente **clicca** per correggerlo (nuvole luminose, riflessi, sole
+  coperto), poi *Invio* applica ed *Esc* annulla.
+- Sulla miniatura compaiono anche la riga dell'orizzonte e, dopo
+  l'applicazione, un mirino dove *dovrebbe* stare il sole calcolato: un
+  controllo visivo immediato.
+
+**Calcolo**
+- Il clic dà le coordinate (u, v) dell'immagine, con origine in basso a
+  sinistra come i pixel di Blender. Da lì si ricavano azimut ed elevazione del
+  sole nell'HDRI con la convenzione equirettangolare di Cycles: u = 0,5 guarda
+  +X, u cresce in senso orario visto dall'alto, v = 0,5 è l'orizzonte. **Da
+  confermare con un test di render** (probe `hdri`) prima di fidarsi.
+- Rotazione Z = azimut del sole nell'HDRI − azimut del sole calcolato. Il
+  segno va verificato nello stesso probe: il nodo Mapping ruota le coordinate,
+  non l'immagine.
+- **Elevazione: non si tocca**, si confronta. Se l'elevazione del sole
+  nell'HDRI e quella calcolata differiscono oltre ~10°, appare un avviso:
+  "l'HDRI è stato ripreso con il sole più alto o più basso, le ombre non
+  avranno la stessa lunghezza".
+
+**Nodi del World**
+- Se tra *Texture Coordinate* e *Environment Texture* c'è già un *Mapping*,
+  FTC cambia solo la sua rotazione Z. X, Y e posizione restano come sono.
+- Se manca, FTC inserisce *Texture Coordinate (Generated) → Mapping* con un
+  tag `ftc_hdri`, così lo ritrova e non ne aggiunge un secondo.
+- World con più Environment Texture: si sceglie quale dalla lista, oppure
+  avviso.
+- Lettura dei pixel solo sulla miniatura: un HDRI 16k pieno pesa ~2 GB in
+  float. Si lavora su una copia ridotta, poi eliminata.
+
+**Insieme alla luce Sun**: è il caso tipico. La Sun dà ombre nette, l'HDRI dà
+luce ambiente e riflessi. Il pannello lo dice in una riga: se l'HDRI contiene
+già un sole molto forte, conviene abbassare la Sun o l'HDRI per non
+raddoppiare la luce diretta.
+
 ### Test
 
+- HDRI: un HDRI sintetico con un "sole" in una posizione nota, poi
+  clic → rotazione → la direzione del picco nel mondo coincide con il sole
+  calcolato entro 0,5°. Il probe `hdri` fa un render Cycles di una sfera
+  speculare per confermare convenzioni e segno.
 - `solver/sun.py` contro tabelle NOAA per alcune date e località, incluse
   latitudini alte e l'emisfero sud: errore < 0,05°.
 - Ombra sintetica: camera nota, palo e ombra proiettati, direzione ritrovata
