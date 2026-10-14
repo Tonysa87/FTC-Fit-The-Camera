@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 import struct
 import zlib
+from datetime import UTC, datetime
 
 import exif
 import pytest
@@ -144,3 +145,80 @@ def test_broken_exif_pointer_keeps_ifd0():
     tiff = build_tiff(ifd0=ifd0)
     data = exif.read_exif(jpeg(tiff))
     assert data.make == "Acme" and data.orientation == 6 and data.focal_mm is None
+
+
+def timed(exif_ifd=(), gps_ifd=()):
+    """A JPEG with only time tags."""
+    tiff = build_tiff(ifd0=[(exif.TAG_MAKE, ASCII, "Acme")], exif_ifd=list(exif_ifd), gps_ifd=list(gps_ifd))
+    return exif.read_exif(jpeg(tiff))
+
+
+GPS_TIME = [(exif.GPS_DATE, ASCII, "2026:08:04"), (exif.GPS_TIME, RATIONAL, [(16, 1), (52, 1), (18, 1)])]
+LOCAL = (exif.TAG_DATETIME_ORIGINAL, ASCII, "2026:08:04 18:52:19")
+
+
+def test_gps_time_is_utc_and_implies_the_zone():
+    """Android phones: GPS time, camera clock, no offset tag (the samples)."""
+    t = timed([LOCAL], GPS_TIME).capture_time()
+    assert t.source == "GPS" and not t.clock_mismatch
+    assert t.utc == datetime(2026, 8, 4, 16, 52, 18, tzinfo=UTC)
+    assert t.offset_minutes == 120
+    assert t.local == datetime(2026, 8, 4, 18, 52, 18)
+
+
+def test_gps_time_alone():
+    t = timed(gps_ifd=GPS_TIME).capture_time()
+    assert t.source == "GPS" and t.utc.hour == 16 and t.local is None and t.offset_minutes is None
+
+
+def test_stale_gps_time_is_flagged():
+    """Some phones write the time of the last GPS fix: hours off, not a whole zone."""
+    gps = [(exif.GPS_DATE, ASCII, "2026:08:04"), (exif.GPS_TIME, RATIONAL, [(14, 1), (3, 1), (10, 1)])]
+    t = timed([LOCAL], gps).capture_time()
+    assert t.source == "GPS" and t.clock_mismatch and t.offset_minutes is None
+    assert t.local == datetime(2026, 8, 4, 18, 52, 19)
+
+
+@pytest.mark.parametrize("hours, minutes, zone", [(13, 7, 345), (14, 22, 270), (14, 37, None), (2, 52, None)])
+def test_only_real_zones_are_accepted(hours, minutes, zone):
+    """+5:45 (Nepal) and +4:30 (Afghanistan) exist, +4:15 and +16:00 do not."""
+    gps = [(exif.GPS_DATE, ASCII, "2026:08:04"), (exif.GPS_TIME, RATIONAL, [(hours, 1), (minutes, 1), (19, 1)])]
+    t = timed([LOCAL], gps).capture_time()
+    assert t.offset_minutes == zone and t.clock_mismatch == (zone is None)
+
+
+def test_offset_disagreeing_with_gps_is_flagged():
+    t = timed([LOCAL, (exif.TAG_OFFSET_TIME_ORIGINAL, ASCII, "+01:00")], GPS_TIME).capture_time()
+    assert t.clock_mismatch
+
+
+def test_offset_time_without_gps():
+    t = timed([LOCAL, (exif.TAG_OFFSET_TIME_ORIGINAL, ASCII, "-05:30")]).capture_time()
+    assert t.source == "OFFSET" and t.offset_minutes == -330
+    assert t.utc == datetime(2026, 8, 5, 0, 22, 19, tzinfo=UTC)
+
+
+def test_local_time_only_needs_the_zone_by_hand():
+    t = timed([LOCAL]).capture_time()
+    assert t.source == "LOCAL" and t.utc is None and t.local == datetime(2026, 8, 4, 18, 52, 19)
+
+
+def test_no_time_at_all():
+    assert timed().capture_time() is None
+
+
+@pytest.mark.parametrize(
+    "local, offset, date, time",
+    [
+        ("    :  :     :  :  ", "+2:00", "2026-08-04", [(16, 1), (99, 1), (0, 1)]),
+        ("2026:13:40 25:00:00", "+15:00", "garbage", [(16, 1), (52, 1)]),
+        ("", "02:00", "2026:02:30", [(16, 1), (52, 1), (18, 0)]),
+    ],
+)
+def test_garbled_time_tags_are_none(local, offset, date, time):
+    data = timed(
+        [(exif.TAG_DATETIME_ORIGINAL, ASCII, local or " "), (exif.TAG_OFFSET_TIME_ORIGINAL, ASCII, offset)],
+        [(exif.GPS_DATE, ASCII, date), (exif.GPS_TIME, RATIONAL, time)],
+    )
+    assert data.datetime_original is None and data.offset_minutes is None and data.gps_datetime is None
+    assert data.make == "Acme"

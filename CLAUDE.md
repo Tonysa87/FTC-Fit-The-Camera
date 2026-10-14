@@ -7,8 +7,10 @@ Extensions audience) and `README.it.md` (Italian); developer docs
 "Camera Match": the final name is **FTC**, package `fit_the_camera`, tab "FTC").
 
 ## Status / next session (bookmark 2026-10-14, evening)
-- **NEXT SESSION: start 1.1** from `docs/SPEC_1.1.md` (phases S1 EXIF date/time
-  + `solver/sun.py` -> S2 Sun -> S3 sun from a shadow -> S4 Orient HDRI -> A1
+- **1.1 in progress** from `docs/SPEC_1.1.md`. S1 DONE (2026-10-14): `exif.capture_time()`
+  (GPS UTC > camera clock + OffsetTimeOriginal > bare local time; GPS vs clock
+  checked against real zones, `clock_mismatch` = stale GPS fix) and `solver/sun.py`
+  (NOAA, < 0.013° vs NREL SPA in `tests/test_sun.py`). Next: S2 Sun -> S3 sun from a shadow -> S4 Orient HDRI -> A1
   extra VP lines -> A2 report). Decided 2026-10-14: explicit *New Sun* button,
   HDRI equirectangular only. No compass is the NORM (Android: none of the
   `samples/` has GPSImgDirection; all have GPS + UTC GPS time): north from a
