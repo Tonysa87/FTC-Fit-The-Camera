@@ -6,6 +6,7 @@ changed; the sun's elevation in the HDRI is compared, never changed.
 
 from __future__ import annotations
 
+import contextlib
 import math
 from dataclasses import dataclass
 
@@ -22,6 +23,9 @@ from .solver.hdri import brightest_point, elevation, luminance, z_rotation
 
 MAPPING_TAG = "ftc_hdri"
 THUMB_LONG_SIDE = 1024
+# The viewer shows a finer copy (for its magnifier) and takes half the view.
+VIEWER_LONG_SIDE = 2048
+VIEWER_FRACTION = 0.5
 # The HDRI's sun and the computed one differ in elevation beyond this (degrees):
 # the shadows will not have the same length.
 ELEVATION_WARNING = 10.0
@@ -399,6 +403,16 @@ def thumbnail(image, long_side=THUMB_LONG_SIDE) -> np.ndarray:
     return px.reshape(th, tw, 4)[..., :3]
 
 
+def reduced(rgb: np.ndarray, long_side=THUMB_LONG_SIDE) -> np.ndarray:
+    """``rgb`` averaged by blocks down to ``long_side`` (a thumbnail of a thumbnail)."""
+    h, w = rgb.shape[:2]
+    k = max(1, math.ceil(max(w, h) / long_side))
+    if k == 1:
+        return rgb
+    th, tw = h // k, w // k
+    return rgb[: th * k, : tw * k].reshape(th, k, tw, k, 3).mean(axis=(1, 3))
+
+
 def fit(settings, scene, uv, state=None):
     """Turn the World's HDRI so that its point ``uv`` (the sun) takes the azimuth
     of the computed sun. Returns (Z angle, elevation difference in degrees,
@@ -489,12 +503,16 @@ class Viewer:
         self.sun_elevation = sun_elevation
         self.handler = None
         self.rect = (0.0, 0.0, 1.0, 1.0)
+        # Shift: a magnifier on the mouse (region pixels), the system cursor hidden.
+        self.mouse = None
+        self.magnify = False
+        self.cursor_window = None
 
     def layout(self, region):
         w, h = self.size
         avail_w = max(100.0, region.width - 2 * VIEWER_MARGIN)
         avail_h = max(50.0, region.height - 3 * VIEWER_MARGIN)
-        scale = min(avail_w / w, avail_h / h)
+        scale = VIEWER_FRACTION * min(avail_w / w, avail_h / h)
         x0 = (region.width - w * scale) / 2.0
         y0 = (region.height - h * scale) / 2.0
         self.rect = (x0, y0, x0 + w * scale, y0 + h * scale)
@@ -506,6 +524,28 @@ class Viewer:
     def to_uv(self, x, y):
         x0, y0, x1, y1 = self.rect
         return (x - x0) / (x1 - x0), (y - y0) / (y1 - y0)
+
+    def inside(self, x, y) -> bool:
+        u, v = self.to_uv(x, y)
+        return 0.0 <= u <= 1.0 and 0.0 <= v <= 1.0
+
+    def set_magnifier(self, window, on: bool) -> None:
+        """Show or hide the lens, hiding the system cursor while it is shown
+        (the lens has its own cross hair)."""
+        if on == self.magnify:
+            return
+        self.magnify = on
+        if on and window is not None:
+            window.cursor_modal_set("NONE")
+            self.cursor_window = window
+        elif not on:
+            self.restore_cursor()
+
+    def restore_cursor(self) -> None:
+        window, self.cursor_window = self.cursor_window, None
+        if window is not None:
+            with contextlib.suppress(ReferenceError):  # the window was closed
+                window.cursor_modal_restore()
 
 
 def draw_viewer(viewer):
@@ -537,23 +577,67 @@ def paint(viewer, region):
         horizon = (y0 + y1) / 2.0
         draw.lines([(x0, horizon), (x1, horizon)], draw.HORIZON_COLOR, 1.0)
         draw.lines([(x0, y0), (x1, y0), (x1, y0), (x1, y1), (x1, y1), (x0, y1), (x0, y1), (x0, y0)], draw.NEUTRAL)
-        if viewer.proposal is not None:
-            draw.circle(viewer.to_region(viewer.proposal), 7.0 * s, draw.with_alpha(draw.WHITE, 0.6))
+        _markers(viewer, viewer.to_region, s)
         if viewer.pick is not None:
             pick = viewer.to_region(viewer.pick)
-            draw.circle(pick, 11.0 * s, draw.SUN_COLOR)
-            target_v = 0.5 + viewer.sun_elevation / 180.0
-            c = viewer.to_region((viewer.pick[0], target_v))
-            r = 6.0 * s
-            cross = [(c[0] - r, c[1] - r), (c[0] + r, c[1] + r), (c[0] - r, c[1] + r), (c[0] + r, c[1] - r)]
-            draw.lines(cross, draw.WHITE, 1.0)
             draw.text((pick[0] + 14 * s, pick[1] + 6 * s), f"{elevation(viewer.pick[1]):.1f}°", draw.SUN_COLOR)
         hint = bpy.app.translations.pgettext_iface(
-            "Click the sun in the HDRI · Enter: apply · Esc: cancel · the cross is the photo's sun"
+            "Click the sun in the HDRI · Shift: magnifier · Enter: apply · Esc: cancel · the cross is the photo's sun"
         )
         draw.text((x0, y1 + 10 * s), hint, draw.WHITE, 12.0)
+        if viewer.magnify and viewer.mouse is not None and viewer.inside(*viewer.mouse):
+            _lens(viewer, s)
     finally:
         gpu.state.blend_set("NONE")
+
+
+def _markers(viewer, to_region, s, clip=None) -> None:
+    """The proposal (thin ring), the pick (sun ring) and where the photo's sun
+    lands after the turn (cross, same column). ``clip``: (centre, radius) of
+    the lens, outside which nothing is drawn."""
+
+    def shown(p, size):
+        return clip is None or math.dist(p, clip[0]) + size <= clip[1]
+
+    if viewer.proposal is not None and shown(p := to_region(viewer.proposal), 7.0 * s):
+        draw.circle(p, 7.0 * s, draw.with_alpha(draw.WHITE, 0.6))
+    if viewer.pick is not None:
+        if shown(p := to_region(viewer.pick), 11.0 * s):
+            draw.circle(p, 11.0 * s, draw.SUN_COLOR)
+        c = to_region((viewer.pick[0], 0.5 + viewer.sun_elevation / 180.0))
+        r = 6.0 * s
+        if shown(c, r * math.sqrt(2.0)):
+            cross = [(c[0] - r, c[1] - r), (c[0] + r, c[1] + r), (c[0] - r, c[1] + r), (c[0] + r, c[1] - r)]
+            draw.lines(cross, draw.WHITE, 1.0)
+
+
+def _lens(viewer, s) -> None:
+    """Magnifier on the mouse: the HDRI ``draw.LENS_ZOOM`` times larger, with
+    its horizon and markers, and a cross hair on the point a click picks."""
+    x0, y0, x1, y1 = viewer.rect
+    centre = viewer.mouse
+    radius = draw.LENS_RADIUS * s
+    zoom = draw.LENS_ZOOM
+    uv = viewer.to_uv(*centre)
+    uv_radius = (radius / (zoom * (x1 - x0)), radius / (zoom * (y1 - y0)))
+    draw._lens_disk(centre, radius, viewer.texture, s, uv, uv_radius)
+    gpu.state.blend_set("ALPHA")
+
+    def magnified(point_uv):
+        x, y = viewer.to_region(point_uv)
+        return centre[0] + zoom * (x - centre[0]), centre[1] + zoom * (y - centre[1])
+
+    inner = radius - 1.0 * s
+    dy = magnified((0.0, 0.5))[1] - centre[1]
+    if abs(dy) < inner:
+        dx = math.sqrt(inner * inner - dy * dy)
+        draw.lines([(centre[0] - dx, centre[1] + dy), (centre[0] + dx, centre[1] + dy)], draw.HORIZON_COLOR, 1.0)
+    _markers(viewer, magnified, s, (centre, inner))
+    gap, arm = 3.0 * s, 9.0 * s
+    cx, cy = centre
+    hair = [(cx - arm, cy), (cx - gap, cy), (cx + gap, cy), (cx + arm, cy)]
+    hair += [(cx, cy - arm), (cx, cy - gap), (cx, cy + gap), (cx, cy + arm)]
+    draw.lines(hair, draw.WHITE, 1.0)
 
 
 class FTC_OT_fit_hdri(Operator):
@@ -633,7 +717,7 @@ class FTC_OT_fit_hdri(Operator):
             return self.execute(context)
         try:
             settings, state, env = self._prepare(context)
-            rgb = thumbnail(env.image)
+            rgb = thumbnail(env.image, VIEWER_LONG_SIDE)
         except ValueError as exc:
             self.report({"ERROR"}, bpy.app.translations.pgettext_tip(str(exc)))
             return {"CANCELLED"}
@@ -641,7 +725,7 @@ class FTC_OT_fit_hdri(Operator):
         if region is None:
             return self.execute(context)
         sun_elevation = math.degrees(math.asin(max(-1.0, min(1.0, state.direction.z))))
-        viewer = Viewer(context.area, region, rgb, brightest_point(luminance(rgb)), sun_elevation)
+        viewer = Viewer(context.area, region, rgb, brightest_point(luminance(reduced(rgb))), sun_elevation)
         viewer.handler = bpy.types.SpaceView3D.draw_handler_add(draw_viewer, (viewer,), "WINDOW", "POST_PIXEL")
         FTC_OT_fit_hdri._viewer = viewer
         self._state = (settings, state, env)
@@ -656,6 +740,14 @@ class FTC_OT_fit_hdri(Operator):
         try:
             if event.type in {"MIDDLEMOUSE", "WHEELUPMOUSE", "WHEELDOWNMOUSE"}:
                 return {"PASS_THROUGH"}
+            if event.type in {"MOUSEMOVE", "LEFT_SHIFT", "RIGHT_SHIFT"}:
+                region = next((r for r in context.area.regions if r.as_pointer() == viewer.region_ptr), None)
+                if region is not None:
+                    viewer.mouse = (event.mouse_x - region.x, event.mouse_y - region.y)
+                    viewer.set_magnifier(context.window, event.shift and viewer.inside(*viewer.mouse))
+                    if viewer.magnify or event.type != "MOUSEMOVE":
+                        context.area.tag_redraw()
+                return {"RUNNING_MODAL"}
             if event.type == "LEFTMOUSE" and event.value == "PRESS":
                 area = context.area
                 region = next((r for r in area.regions if r.as_pointer() == viewer.region_ptr), None)
@@ -696,6 +788,8 @@ class FTC_OT_fit_hdri(Operator):
 
 def close_viewer() -> None:
     viewer = FTC_OT_fit_hdri._viewer
+    if viewer is not None:
+        viewer.restore_cursor()
     if viewer is not None and viewer.handler is not None:
         bpy.types.SpaceView3D.draw_handler_remove(viewer.handler, "WINDOW")
     FTC_OT_fit_hdri._viewer = None

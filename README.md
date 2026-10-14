@@ -276,9 +276,11 @@ HDRI** turns it about Z so that its sun comes from the same side as the photo's:
 ambient light, reflections and the Sun light then agree.
 
 - A viewer opens over the viewport with a reduced copy of the HDRI. FTC proposes
-  the brightest spot (a white ring); click the sun if it is wrong (bright clouds,
-  reflections, a hidden sun), **Enter** applies, **Esc** cancels. The white cross
-  is where the photo's sun lands: its height against the HDRI's sun.
+  the brightest spot (thin white ring); the orange ring is the point you pick:
+  click the sun if the proposal is wrong (bright clouds, reflections, a hidden
+  sun). Hold **Shift** for a ×4 magnifier on the mouse, as for the calibration
+  handles. **Enter** applies, **Esc** cancels. The white cross is where the
+  photo's sun lands, in the same column: its height against the HDRI's sun.
 - Only the Z rotation of a *Mapping* node changes: an existing one is reused
   (its X, Y and location stay), otherwise *Texture Coordinate › Mapping* is
   inserted. The sun's elevation is never changed, only compared: more than 10°

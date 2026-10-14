@@ -742,16 +742,17 @@ def _photo(view, image) -> None:
     batch_for_shader(shader, "TRIS", {"pos": corners, "texCoord": uvs}, indices=[(0, 1, 2), (0, 2, 3)]).draw(shader)
 
 
-def _disk(centre, radius, texture) -> None:
-    """``texture`` mapped onto a disk: its inscribed circle fills the disk."""
+def _disk(centre, radius, texture, uv_centre=(0.5, 0.5), uv_radius=(0.5, 0.5)) -> None:
+    """``texture`` mapped onto a disk: the ellipse ``uv_centre`` ± ``uv_radius``
+    of the texture (by default its inscribed circle) fills the disk."""
     shader = _shader("IMAGE")
     shader.bind()
     shader.uniform_sampler("image", texture)
-    pos, uvs = [centre], [(0.5, 0.5)]
+    pos, uvs = [centre], [uv_centre]
     for i in range(LENS_SEGMENTS + 1):
         a = 2.0 * math.pi * i / LENS_SEGMENTS
         pos.append((centre[0] + radius * math.cos(a), centre[1] + radius * math.sin(a)))
-        uvs.append((0.5 + 0.5 * math.cos(a), 0.5 + 0.5 * math.sin(a)))
+        uvs.append((uv_centre[0] + uv_radius[0] * math.cos(a), uv_centre[1] + uv_radius[1] * math.sin(a)))
     tris = [(0, i, i + 1) for i in range(1, LENS_SEGMENTS + 1)]
     batch_for_shader(shader, "TRIS", {"pos": pos, "texCoord": uvs}, indices=tris).draw(shader)
 
@@ -782,10 +783,11 @@ def draw_lens(view, settings, solution, session, unit_system) -> None:
     _lens_disk(centre, radius, texture, s)
 
 
-def _lens_disk(centre, radius, texture, s) -> None:
+def _lens_disk(centre, radius, texture, s, uv_centre=(0.5, 0.5), uv_radius=(0.5, 0.5)) -> None:
+    """The lens: ``texture`` on a disk (see ``_disk``), its rim and zoom label."""
     gpu.state.blend_set("ALPHA")
     try:
-        _disk(centre, radius, texture)
+        _disk(centre, radius, texture, uv_centre, uv_radius)
         circle(centre, radius + 1.0 * s, (0.0, 0.0, 0.0, 0.6), 1.0, segments=LENS_SEGMENTS)
         circle(centre, radius, (1.0, 1.0, 1.0, 0.9), 1.5, segments=LENS_SEGMENTS)
         corner = (centre[0] + 0.62 * radius, centre[1] + 0.82 * radius)

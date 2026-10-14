@@ -259,10 +259,12 @@ lo ruota attorno a Z finché il suo sole arriva dalla stessa parte di quello
 della foto: luce ambiente, riflessi e luce Sole sono così d'accordo.
 
 - Sul viewport si apre un visore con una copia ridotta dell'HDRI. FTC propone il
-  punto più luminoso (anello bianco); se è sbagliato (nuvole luminose, riflessi,
-  sole coperto) clicca il sole, **Invio** applica, **Esc** annulla. La croce
-  bianca è dove cade il sole della foto: la sua altezza rispetto al sole
-  dell'HDRI.
+  punto più luminoso (anello bianco sottile); l'anello arancione è il punto
+  scelto: se la proposta è sbagliata (nuvole luminose, riflessi, sole coperto)
+  clicca il sole. Tieni **Shift** per una lente ×4 sul mouse, come per le
+  maniglie di calibrazione. **Invio** applica, **Esc** annulla. La croce bianca
+  è dove cade il sole della foto, nella stessa colonna: la sua altezza rispetto
+  al sole dell'HDRI.
 - Cambia solo la rotazione Z di un nodo *Mapping*: se c'è già viene usato (X, Y
   e posizione restano), altrimenti viene inserito *Texture Coordinate › Mapping*.
   L'elevazione del sole non viene mai cambiata, solo confrontata: oltre 10° di
