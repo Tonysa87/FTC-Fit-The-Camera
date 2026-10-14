@@ -16,5 +16,5 @@ license = ["SPDX:GPL-3.0-or-later"]
 copyright = ["2026 Antonio Sartini"]
 
 [permissions]
-files = "Read the reference image and its EXIF metadata"
+files = "Read the photo and its EXIF metadata, save calibration reports"
 

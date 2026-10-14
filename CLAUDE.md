@@ -3,7 +3,7 @@
 Single-image camera calibration add-on. User docs: `README.md` (English, GitHub /
 Extensions audience) and `README.it.md` (Italian); developer docs
 `docs/DEVELOPMENT.md` (Italian); publishing on extensions.blender.org:
-`docs/PUBLISHING.md`. History: `docs/CHANGELOG.md`. Original spec: `FTC – Specifica addon Blender 5.2+.md` (says
+`docs/PUBLISHING.md`. History: `docs/CHANGELOG.md` (English from 1.1), full Italian history `docs/CHANGELOG.it.md`. Original spec: `FTC – Specifica addon Blender 5.2+.md` (says
 "Camera Match": the final name is **FTC**, package `fit_the_camera`, tab "FTC").
 
 ## Status / next session (bookmark 2026-10-14, evening)
@@ -290,6 +290,6 @@ fine dragging (×0.2) the cursor drifts away from the handle. Probe `lens` write
 
 ## Open work
 - **Next: 1.1, spec in `docs/SPEC_1.1.md`** (Sun from EXIF / shadow, HDRI rotated about Z onto the sun, extra VP lines, report; a Known Points PnP mode is described but NOT a priority: the user's photo insertions usually have no field survey). Open decisions settled 2026-10-14 (New Sun button; HDRI equirectangular only). 1.0.x bug fixes stay separate.
-- Possible: English changelog (docs/CHANGELOG.md is Italian, linked from the Extensions release notes). Add tags only when they really fit (moderators prune them).
+- Add tags only when they really fit (moderators prune them).
 - Possible: more than two lines per VP;
   turn the `paneltest` / `drawall` probes into regular Blender tests.

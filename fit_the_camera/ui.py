@@ -344,6 +344,7 @@ class FTC_PT_main(Panel):
             box = body.box()
             box.alert = True
             wrapped(box, context, res.error or iface_("Not solved"), icon="ERROR")
+            body.operator("ftc.export_report", icon="EXPORT")
             return
         for line in res.warnings.splitlines():
             wrapped(body.box(), context, line, icon="ERROR")
@@ -368,6 +369,7 @@ class FTC_PT_main(Panel):
         info_row(col, iface_("Yaw", "FTC"), f"{math.degrees(res.yaw):.2f}°")
         if settings.straighten:
             info_row(col, iface_("Removed Roll"), f"{math.degrees(res.removed_roll):+.2f}°", alert=True)
+        body.operator("ftc.export_report", icon="EXPORT")
 
     def draw_render(self, context, layout, settings):
         header, body = layout.panel("ftc_render", default_closed=True)

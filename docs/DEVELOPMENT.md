@@ -31,6 +31,7 @@ fit_the_camera/          # l'estensione (questa cartella diventa lo zip)
   ops_render.py          # Prepara render, ruoli Shadow Catcher / Holdout
   ops_sun.py             # Fit Sun: ora/luogo o ombra -> sole nella scena -> luce Sole (1.1)
   ops_hdri.py            # Fit HDRI: visore, nodo Mapping, l'HDRI segue il sole (1.1)
+  report.py              # report di calibrazione (Markdown / JSON) (1.1)
   draw.py                # overlay gpu (guide, maniglie, griglia, orizzonte, cubo)
   ui.py                  # pannello
   translations.py        # traduzione italiana
@@ -42,7 +43,8 @@ scripts/probes/          # sonde diagnostiche: bash scripts/probe.sh <nome>
 samples/                 # foto di prova (ignorata da git: contengono GPS)
 README.md / README.it.md # guida utente (inglese / italiano)
 LICENSE                  # GPL-3.0-or-later
-docs/CHANGELOG.md
+docs/CHANGELOG.md        # changelog in inglese (dalla 1.1)
+docs/CHANGELOG.it.md     # storia completa in italiano
 docs/DEVELOPMENT.md      # questo file
 docs/PUBLISHING.md       # pubblicazione su extensions.blender.org
 docs/SPEC_1.1.md         # specifica della versione 1.1
