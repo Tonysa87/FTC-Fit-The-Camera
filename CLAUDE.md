@@ -7,39 +7,14 @@ Extensions audience) and `README.it.md` (Italian); developer docs
 "Camera Match": the final name is **FTC**, package `fit_the_camera`, tab "FTC").
 
 ## Status / next session (bookmark 2026-10-14, night)
-- **RESUME HERE**: the user is GUI-testing **1.1.0-alpha.14** on Windows
-  (`dist/fit_the_camera-1.1.0-alpha.14.zip`, checklist `docs/TEST_GUI_1.1.md`).
-  Cabin photo (`samples/IMG_20260804_185218650.jpg`) DONE: Side **-Y** (not -X:
-  +Y runs into the wall), Turn -16°, **Raise** -3.5° (16.0° -> 12.5°) -> the CG
-  sign shadow matches the photo ("PERFETTO"). Raise (`sun.elevation_correction`,
-  `ops_sun.raised`, clamped 0..90°) was added in alpha.9 on his request: the
-  date's sun gave a too-short shadow. alpha.10: **Fit HDRI** follows a linked
-  Mapping rotation back to its source and writes it there
-  (`ops_hdri.rotation_control`: reroutes, Combine XYZ, Value, linear Math /
-  Vector Math, group inputs/outputs, min/max respected): his Poly Haven World
-  (group input Rotation in degrees -> Multiply 0.0175 -> Combine XYZ Z ->
-  Mapping): verified by the user in the GUI, HDRI shadows "perfect" in
-  azimuth (elevation differs by nature: only Z is turned). alpha.11 (asked by
-  him): the HDRI viewer at half size (`VIEWER_FRACTION`) with a Shift
-  magnifier on the mouse (`ops_hdri._lens`, 2048 px viewer copy, proposal from
-  a 1024 `reduced` one); probe `hdri` also writes `hdri_lens.png`. alpha.12
-  (asked by him): the lens cross hair is drawn with blend INVERT; **Calibrate
-  Shadow** = `ftc.calibrate(shadow=True)`: `Session.shadow_only`, only
-  `draw.session_keys` (shadow handles), no guides/cube/pitch/warnings,
-  calibration shortcuts off, `calibrate.session_camera` not set, Enter never
-  writes the camera; clicking the other kind of Calibrate switches. alpha.13:
-  the white × (`draw.sun_mark`, label "Fit Sun") = the computed sun wherever
-  it meets a measure (shadow tip in the view, sun in the HDRI viewer), hints in
-  panel/header; *Check with a Shadow* (`use_shadow`) also with Side (*Shadow vs
-  Turn* = the Turn to add; *Shadow vs Date* = the Raise that matches). The
-  grey + is the principal point. alpha.14 = general audit of alpha.9–13
-  (3 parallel reviewers; fixes in the commit "Audit of alpha.9-13") + GitHub
-  docs: READMEs (typical Fit Sun session), detailed v1.1 in
-  `docs/CHANGELOG.md` (Highlights … "Shaped by the GUI tests"). The user said
-  "per me potremmo esserci": next is the 1.1.0 release when he says go (also
-  update the git-ignored `extensions_listing/description.md`). Then the
-  rest of the checklist, then release 1.1.0. He also asked whether the grid step
-  should be labelled (offered, not decided).
+- **RESUME HERE**: **1.1.0 released on GitHub (2026-10-14)**, tag `v1.1.0`,
+  `dist/fit_the_camera-1.1.0.zip`. The user uploads it to extensions.blender.org
+  himself (*Upload New Version*, release notes + new description in the
+  git-ignored `extensions_listing/description.md`; the description is pasted on
+  the *Edit* page). GUI test of 1.1 done by the user on alphas 8–13 (cabin photo
+  matched with Side −Y, Turn −16°, Raise −3.5°; Poly Haven World turned through
+  its Rotation input); alpha.14 = general audit. Open idea, not decided: label
+  the grid step. Next version: start from `docs/CHANGELOG.md` (new section).
 - **1.1 developed (2026-10-14): all phases S1–S4, A1, A2 done, audited, pushed.**
   Build 1.1.0-alpha.8 is in the user's GUI test (`docs/TEST_GUI_1.1.md`, items
   1–16, photos in `samples/`); then release 1.1.0: drop "(1.1, in development)"

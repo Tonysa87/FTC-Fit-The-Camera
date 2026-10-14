@@ -58,7 +58,7 @@ The rest of this page explains every option.
 
 ## Features
 
-- **Vanishing points**: 1, 2 or 3, two to six guide lines per axis (six: 1.1, in development), with the axis and
+- **Vanishing points**: 1, 2 or 3, two to six guide lines per axis, with the axis and
   direction of each group (X, Y, Z, ±).
 - **Known rectangle**: the four corners of a rectangle of known size, lying on the reference plane (XY, XZ or YZ).
 - **Horizon**: the horizon line, the camera height and the heading.
@@ -82,9 +82,9 @@ The rest of this page explains every option.
 - **Render over the photo**: one button sets colour management, transparent film
   and the compositor; shadow catcher and holdout roles for the objects that
   stand in for real surfaces and objects of the photo.
-- **Calibration report** (1.1, in development): Markdown or JSON, with the
+- **Calibration report**: Markdown or JSON, with the
   source of every input.
-- **Fit Sun** (1.1, in development): a Sun light turned like the sun of the
+- **Fit Sun**: a Sun light turned like the sun of the
   photo, from the EXIF date, time and GPS (or entered by hand), placed by the
   compass, by the scene axis it comes from (turned by eye) or by a shadow; or
   measured on a shadow in the photo alone. *Turn* and *Raise* fine-tune it on a
@@ -130,7 +130,7 @@ Open the sidebar of the 3D viewport (N) and the **FTC** tab.
    guides onto edges of the image that are parallel in the real world.
    Shift = fine, with a ×4 magnifier on the handle, Ctrl = snap, 1/2/3 = axis,
    F = flip the direction, H = straighten the horizon, Ctrl+Z / Ctrl+Shift+Z = undo / redo, Enter = apply,
-   Esc / right click = exit. The **− n +** buttons next to an axis (1.1, in development) add a
+   Esc / right click = exit. The **− n +** buttons next to an axis add a
    guide line between its first two, up to six, or remove the last: more lines
    on long edges average out the placement errors. With *Live Update* (default) the camera follows the
    guides while you drag; Enter or **Apply** writes it and ends the session.
@@ -140,10 +140,10 @@ Open the sidebar of the 3D viewport (N) and the **FTC** tab.
 4. **Align to Scene** – place the calibrated plane (XY, XZ or YZ) on the 3D
    cursor, on the active face (Edit Mode) or on the active object.
 5. **Results** – focal length, field of view, camera height, angles, uncertainty
-   and guide fit, with warnings. **Export Report** (1.1, in development) saves them, with the
+   and guide fit, with warnings. **Export Report** saves them, with the
    source of every input and the sun, as Markdown or JSON.
 6. **Render** – see below.
-7. **Fit Sun** (1.1, in development) – a Sun light and the World HDRI turned
+7. **Fit Sun** – a Sun light and the World HDRI turned
    like the sun of the photo: see below.
 8. **Tools › FTC Orientation** – makes the "FTC" transform orientation the viewport's:
      the photo's calibrated axes in the scene (created on Apply and by Align to
@@ -216,10 +216,7 @@ rendered normally.
 A click on a row selects the object; *Set Role of Selected* gives *Shadow
 Catcher*, *Holdout* or *No Role* to all the selected objects.
 
-### Fit Sun (1.1, in development)
-
-> Not in the 1.0 release on Blender Extensions: it comes with 1.1 (test builds
-> for now).
+### Fit Sun
 
 Turns a Sun light towards the sun of the photo, so that the CG shadows fall like
 the real ones. *Sun From* picks the source:

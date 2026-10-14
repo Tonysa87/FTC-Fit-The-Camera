@@ -36,6 +36,12 @@ Riassunto delle regole di [extensions.blender.org](https://extensions.blender.or
   caricare una nuova versione (lo zip non contiene il logo). In fondo alla
   descrizione aggiunta la riga dei crediti a fSpy e Perspective Plotter.
 
+- 2026-10-14: **1.1.0** (Fit Sun, Fit HDRI, fino a sei linee, report)
+  pubblicata su GitHub; su Extensions con *Upload New Version*: zip
+  `dist/fit_the_camera-1.1.0.zip`, note di versione e nuova descrizione in
+  `extensions_listing/description.md` (la descrizione si aggiorna dalla pagina
+  *Edit*).
+
 ## Materiale
 
 Il materiale sta in `extensions_listing/`, cartella locale esclusa da git (vedi
@@ -44,7 +50,7 @@ il suo README): immagini in `extensions_listing/upload/`, testi e didascalie in
 
 | Elemento | Requisito | Stato |
 | --- | --- | --- |
-| Zip | `pixi run build` (manifest validato) | pronto: `dist/fit_the_camera-1.0.0.zip`, uguale a quello della release GitHub |
+| Zip | `pixi run build` (manifest validato) | pronto: `dist/fit_the_camera-1.1.0.zip`, uguale a quello della release GitHub |
 | Icona | PNG, al massimo 256 × 256 (obbligatoria) | `upload/icon.png` |
 | Immagine in evidenza | JPEG, PNG o WebP (obbligatoria; in home in un riquadro 16:9) | `upload/00_featured.jpg` (1920 × 1080) |
 | Anteprime | almeno 1: JPEG, PNG, WebP o MP4, didascalia ≤ 255 caratteri; ridotte senza ritaglio | online, nell'ordine: `02_scene_elevator.jpg`, `06_calibration_16x9.jpg`, `08_fountain_view.png`, `03_scene_gallery.jpg` |
