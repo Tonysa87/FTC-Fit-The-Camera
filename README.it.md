@@ -193,8 +193,13 @@ Catcher*, *Holdout* o *No Role* a tutti gli oggetti selezionati.
 > prova).
 
 Orienta una luce Sole come il sole della foto, così le ombre della CG cadono come
-quelle vere. La calibrazione conosce già la verticale: l'altezza del sole (la
-lunghezza delle ombre) è giusta qualunque sia il nord.
+quelle vere. *Sole da* sceglie la fonte:
+
+- **Data e luogo**: il sole dell'ora e del luogo dello scatto, con il nord della
+  scena (sotto). La calibrazione conosce già la verticale: l'altezza del sole (la
+  lunghezza delle ombre) è giusta qualunque sia il nord.
+- **Ombra**: il sole misurato su un'ombra nella foto, senza data, luogo né nord
+  (qualsiasi foto con un'ombra netta, anche senza EXIF).
 
 - **Quando e dove**: data, ora, fuso UTC, latitudine e longitudine dello scatto,
   lette dall'EXIF. L'ora GPS è UTC; se l'orologio della fotocamera concorda,
@@ -218,6 +223,16 @@ lunghezza delle ombre) è giusta qualunque sia il nord.
   bussole dei telefoni sbagliano spesso di 5–15°, quindi regolala finché le ombre
   della CG coincidono con la foto. Una camera molto inclinata in alto o in basso
   rende la bussola inaffidabile (avviso).
+- **Ombra**: in *Calibra* tre maniglie arancioni vanno sul **piede** e sulla
+  **cima** di qualcosa di verticale (un palo, un montante, uno stipite) e sulla
+  **punta della sua ombra**. Il piede sta a terra; la punta a terra o su una
+  parete per l'origine (*Ombra su*: metti l'origine al piede di quella parete).
+  Il sole sta sulla retta dalla punta alla cima. Il pannello dà la sua elevazione
+  con un ± dalle maniglie: un'ombra lunga misura meglio di una corta. Con *Misura
+  un'ombra* accanto a *Data e luogo* le verifica: *Ombra / data* (elevazione: ora
+  o calibrazione sbagliate) e *Ombra / nord* (l'errore di bussola, mappa o
+  riferimento); *Usa il nord dell'ombra* prende il nord dall'ombra. Una crocetta
+  bianca segna dove il sole della data metterebbe la punta.
 - **La luce**: scegli una luce Sole o premi *Nuovo sole*. FTC ne imposta solo la
   rotazione: intensità, colore e angolo restano tuoi. Segue la camera con
   *Applica* e durante la calibrazione. Una luce cancellata o collegata, o vincoli
@@ -225,8 +240,7 @@ lunghezza delle ombre) è giusta qualunque sia il nord.
 - *Visualizzazione › Nord* disegna il nord (N) e la direzione del sole
   (tratteggiata) sul suolo per l'origine durante la calibrazione.
 
-Prossimi nella 1.1: il sole da un'ombra nella foto e *Fit HDRI* (l'HDRI del
-World ruotato attorno a Z sul sole).
+Prossimo nella 1.1: *Fit HDRI* (l'HDRI del World ruotato attorno a Z sul sole).
 
 ### Consigli (verificati su foto reali, vedi `tests/data`)
 

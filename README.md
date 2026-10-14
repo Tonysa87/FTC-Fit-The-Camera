@@ -84,7 +84,8 @@ The rest of this page explains every option.
   stand in for real surfaces and objects of the photo.
 - **Fit Sun** (1.1, in development): a Sun light turned like the sun of the
   photo, from the EXIF date, time and GPS (or entered by hand), with the north
-  from the compass, a map or a distant landmark.
+  from the compass, a map, a distant landmark or a shadow; or measured on a
+  shadow in the photo alone.
 - Interface in English and Italian.
 
 ## Install
@@ -209,8 +210,13 @@ Catcher*, *Holdout* or *No Role* to all the selected objects.
 > for now).
 
 Turns a Sun light towards the sun of the photo, so that the CG shadows fall like
-the real ones. The calibration already knows the vertical, so the height of the
-sun (the length of the shadows) is right whatever the north.
+the real ones. *Sun From* picks the source:
+
+- **Date and Place**: the sun of the shooting time and place, with the scene
+  north (below). The calibration already knows the vertical, so the height of
+  the sun (the length of the shadows) is right whatever the north.
+- **Shadow**: the sun measured on a shadow in the photo, with no date, place or
+  north (any photo with a sharp shadow, also without EXIF).
 
 - **When and where**: date, time, UTC offset, latitude and longitude of the shot,
   read from the EXIF. The GPS time is UTC; when the camera clock agrees with it,
@@ -234,6 +240,16 @@ sun (the length of the shadows) is right whatever the north.
   phone compasses are often 5–15° off, so turn it until the CG shadows match the
   photo. A camera looking steeply up or down makes the compass unreliable
   (warning).
+- **Shadow**: in *Calibrate* three orange handles go on the **foot** and the
+  **top** of something vertical (a pole, a post, a door jamb) and on the **tip of
+  its shadow**. The foot is on the ground; the tip on the ground or on a wall
+  through the origin (*Shadow On*: put the origin at the foot of that wall). The
+  sun lies along the line from the tip through the top. The panel gives its
+  elevation with a ± from the handles: a long shadow measures better than a
+  short one. With *Measure Shadow* next to *Date and Place* it checks them:
+  *Shadow vs Date* (elevation: a wrong time or calibration) and *Shadow vs North*
+  (the compass, map or landmark error); *Use Shadow North* takes the north from
+  the shadow. A white cross marks where the date's sun would put the tip.
 - **The light**: pick a Sun light or press *New Sun*. FTC only sets its
   rotation: strength, colour and angle stay yours. It follows the camera on
   *Apply* and while calibrating. A deleted or linked light, or constraints and
@@ -241,8 +257,7 @@ sun (the length of the shadows) is right whatever the north.
 - *Display › North* draws the north (N) and the sun direction (dashed) on the
   ground through the origin while calibrating.
 
-Next in 1.1: the sun from a shadow in the photo, and *Fit HDRI* (the World HDRI
-turned about Z onto the sun).
+Next in 1.1: *Fit HDRI* (the World HDRI turned about Z onto the sun).
 
 ## Tips
 

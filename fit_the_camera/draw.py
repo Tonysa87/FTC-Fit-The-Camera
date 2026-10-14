@@ -492,7 +492,8 @@ def _shadow(view, solution, settings):
     where the sun of the date and place would put that tip (a cross)."""
     foot, top, tip = (view.to_region(calibrate.handle(settings, k)) for k in ops_sun.SHADOW_KEYS)
     segment(foot, top, SUN_COLOR, 1.0)
-    segment(foot, tip, with_alpha(SUN_COLOR, 0.5), 1.0)
+    if settings.sun.shadow_plane == "XY":
+        segment(foot, tip, with_alpha(SUN_COLOR, 0.5), 1.0)
     dashed(top, tip, SUN_COLOR, 1.0, 5.0)
     if settings.sun.source != "TIME":
         return

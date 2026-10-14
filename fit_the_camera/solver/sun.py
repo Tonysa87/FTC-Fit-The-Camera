@@ -171,6 +171,22 @@ def _plane_hit(centre, direction, normal):
     return centre + s * direction if s > 0.0 else None
 
 
+def _ground(solution, shadow: Shadow) -> float:
+    """Height of the ground the foot stands on. With the tip on the ground too,
+    the sun does not depend on it (the scene only scales about the camera): a
+    plane below the camera is used when the origin is above it (a calibration
+    on a facade). With the tip on a wall it is the ground through the origin."""
+    cz = float(solution.position[2])
+    return 0.0 if shadow.plane != "XY" or cz > 1e-9 else cz - 1.0
+
+
+def _plane_through(centre, direction, normal, offset):
+    """``_plane_hit`` for the plane ``normal . x = offset``."""
+    shift = offset * np.asarray(normal, float)
+    hit = _plane_hit(centre - shift, direction, np.asarray(normal, float))
+    return None if hit is None else hit + shift
+
+
 def shadow_points(solution, shadow: Shadow):
     """World foot, top and tip of ``shadow`` seen by ``solution``; ``SolverError``
     when a point is off its plane or the object has no height."""
@@ -178,15 +194,19 @@ def shadow_points(solution, shadow: Shadow):
     rot = np.asarray(solution.rotation, float)
     p, f = solution.principal_point, solution.focal_px
     up = np.array([0.0, 0.0, 1.0])
-    foot = _plane_hit(centre, rot @ ray(shadow.foot, p, f), up)
+    ground = _ground(solution, shadow)
+    foot = _plane_through(centre, rot @ ray(shadow.foot, p, f), up, ground)
     if foot is None:
         raise SolverError("the foot of the object is beyond the horizon: put it on the ground")
     height = closest_param_on_line(foot - centre, up, rot @ ray(shadow.top, p, f))
     if height <= 1e-9 * float(np.linalg.norm(foot - centre)):
         raise SolverError("the top of the object must be above its foot")
-    tip = _plane_hit(centre, rot @ ray(shadow.tip, p, f), plane_frame(shadow.plane)[:, 2])
+    normal = plane_frame(shadow.plane)[:, 2]
+    tip = _plane_through(centre, rot @ ray(shadow.tip, p, f), normal, ground if shadow.plane == "XY" else 0.0)
     if tip is None:
         raise SolverError("the shadow tip is beyond the horizon of its plane")
+    if shadow.plane != "XY" and tip[2] < ground:
+        raise SolverError("the shadow tip is below the ground: put it on the ground, or the origin on the wall's foot")
     return foot, foot + height * up, tip
 
 
@@ -226,4 +246,12 @@ def shadow_tip_for(solution, shadow: Shadow, sun) -> np.ndarray | None:
     """Where the top's shadow falls on the shadow plane for a sun direction
     ``sun`` (calibrated world): the check of a computed sun against the photo."""
     _foot, top, _tip = shadow_points(solution, shadow)
-    return _plane_hit(top, -np.asarray(sun, float), plane_frame(shadow.plane)[:, 2])
+    offset = _ground(solution, shadow) if shadow.plane == "XY" else 0.0
+    return _plane_through(top, -np.asarray(sun, float), plane_frame(shadow.plane)[:, 2], offset)
+
+
+def azimuth_spread(spread: float, direction) -> float:
+    """Spread of the heading of ``direction`` for a spread of the direction itself
+    (degrees): the heading gets shakier as the sun climbs."""
+    c = math.hypot(float(direction[0]), float(direction[1]))
+    return math.inf if c < MIN_HORIZONTAL else spread / c

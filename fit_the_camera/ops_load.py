@@ -411,6 +411,9 @@ class FTC_OT_upright_image(Operator):
         calibrate.reset_handles(settings)
         fit_scene_to_image(context.scene, (nw, nh))
         calibrate.refresh(cam_obj.data)
+        from . import ops_sun  # (ops_sun imports this module)
+
+        ops_sun.orient(settings)
         sync_render_photo(context.scene)
         calibrate.tag_redraw(context)
         return {"FINISHED"}

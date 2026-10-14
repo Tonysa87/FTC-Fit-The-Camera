@@ -186,7 +186,9 @@ _IT = {
     "Show the scene north and the sun direction on the reference plane while calibrating": (
         "Mostra il nord della scena e la direzione del sole sul piano di riferimento durante la calibrazione"
     ),
-    "No compass direction in the photo: use Map or Landmark": "Nessuna bussola nella foto: usa Mappa o Riferimento",
+    "No compass direction in the photo: use Map, Landmark or Shadow": (
+        "Nessuna bussola nella foto: usa Mappa, Riferimento o Ombra"
+    ),
     "Drag the Landmark handle (Calibrate) onto a distant feature": (
         "Trascina la maniglia Riferimento (Calibra) su un elemento lontano"
     ),
@@ -257,8 +259,15 @@ _IT = {
         "Piano per l'origine su cui sta la punta dell'ombra (il piede è sempre a terra)"
     ),
     "The ground: plane XY through the origin": "Il suolo: piano XY per l'origine",
-    "The wall XZ through the origin": "La parete XZ per l'origine",
-    "The wall YZ through the origin": "La parete YZ per l'origine",
+    "The wall XZ through the origin: put the origin where the wall meets the ground": (
+        "La parete XZ per l'origine: metti l'origine dove la parete incontra il suolo"
+    ),
+    "The wall YZ through the origin: put the origin where the wall meets the ground": (
+        "La parete YZ per l'origine: metti l'origine dove la parete incontra il suolo"
+    ),
+    "the shadow tip is below the ground: put it on the ground, or the origin on the wall's foot": (
+        "la punta dell'ombra è sotto il suolo: mettila a terra, o l'origine al piede della parete"
+    ),
     "From a shadow in the photo (shadow handles in Calibrate) and the sun of the date and place": (
         "Da un'ombra nella foto (maniglie dell'ombra in Calibra) e dal sole di data e luogo"
     ),
@@ -274,7 +283,7 @@ _IT = {
         "Calibra prima la camera: l'ombra si misura attraverso di lei"
     ),
     "Place the shadow handles on the photo (Calibrate)": "Metti le maniglie dell'ombra sulla foto (Calibra)",
-    "The shadow gives no direction: move its handles": "L'ombra non dà una direzione: sposta le sue maniglie",
+    "The sun is almost overhead: its shadow gives no north": "Il sole è quasi allo zenit: la sua ombra non dà il nord",
     "the foot of the object is beyond the horizon: put it on the ground": (
         "il piede dell'oggetto è oltre l'orizzonte: mettilo a terra"
     ),

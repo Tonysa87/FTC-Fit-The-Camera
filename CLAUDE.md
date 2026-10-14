@@ -22,8 +22,13 @@ Extensions audience) and `README.it.md` (Italian); developer docs
   an already-translated string is translated again ("Data"->"Dati"): pass
   `text_ctxt`; GPS time vs camera clock: clock+offset wins on disagreement (stale
   fix), GPS only without offset; panels use `calibrate.current_solution` (solves
-  lazily without writing, cache cleared on undo outside a session). Next: S3 sun from a shadow (tip also on a
-  wall) -> S4 Fit HDRI -> A1 extra VP lines -> A2 report. Decided 2026-10-14: explicit *New Sun* button,
+  lazily without writing, cache cleared on undo outside a session).
+  S3 DONE (1.1.0-alpha.3, audited): `sun.source` TIME/SHADOW, `use_shadow`,
+  `shadow_plane`, north_source SHADOW (appended); handles shadow_foot/top/tip
+  (`ops_sun.SUN_KEYS`: pose-only, kept by Reset Guides, drag only orients);
+  ground shadows are scale-invariant (plane below the camera if the origin is
+  above it), wall tips need the origin on the wall's foot; shadow north ignores
+  north_correction; heading spread = spread / cos(elevation). Next: S4 Fit HDRI -> A1 extra VP lines -> A2 report. Decided 2026-10-14: explicit *New Sun* button,
   HDRI equirectangular only. No compass is the NORM (Android: none of the
   `samples/` has GPSImgDirection; all have GPS + UTC GPS time): north from a
   map bearing / azimuth slider / shadow are first-class, not fallbacks.
