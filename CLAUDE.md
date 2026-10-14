@@ -6,7 +6,12 @@ Extensions audience) and `README.it.md` (Italian); developer docs
 `docs/PUBLISHING.md`. History: `docs/CHANGELOG.md`. Original spec: `FTC – Specifica addon Blender 5.2+.md` (says
 "Camera Match": the final name is **FTC**, package `fit_the_camera`, tab "FTC").
 
-## Status / next session (bookmark 2026-10-11, afternoon)
+## Status / next session (bookmark 2026-10-14)
+- **1.0.0 approved on extensions.blender.org (2026-10-14)**, public at
+  https://extensions.blender.org/add-ons/fit-the-camera/. The moderator only asked to drop the `3D View` tag in future
+  versions: done in the manifest (Camera, Render), it ships with the next
+  upload; no 1.0.1 just for that. READMEs point to Blender Extensions as the
+  main install route (zip from Releases as the offline alternative).
 - **v1.0.0 released on GitHub** (2026-10-11) after the user's full GUI test
   (`docs/TEST_GUI.md` 1–49) and **submitted to extensions.blender.org the same
   day: status "Awaiting Review"** (developer account TonyS87). Listing: icon,
@@ -233,7 +238,6 @@ fine dragging (×0.2) the cursor drifts away from the handle. Probe `lens` write
   their untouched hand-made default guides (~22 mm equivalent) may then warn.
 
 ## Open work
-- Pending: extensions.blender.org review of 1.0.0 (submitted 2026-10-11).
-- Possible: English changelog (docs/CHANGELOG.md is Italian, linked from the Extensions release notes); tag "Compositing" in the manifest.
+- Possible: English changelog (docs/CHANGELOG.md is Italian, linked from the Extensions release notes). Add tags only when they really fit (moderators prune them).
 - Possible: more than two lines per VP;
   turn the `paneltest` / `drawall` probes into regular Blender tests.

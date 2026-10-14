@@ -2,6 +2,9 @@
 
 **English** · [Italiano](README.it.md)
 
+**Get it on [Blender Extensions](https://extensions.blender.org/add-ons/fit-the-camera/)** (or from the
+[Releases](https://github.com/Tonysa87/FTC-Fit-The-Camera/releases)).
+
 ![A CG object rendered into a photo calibrated with FTC](docs/images/ftc_hero.jpg)
 
 A Blender 5.2+ extension that matches a camera to a single image (a photo, a
@@ -12,9 +15,9 @@ the real ground.
 
 ## Quick start
 
-1. **Install** – download `fit_the_camera-<version>.zip` from the
-   [Releases](https://github.com/Tonysa87/FTC-Fit-The-Camera/releases), then in
-   Blender *Edit › Preferences › Get Extensions › ⌄ › Install from Disk…*
+1. **Install** – in Blender *Edit › Preferences › Get Extensions*, search
+   "Fit The Camera" and press *Install* (page on
+   [Blender Extensions](https://extensions.blender.org/add-ons/fit-the-camera/)).
 2. **Load the photo** – 3D viewport sidebar (**N**) › **FTC** tab › **Load
    Image**. The photo goes onto the scene camera (onto a new camera named after
    the photo when that one already has a photo) and the view looks through it;
@@ -82,6 +85,12 @@ The rest of this page explains every option.
 - Interface in English and Italian.
 
 ## Install
+
+FTC is on [Blender Extensions](https://extensions.blender.org/add-ons/fit-the-camera/): in Blender 5.2 or later open
+*Edit › Preferences › Get Extensions*, search "Fit The Camera" and press
+*Install*. Blender then offers the updates there.
+
+Without the online extensions (offline, or a specific version):
 
 1. Download `fit_the_camera-<version>.zip` from the
    [Releases](https://github.com/Tonysa87/FTC-Fit-The-Camera/releases).
