@@ -385,54 +385,62 @@ class FTC_PT_main(Panel):
             return
         data = settings.camera_data
         sun = settings.sun
+        state = ops_sun.evaluate(settings)
 
-        col = body.column(align=True)
-        time_row(col, "Date", data, ("day", "month", "year"), data.time_state)
-        time_row(col, "Time", data, ("hour", "minute", "second"), data.time_state)
-        row = field(body, data, "utc_offset", data.offset_state)
-        if data.time_from_gps and data.offset_state == "EXIF" and data.utc_offset == 0.0:
-            row.label(text="UTC")
-        col = body.column(align=True)
-        state = ops_sun.location_state(data)
-        field(col, data, "gps_latitude", state)
-        field(col, data, "gps_longitude", state)
-        body.operator("ftc.read_photo_time", icon="FILE_REFRESH")
-
-        body.separator()
         row = body.row(align=True)
         row.use_property_split = False
-        row.prop(sun, "north_source", expand=True)
-        col = body.column()
-        if sun.north_source == "COMPASS":
-            # Without a compass the error box below says what to do.
-            if data.direction_state != "MISSING":
-                row = field(col, data, "direction", data.direction_state)
-                if data.direction_ref:
-                    row.label(text=data.direction_ref)
-                if data.direction_ref.upper().startswith("M"):
-                    col.prop(sun, "declination")
-        elif sun.north_source == "MAP":
-            col.prop(sun, "map_axis")
-            col.prop(sun, "map_bearing")
-        else:
-            col.prop(sun, "landmark_bearing")
-            wrapped(col, context, iface_("Drag the Landmark handle (Calibrate) onto a distant feature"), icon="INFO")
-        col.prop(sun, "north_correction")
+        row.prop(sun, "source", expand=True)
 
-        sun_state = ops_sun.evaluate(settings)
-        if sun_state.sun is not None:
-            box = body.column(align=True)
-            info_row(box, iface_("Sun Azimuth"), f"{sun_state.sun.azimuth:.1f}°")
-            info_row(
-                box, iface_("Sun Elevation"), f"{sun_state.sun.elevation:.1f}°", alert=sun_state.sun.elevation <= 0
-            )
-        if sun_state.error:
+        if sun.source == "TIME":
+            col = body.column(align=True)
+            time_row(col, "Date", data, ("day", "month", "year"), data.time_state)
+            time_row(col, "Time", data, ("hour", "minute", "second"), data.time_state)
+            row = field(body, data, "utc_offset", data.offset_state)
+            if data.time_from_gps and data.offset_state == "EXIF" and data.utc_offset == 0.0:
+                row.label(text="UTC")
+            col = body.column(align=True)
+            place = ops_sun.location_state(data)
+            field(col, data, "gps_latitude", place)
+            field(col, data, "gps_longitude", place)
+            body.operator("ftc.read_photo_time", icon="FILE_REFRESH")
+
+            body.separator()
+            row = body.row(align=True)
+            row.use_property_split = False
+            row.prop(sun, "north_source", expand=True)
+            col = body.column()
+            if sun.north_source == "COMPASS":
+                # Without a compass the error box below says what to do.
+                if data.direction_state != "MISSING":
+                    row = field(col, data, "direction", data.direction_state)
+                    if data.direction_ref:
+                        row.label(text=data.direction_ref)
+                    if data.direction_ref.upper().startswith("M"):
+                        col.prop(sun, "declination")
+            elif sun.north_source == "MAP":
+                col.prop(sun, "map_axis")
+                col.prop(sun, "map_bearing")
+            elif sun.north_source == "LANDMARK":
+                col.prop(sun, "landmark_bearing")
+                wrapped(
+                    col, context, iface_("Drag the Landmark handle (Calibrate) onto a distant feature"), icon="INFO"
+                )
+            col.prop(sun, "north_correction")
+            if state.sun is not None:
+                col = body.column(align=True)
+                info_row(col, iface_("Sun Azimuth"), f"{state.sun.azimuth:.1f}°")
+                info_row(col, iface_("Sun Elevation"), f"{state.sun.elevation:.1f}°", alert=state.sun.elevation <= 0)
+
+        self.draw_shadow(context, body, sun, state)
+
+        if state.error:
             box = body.box()
             box.alert = True
-            wrapped(box, context, iface_(sun_state.error), icon="ERROR")
-        for line in sun_state.warnings:
+            wrapped(box, context, iface_(state.error), icon="ERROR")
+        for line in state.warnings:
             wrapped(body.box(), context, iface_(line), icon="ERROR")
 
+        body.separator()
         row = body.row(align=True)
         row.prop(sun, "light")
         row.operator("ftc.new_sun", text="", icon="LIGHT_SUN")
@@ -442,6 +450,52 @@ class FTC_PT_main(Panel):
             box = body.box()
             box.alert = True
             wrapped(box, context, iface_(problem), icon="ERROR")
+
+    def draw_shadow(self, context, body, sun, state):
+        """Shadow handles: the sun itself (Shadow), or a check of the date and place."""
+        body.separator()
+        needed = sun.source == "SHADOW" or sun.north_source == "SHADOW"
+        if not needed:
+            body.prop(sun, "use_shadow")
+        if not (needed or sun.use_shadow):
+            return
+        row = body.row(align=True)
+        row.use_property_split = False
+        row.prop(sun, "shadow_plane", expand=True)
+        wrapped(
+            body,
+            context,
+            iface_(
+                "Calibrate: orange handles on the foot and the top of something vertical, and on the tip of its shadow"
+            ),
+            icon="INFO",
+        )
+        col = body.column(align=True)
+        if state.shadow is not None:
+            spread = f"  ±{state.shadow_spread:.1f}°" if math.isfinite(state.shadow_spread) else ""
+            info_row(col, iface_("Shadow Elevation"), f"{ops_sun.elevation_of(state.shadow):.1f}°{spread}")
+        elif state.shadow_error and state.error != state.shadow_error:
+            box = body.box()
+            box.alert = True
+            wrapped(box, context, iface_(state.shadow_error), icon="ERROR")
+        if state.shadow_elevation_offset is not None:
+            off = state.shadow_elevation_offset
+            info_row(
+                col,
+                iface_("Shadow vs Date"),
+                iface_("{:+.1f}° elevation").format(off),
+                alert=abs(off) > ops_sun.SHADOW_ELEVATION_ALERT,
+            )
+        if state.shadow_north_offset is not None:
+            off = state.shadow_north_offset
+            info_row(
+                col,
+                iface_("Shadow vs North"),
+                f"{off:+.1f}°",
+                alert=abs(off) > ops_sun.SHADOW_NORTH_ALERT,
+            )
+            row = body.row()
+            row.prop_enum(sun, "north_source", "SHADOW", text="Use Shadow North")
 
     def draw_tools(self, context, layout):
         header, body = layout.panel("ftc_tools", default_closed=False)

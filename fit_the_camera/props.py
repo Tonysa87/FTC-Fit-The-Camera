@@ -289,6 +289,39 @@ class FTC_Results(PropertyGroup):
 class FTC_Sun(PropertyGroup):
     """Sun of the photo: where the scene north is and which light follows it."""
 
+    source: EnumProperty(
+        name="Sun From",
+        translation_context=FTC_CONTEXT,
+        description="Where the direction of the sun comes from",
+        items=[
+            ("TIME", "Date and Place", "Computed from the date, time and place of the shot, with the scene north"),
+            ("SHADOW", "Shadow", "Measured on a shadow in the photo: no date, place or north needed"),
+        ],
+        default="TIME",
+        update=_sun_changed,
+    )
+    use_shadow: BoolProperty(
+        name="Measure Shadow",
+        translation_context=FTC_CONTEXT,
+        description=(
+            "Show the shadow handles (foot and top of something vertical, tip of its shadow) to check the sun "
+            "of the date and place, and the north"
+        ),
+        update=_sun_changed,
+    )
+    shadow_plane: EnumProperty(
+        name="Shadow On",
+        translation_context=FTC_CONTEXT,
+        description="Plane through the origin where the tip of the shadow lies (the foot is always on the ground)",
+        items=[
+            ("XY", "Ground", "The ground: plane XY through the origin"),
+            ("XZ", "Wall XZ", "The wall XZ through the origin"),
+            ("YZ", "Wall YZ", "The wall YZ through the origin"),
+        ],
+        default="XY",
+        update=_sun_changed,
+    )
+
     light: PointerProperty(
         name="Light",
         translation_context=FTC_CONTEXT,
@@ -308,6 +341,11 @@ class FTC_Sun(PropertyGroup):
                 "LANDMARK",
                 "Landmark",
                 "From a distant landmark in the photo (Landmark handle in Calibrate) and its bearing on a map",
+            ),
+            (
+                "SHADOW",
+                "Shadow",
+                "From a shadow in the photo (shadow handles in Calibrate) and the sun of the date and place",
             ),
         ],
         default="COMPASS",

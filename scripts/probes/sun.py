@@ -1,6 +1,7 @@
-"""Overlay with the north arrow, the sun direction and the landmark handle.
+"""Overlay with the north arrow, the sun direction, the landmark handle and a shadow.
 
-Writes dist/probes/sun_map.png (north from a map) and sun_landmark.png.
+Writes dist/probes/sun_map.png (north from a map), sun_landmark.png and
+sun_shadow.png (shadow handles, the cross = the tip for the date's sun).
 """
 
 import importlib
@@ -27,8 +28,15 @@ s = cam.data.ftc
 W, H = 1200, 700
 view = draw.View(20.0, 20.0, 1180.0, 20.0 + 1160 * 1080 / 1920, (1920, 1080))
 session = SimpleNamespace(active_vp=0, hover=None, drag_key=None)
-for name, source in (("sun_map", "MAP"), ("sun_landmark", "LANDMARK")):
+from solver.sun import direction_enu  # noqa: E402
+
+for name, source in (("sun_map", "MAP"), ("sun_landmark", "LANDMARK"), ("sun_shadow", "MAP")):
     s.sun.north_source = source
+    s.sun.use_shadow = name == "sun_shadow"
+    if s.sun.use_shadow:
+        calibrate.refresh(cam.data)
+        # Shadow of the sun 8° off the date's: the cross shows where it should be.
+        g["set_shadow"](s, direction_enu(g["SUN_AZIMUTH"] + 8.0, g["SUN_ELEVATION"]), (0.0, 1.0, 0.0), 4.0)
     s.sun.map_axis, s.sun.map_bearing = "+X", math.radians(90.0)
     s.sun.landmark_bearing = math.radians(200.0)
     calibrate.set_handle(s, "landmark", (0.7, 0.62))

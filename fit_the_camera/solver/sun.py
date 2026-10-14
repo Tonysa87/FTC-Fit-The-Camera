@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Position of the sun in the sky for a time and place.
+"""Position of the sun in the sky for a time and place, or from a shadow.
 
 NOAA's solar position equations (Meeus, *Astronomical Algorithms*, 1998), the
 ones behind the NOAA Solar Position Calculator: about 0.01° between 1900 and
@@ -15,6 +15,8 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 
 import numpy as np
+
+from .common import SolverError, closest_param_on_line, plane_frame, ray
 
 # Julian day of 2000-01-01 12:00 UTC (J2000.0).
 J2000 = 2451545.0
@@ -140,3 +142,88 @@ def y_bearing(bearing: float, direction) -> float | None:
 def scene_direction(sun: SunPosition, y_bear: float) -> np.ndarray:
     """Unit vector towards the sun in the scene."""
     return direction_enu(sun.azimuth - y_bear, sun.elevation)
+
+
+# ----------------------------------------------------------------------------
+# Sun from a shadow: a vertical object standing on the ground (foot and top) and
+# the shadow of its top on the ground or on a wall. The sun lies along the line
+# from the shadow's tip through the top (Kee, O'Brien, Farid 2013: in the image
+# that line passes through the projected light). Calibrated world, Z up; the
+# ground (XY) and the walls (XZ, YZ) pass through the origin.
+
+
+@dataclass(frozen=True)
+class Shadow:
+    """Image points (pixels) of the foot and top of a vertical object and of the
+    tip of the top's shadow, which lies on ``plane`` (through the origin)."""
+
+    foot: tuple[float, float]
+    top: tuple[float, float]
+    tip: tuple[float, float]
+    plane: str = "XY"
+
+
+def _plane_hit(centre, direction, normal):
+    den = float(normal @ direction)
+    if abs(den) < 1e-12:
+        return None
+    s = -float(normal @ centre) / den
+    return centre + s * direction if s > 0.0 else None
+
+
+def shadow_points(solution, shadow: Shadow):
+    """World foot, top and tip of ``shadow`` seen by ``solution``; ``SolverError``
+    when a point is off its plane or the object has no height."""
+    centre = np.asarray(solution.position, float)
+    rot = np.asarray(solution.rotation, float)
+    p, f = solution.principal_point, solution.focal_px
+    up = np.array([0.0, 0.0, 1.0])
+    foot = _plane_hit(centre, rot @ ray(shadow.foot, p, f), up)
+    if foot is None:
+        raise SolverError("the foot of the object is beyond the horizon: put it on the ground")
+    height = closest_param_on_line(foot - centre, up, rot @ ray(shadow.top, p, f))
+    if height <= 1e-9 * float(np.linalg.norm(foot - centre)):
+        raise SolverError("the top of the object must be above its foot")
+    tip = _plane_hit(centre, rot @ ray(shadow.tip, p, f), plane_frame(shadow.plane)[:, 2])
+    if tip is None:
+        raise SolverError("the shadow tip is beyond the horizon of its plane")
+    return foot, foot + height * up, tip
+
+
+def shadow_direction(solution, shadow: Shadow) -> np.ndarray:
+    """Unit vector towards the sun (calibrated world) measured from ``shadow``."""
+    _foot, top, tip = shadow_points(solution, shadow)
+    d = top - tip
+    n = float(np.linalg.norm(d))
+    if n < 1e-12:
+        raise SolverError("the shadow tip is on the top of the object")
+    d /= n
+    if d[2] <= 0.0:
+        raise SolverError("this shadow puts the sun below the horizon: check the handles and the shadow plane")
+    return d
+
+
+def shadow_uncertainty(solution, shadow: Shadow, step: float) -> float:
+    """Spread (degrees) of the measured sun direction when each handle moves by
+    ``step`` pixels, coordinate by coordinate, added in quadrature; ``inf`` when
+    a nudge makes the shadow unreadable."""
+    base = shadow_direction(solution, shadow)
+    total = 0.0
+    for name in ("foot", "top", "tip"):
+        for axis in (0, 1):
+            co = list(getattr(shadow, name))
+            co[axis] += step
+            nudged = Shadow(**{**shadow.__dict__, name: tuple(co)})
+            try:
+                d = shadow_direction(solution, nudged)
+            except SolverError:
+                return math.inf
+            total += math.degrees(math.acos(min(1.0, float(base @ d)))) ** 2
+    return math.sqrt(total)
+
+
+def shadow_tip_for(solution, shadow: Shadow, sun) -> np.ndarray | None:
+    """Where the top's shadow falls on the shadow plane for a sun direction
+    ``sun`` (calibrated world): the check of a computed sun against the photo."""
+    _foot, top, _tip = shadow_points(solution, shadow)
+    return _plane_hit(top, -np.asarray(sun, float), plane_frame(shadow.plane)[:, 2])

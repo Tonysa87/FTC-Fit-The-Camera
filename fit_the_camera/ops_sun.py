@@ -1,9 +1,10 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Sun of the photo: shooting time and place -> sun in the scene -> a Sun light.
+"""Sun of the photo -> a Sun light.
 
-The scene is Z up. Its north comes from the compass of the photo, from the map
-bearing of a scene axis or from a distant landmark; FTC only turns the light,
-its strength, colour and angle stay the user's.
+The sun comes from the shooting time and place (with the scene north from the
+compass of the photo, the map bearing of a scene axis, a distant landmark or a
+shadow), or straight from a shadow in the photo. The scene is Z up. FTC only
+turns the light: its strength, colour and angle stay the user's.
 """
 
 from __future__ import annotations
@@ -20,12 +21,27 @@ from mathutils import Matrix, Vector
 
 from . import calibrate, ops_load
 from .exif import read_exif
-from .solver.common import ray
-from .solver.sun import SunPosition, scene_direction, sun_position, y_bearing
+from .solver.common import SolverError, ray
+from .solver.sun import (
+    Shadow,
+    SunPosition,
+    heading,
+    scene_direction,
+    shadow_direction,
+    shadow_uncertainty,
+    sun_position,
+    y_bearing,
+)
 
 SUN_NAME = "FTC Sun"
 AXIS_VECTORS = {"+X": (1.0, 0.0, 0.0), "+Y": (0.0, 1.0, 0.0), "-X": (-1.0, 0.0, 0.0), "-Y": (0.0, -1.0, 0.0)}
 LANDMARK_KEY = "landmark"
+SHADOW_KEYS = ("shadow_foot", "shadow_top", "shadow_tip")
+# Handles that are sun inputs, not calibration guides.
+SUN_KEYS = {LANDMARK_KEY, *SHADOW_KEYS}
+# Shadow and date/place disagreeing beyond these (degrees) is worth a red value.
+SHADOW_NORTH_ALERT = 5.0
+SHADOW_ELEVATION_ALERT = 2.0
 
 
 @dataclass
@@ -39,6 +55,46 @@ class SunState:
     direction: Vector | None = None  # towards the sun, in the scene
     error: str = ""
     warnings: list[str] = field(default_factory=list)
+    # Sun measured on the shadow (scene), its spread (degrees) or why not.
+    shadow: Vector | None = None
+    shadow_spread: float = 0.0
+    shadow_error: str = ""
+    # Shadow minus date/place: north (degrees, + = clockwise) and elevation.
+    shadow_north_offset: float | None = None
+    shadow_elevation_offset: float | None = None
+
+
+def shadow_in_use(settings) -> bool:
+    sun = settings.sun
+    return sun.source == "SHADOW" or sun.use_shadow or sun.north_source == "SHADOW"
+
+
+def shadow_of(settings) -> Shadow:
+    """The shadow handles, in image pixels."""
+    foot, top, tip = (calibrate.to_pixels(settings, calibrate.handle(settings, k)) for k in SHADOW_KEYS)
+    return Shadow(foot, top, tip, settings.sun.shadow_plane)
+
+
+def measure_shadow(settings, solution, state) -> None:
+    """Fill ``state.shadow`` (scene direction), its spread, or ``shadow_error``."""
+    if solution is None:
+        state.shadow_error = "Calibrate the camera first: the shadow is measured through it"
+        return
+    shadow = shadow_of(settings)
+    try:
+        d = shadow_direction(solution, shadow)
+        step = calibrate.PLACEMENT_ERROR * max(calibrate.image_size(settings))
+        state.shadow_spread = shadow_uncertainty(solution, shadow, step)
+    except SolverError as exc:
+        state.shadow_error = str(exc)
+        return
+    state.shadow = Vector((scene_rotation(settings) @ d).tolist())
+    if all(math.dist(calibrate.handle(settings, k), calibrate.HANDLE_DEFAULTS[k]) < 1e-6 for k in SHADOW_KEYS):
+        state.warnings.append("Place the shadow handles on the photo (Calibrate)")
+
+
+def elevation_of(direction) -> float:
+    return math.degrees(math.asin(max(-1.0, min(1.0, float(direction[2])))))
 
 
 def location_state(data) -> str:
@@ -72,6 +128,8 @@ def scene_north(settings, solution) -> tuple[float | None, str]:
     sun = settings.sun
     data = settings.camera_data
     source = sun.north_source
+    if source == "SHADOW":
+        return None, ""  # needs the sun of the date and place: see evaluate()
     if source == "MAP":
         bearing = y_bearing(math.degrees(sun.map_bearing), AXIS_VECTORS[sun.map_axis])
         return bearing, ""
@@ -110,9 +168,21 @@ def evaluate(settings, solution=None) -> SunState:
     sun = settings.sun
     if solution is None:
         solution = calibrate.current_solution(settings.id_data)
+    correction = math.degrees(sun.north_correction)
     bearing, north_error = scene_north(settings, solution)
     if bearing is not None:
-        state.y_bearing = (bearing + math.degrees(sun.north_correction)) % 360.0
+        state.y_bearing = (bearing + correction) % 360.0
+    if shadow_in_use(settings):
+        measure_shadow(settings, solution, state)
+
+    if sun.source == "SHADOW":
+        # Measured in the scene: no time, place or north needed.
+        if state.shadow is None:
+            state.error = state.shadow_error
+        else:
+            state.direction = state.shadow
+        return state
+
     try:
         when = shooting_time(data)
     except ValueError as exc:
@@ -145,6 +215,20 @@ def evaluate(settings, solution=None) -> SunState:
             state.warnings.append("The camera looks steeply up or down: its compass is unreliable, check the north")
     if sun.north_source == "LANDMARK" and _landmark_untouched(settings):
         state.warnings.append("Place the Landmark handle on the landmark (Calibrate)")
+
+    # North implied by the shadow: the sun's bearing minus the shadow's heading.
+    shadow_bearing = None
+    if state.shadow is not None and heading(state.shadow) is not None:
+        shadow_bearing = y_bearing(state.sun.azimuth, state.shadow)
+        state.shadow_elevation_offset = elevation_of(state.shadow) - state.sun.elevation
+    if sun.north_source == "SHADOW":
+        if shadow_bearing is None:
+            state.error = state.shadow_error or "The shadow gives no direction: move its handles"
+            return state
+        bearing = shadow_bearing
+        state.y_bearing = (bearing + correction) % 360.0
+    elif shadow_bearing is not None and state.y_bearing is not None:
+        state.shadow_north_offset = (shadow_bearing - state.y_bearing + 180.0) % 360.0 - 180.0
     if bearing is None:
         state.error = north_error
         return state

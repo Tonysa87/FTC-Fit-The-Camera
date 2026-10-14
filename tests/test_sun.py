@@ -5,13 +5,18 @@ from datetime import UTC, datetime, timedelta, timezone
 import numpy as np
 import pytest
 
+from solver.common import SolverError
 from solver.sun import (
+    Shadow,
     SunPosition,
     direction_enu,
     heading,
     julian_day,
     refraction,
     scene_direction,
+    shadow_direction,
+    shadow_tip_for,
+    shadow_uncertainty,
     sun_position,
     y_bearing,
 )
@@ -144,3 +149,72 @@ def test_scene_direction_follows_the_north():
     d = scene_direction(sun, y_bearing(239.0, view))
     assert heading(d) == pytest.approx(heading(view))
     assert math.degrees(math.asin(d[2])) == pytest.approx(56.0)
+
+
+# ----------------------------------------------------------------------------
+# Sun from a shadow
+
+
+def _shadow_scene(sun_heading, sun_elevation, foot, height, plane="XY"):
+    """Synthetic camera, a pole and the shadow of its top on ``plane``."""
+    from synthetic import make_camera
+
+    from solver.common import CameraSolution
+
+    cam = make_camera()
+    sol = CameraSolution(cam.image_size, cam.focal_px, cam.principal_point, cam.rotation, cam.position)
+    sun = direction_enu(sun_heading, sun_elevation)
+    foot = np.asarray(foot, float)
+    top = foot + [0.0, 0.0, height]
+    normal = {"XY": [0, 0, 1], "XZ": [0, 1, 0], "YZ": [1, 0, 0]}[plane]
+    s = (np.asarray(normal) @ top) / (np.asarray(normal) @ sun)
+    tip = top - s * sun
+    px = cam.project([foot, top, tip])
+    return sol, sun, tip, Shadow(tuple(px[0]), tuple(px[1]), tuple(px[2]), plane)
+
+
+def test_shadow_on_the_ground_gives_the_sun():
+    sol, sun, _tip, shadow = _shadow_scene(120.0, 35.0, (1.0, 2.0, 0.0), 1.5)
+    np.testing.assert_allclose(shadow_direction(sol, shadow), sun, atol=1e-9)
+
+
+def test_shadow_on_a_wall_gives_the_sun():
+    # Wall XZ (y = 0) facing the camera, the sun behind the camera's left.
+    sol, sun, tip, shadow = _shadow_scene(200.0, 20.0, (0.5, -2.0, 0.0), 1.5, plane="XZ")
+    assert tip[2] > 0.0, "the shadow climbs the wall"
+    np.testing.assert_allclose(shadow_direction(sol, shadow), sun, atol=1e-9)
+
+
+def test_shadow_with_pixel_noise():
+    sol, sun, _tip, shadow = _shadow_scene(250.0, 25.0, (2.0, 3.0, 0.0), 2.0)
+    rng = np.random.default_rng(1)
+    worst = 0.0
+    for _ in range(50):
+        noisy = Shadow(*(tuple(np.add(c, rng.normal(0.0, 1.0, 2))) for c in (shadow.foot, shadow.top, shadow.tip)))
+        worst = max(worst, angle_between(shadow_direction(sol, noisy), sun))
+    assert worst < 1.5
+    spread = shadow_uncertainty(sol, shadow, 1.0)
+    assert 0.0 < spread < 2.0
+
+
+def test_predicted_tip_matches_the_photo():
+    sol, sun, tip, shadow = _shadow_scene(120.0, 35.0, (1.0, 2.0, 0.0), 1.5)
+    np.testing.assert_allclose(shadow_tip_for(sol, shadow, sun), tip, atol=1e-9)
+
+
+def test_unreadable_shadows_are_errors():
+    sol, _sun, _tip, shadow = _shadow_scene(120.0, 35.0, (1.0, 2.0, 0.0), 1.5)
+    sky = (sol.image_size[0] / 2, sol.image_size[1] - 1.0)  # above the horizon
+    with pytest.raises(SolverError):
+        shadow_direction(sol, Shadow(sky, shadow.top, shadow.tip))
+    with pytest.raises(SolverError):
+        shadow_direction(sol, Shadow(shadow.foot, (shadow.foot[0], shadow.foot[1] - 50.0), shadow.tip))
+    with pytest.raises(SolverError):
+        shadow_direction(sol, Shadow(shadow.foot, shadow.top, sky))
+    # A tip on a wall above the top puts the sun under the horizon.
+    from synthetic import make_camera
+
+    sol, _sun, tip, shadow = _shadow_scene(200.0, 20.0, (0.5, -2.0, 0.0), 1.5, plane="XZ")
+    high = make_camera().project([[tip[0], 0.0, 3.0]])[0]
+    with pytest.raises(SolverError):
+        shadow_direction(sol, Shadow(shadow.foot, shadow.top, tuple(high), "XZ"))

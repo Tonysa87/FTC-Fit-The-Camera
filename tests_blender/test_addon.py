@@ -1119,7 +1119,8 @@ def sun_tiff(direction=200.0, ref="T", gps_time=(10, 30, 0), orientation=1):
 def _sun_camera(tiff):
     fresh_scene()
     cam = load(write_photo("sun.jpg", (1920, 1080), tiff))
-    syn = make_camera(image_size=(1920, 1080))
+    # 36 mm like the EXIF (35 mm equivalent 36): the known focal agrees.
+    syn = make_camera(image_size=(1920, 1080), focal_mm=36.0)
     set_guides_from(cam.data.ftc, syn)
     assert calibrate.update(bpy.context, cam, apply=True) is not None, cam.data.ftc.results.error
     return cam
@@ -1344,6 +1345,77 @@ def sun_after_reopening_and_upright_copy():
     s.camera_data.hour = 3
     assert bpy.ops.ftc.read_photo_time() == {"CANCELLED"}
     assert s.camera_data.hour == 3 and s.camera_data.time_state == "MANUAL"
+
+
+def set_shadow(settings, sun, foot=(1.0, 2.0, 0.0), height=1.5):
+    """Put the shadow handles on a pole lit by ``sun``, seen by the solved camera
+    (scene = solved world, no alignment)."""
+    sol = calibrate.cached_solution(settings.id_data)
+    foot = np.asarray(foot, float)
+    top = foot + [0.0, 0.0, height]
+    tip = top - top[2] / sun[2] * np.asarray(sun, float)
+    w, h = sol.image_size
+    for key, point in zip(("shadow_foot", "shadow_top", "shadow_tip"), (foot, top, tip)):
+        c = (point - sol.position) @ sol.rotation
+        px = sol.principal_point + sol.focal_px * c[:2] / -c[2]
+        calibrate.set_handle(settings, key, (float(px[0] / w), float(px[1] / h)))
+
+
+@test
+def sun_from_a_shadow_alone():
+    from solver.sun import direction_enu
+
+    ops_sun = importlib.import_module(PKG + ".ops_sun")
+    scene, cam, syn = _calibrated_camera((1920, 1080))
+    s = cam.data.ftc
+    assert "shadow_foot" not in calibrate.active_handle_keys(s)
+    s.sun.source = "SHADOW"
+    assert {"shadow_foot", "shadow_top", "shadow_tip"} <= set(calibrate.active_handle_keys(s))
+    assert "shadow_tip" not in calibrate.calibrate_keys(s)
+    assert any("shadow handles" in w for w in ops_sun.evaluate(s).warnings), "untouched handles"
+    sun = direction_enu(250.0, 30.0)
+    set_shadow(s, sun)
+    state = ops_sun.evaluate(s)
+    assert not state.error and not state.warnings, (state.error, state.warnings)
+    assert math.degrees(state.direction.angle(Vector(sun))) < 0.01
+    assert bpy.ops.ftc.new_sun() == {"FINISHED"}
+    assert shine(s.sun.light).dot(Vector(sun)) < -0.9999
+    # Reset Guides keeps the shadow.
+    before = calibrate.handle(s, "shadow_tip")
+    assert bpy.ops.ftc.reset() == {"FINISHED"}
+    assert max(abs(a - b) for a, b in zip(calibrate.handle(s, "shadow_tip"), before)) < 1e-6
+    # A tip "behind" the light: an error, the light stays.
+    calibrate.set_handle(s, "shadow_foot", (0.5, 0.99))
+    state = ops_sun.evaluate(s)
+    assert state.error and state.direction is None
+
+
+@test
+def shadow_checks_the_date_and_gives_the_north():
+    from solver.sun import direction_enu
+
+    ops_sun = importlib.import_module(PKG + ".ops_sun")
+    cam = _sun_camera(sun_tiff())
+    s = cam.data.ftc
+    # +X east: +Y is north, so the scene is east-north-up.
+    s.sun.north_source = "MAP"
+    s.sun.map_axis, s.sun.map_bearing = "+X", math.radians(90.0)
+    s.sun.use_shadow = True
+    # A high sun (65°) casts short shadows: a tall pole keeps the measure sharp.
+    set_shadow(s, direction_enu(SUN_AZIMUTH, SUN_ELEVATION), foot=(0.0, 1.0, 0.0), height=4.0)
+    state = ops_sun.evaluate(s)
+    assert state.shadow_spread < 2.0, state.shadow_spread
+    assert abs(state.shadow_north_offset) < 0.02 and abs(state.shadow_elevation_offset) < 0.02, state
+    # A map read 10° wrong: the shadow says so.
+    s.sun.map_bearing = math.radians(100.0)
+    state = ops_sun.evaluate(s)
+    assert abs(state.shadow_north_offset + 10.0) < 0.02, state.shadow_north_offset
+    # Use Shadow North: the light follows the shadow's north, the map is ignored.
+    assert bpy.ops.ftc.new_sun() == {"FINISHED"}
+    s.sun.north_source = "SHADOW"
+    d = light_dir(s.sun.light)
+    assert angle_diff(heading_deg(d), SUN_AZIMUTH) < 0.05
+    assert abs(math.degrees(math.asin(d.z)) - SUN_ELEVATION) < 0.05
 
 
 @test

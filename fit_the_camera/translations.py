@@ -240,6 +240,50 @@ _IT = {
     "The landmark is straight above or below the camera: move it": (
         "Il riferimento è dritto sopra o sotto la camera: spostalo"
     ),
+    # Fit Sun: shadow
+    "Where the direction of the sun comes from": "Da dove arriva la direzione del sole",
+    "Computed from the date, time and place of the shot, with the scene north": (
+        "Calcolata da data, ora e luogo dello scatto, con il nord della scena"
+    ),
+    "Measured on a shadow in the photo: no date, place or north needed": (
+        "Misurata su un'ombra nella foto: non servono data, luogo né nord"
+    ),
+    "Show the shadow handles (foot and top of something vertical, tip of its shadow) to check the sun "
+    "of the date and place, and the north": (
+        "Mostra le maniglie dell'ombra (piede e cima di qualcosa di verticale, punta della sua ombra) per "
+        "verificare il sole di data e luogo, e il nord"
+    ),
+    "Plane through the origin where the tip of the shadow lies (the foot is always on the ground)": (
+        "Piano per l'origine su cui sta la punta dell'ombra (il piede è sempre a terra)"
+    ),
+    "The ground: plane XY through the origin": "Il suolo: piano XY per l'origine",
+    "The wall XZ through the origin": "La parete XZ per l'origine",
+    "The wall YZ through the origin": "La parete YZ per l'origine",
+    "From a shadow in the photo (shadow handles in Calibrate) and the sun of the date and place": (
+        "Da un'ombra nella foto (maniglie dell'ombra in Calibra) e dal sole di data e luogo"
+    ),
+    "Calibrate: orange handles on the foot and the top of something vertical, and on the tip of its shadow": (
+        "Calibra: maniglie arancioni sul piede e sulla cima di qualcosa di verticale, e sulla punta della sua ombra"
+    ),
+    "Shadow Elevation": "Elevazione dall'ombra",
+    "Shadow vs Date": "Ombra / data",
+    "{:+.1f}° elevation": "{:+.1f}° di elevazione",
+    "Shadow vs North": "Ombra / nord",
+    "Use Shadow North": "Usa il nord dell'ombra",
+    "Calibrate the camera first: the shadow is measured through it": (
+        "Calibra prima la camera: l'ombra si misura attraverso di lei"
+    ),
+    "Place the shadow handles on the photo (Calibrate)": "Metti le maniglie dell'ombra sulla foto (Calibra)",
+    "The shadow gives no direction: move its handles": "L'ombra non dà una direzione: sposta le sue maniglie",
+    "the foot of the object is beyond the horizon: put it on the ground": (
+        "il piede dell'oggetto è oltre l'orizzonte: mettilo a terra"
+    ),
+    "the top of the object must be above its foot": "la cima dell'oggetto deve stare sopra il piede",
+    "the shadow tip is beyond the horizon of its plane": "la punta dell'ombra è oltre l'orizzonte del suo piano",
+    "the shadow tip is on the top of the object": "la punta dell'ombra coincide con la cima dell'oggetto",
+    "this shadow puts the sun below the horizon: check the handles and the shadow plane": (
+        "quest'ombra mette il sole sotto l'orizzonte: controlla le maniglie e il piano dell'ombra"
+    ),
     # FTC orientation
     "FTC Orientation": "Orientamento FTC",
     "No 3D view to create the orientation from": "Nessuna vista 3D da cui creare l'orientamento",
@@ -275,6 +319,15 @@ _IT_FTC = {
     "Declination": "Declinazione",
     "North Correction": "Correzione del nord",
     "Sun": "Sole",
+    "Sun From": "Sole da",
+    "Date and Place": "Data e luogo",
+    "Shadow": "Ombra",
+    "Measure Shadow": "Misura un'ombra",
+    "Shadow On": "Ombra su",
+    "Ground": "Suolo",
+    "Wall XZ": "Parete XZ",
+    "Wall YZ": "Parete YZ",
+    "Use Shadow North": "Usa il nord dell'ombra",
 }
 
 translations_dict = {"it_IT": {("*", en): it for en, it in _IT.items()}}

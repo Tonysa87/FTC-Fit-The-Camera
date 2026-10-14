@@ -19,8 +19,9 @@ from gpu_extras.batch import batch_for_shader
 from mathutils import Matrix
 
 from . import calibrate, ops_sun
-from .solver.common import plane_frame, vanishing_point
+from .solver.common import SolverError, plane_frame, vanishing_point
 from .solver.scale import CUBE_EDGES, cube_corners, cube_top_px
+from .solver.sun import shadow_tip_for
 
 HANDLE_RADIUS = 8.0
 HANDLE_TICK = 3.5
@@ -486,6 +487,33 @@ def _north(view, solution, settings):
         text((t[0] + 6 * s, t[1] + 6 * s), label, color)
 
 
+def _shadow(view, solution, settings):
+    """The vertical object, the sun ray through its top to the shadow tip, and
+    where the sun of the date and place would put that tip (a cross)."""
+    foot, top, tip = (view.to_region(calibrate.handle(settings, k)) for k in ops_sun.SHADOW_KEYS)
+    segment(foot, top, SUN_COLOR, 1.0)
+    segment(foot, tip, with_alpha(SUN_COLOR, 0.5), 1.0)
+    dashed(top, tip, SUN_COLOR, 1.0, 5.0)
+    if settings.sun.source != "TIME":
+        return
+    state = ops_sun.evaluate(settings, solution)
+    if state.direction is None:
+        return
+    to_calibrated = ops_sun.scene_rotation(settings).T
+    try:
+        hit = shadow_tip_for(solution, ops_sun.shadow_of(settings), to_calibrated @ np.array(state.direction))
+    except SolverError:
+        return
+    if hit is None:
+        return
+    px = project(solution, [hit])[0]
+    if np.isnan(px).any():
+        return
+    c = view.px_to_region(px)
+    r = 5.0 * ui_scale()
+    lines([(c[0] - r, c[1] - r), (c[0] + r, c[1] + r), (c[0] - r, c[1] + r), (c[0] + r, c[1] - r)], WHITE, 1.0)
+
+
 def axis_letter(label: str) -> str:
     return label.lstrip("+-")
 
@@ -600,6 +628,8 @@ def draw_guides(view, settings, solution, session, unit_system):
             _origin_gizmo(view, solution, settings)
             if settings.sun.show_north:
                 _north(view, solution, settings)
+            if ops_sun.shadow_in_use(settings):
+                _shadow(view, solution, settings)
 
         if solution is not None and settings.mode == "VP" and int(settings.vp_count) == 3:
             pp = view.px_to_region(solution.principal_point)
@@ -625,6 +655,8 @@ def draw_guides(view, settings, solution, session, unit_system):
                 pos = hpos(key)
                 bearing = f"{math.degrees(settings.sun.landmark_bearing):.1f}°"
                 text((pos[0] + 10 * s, pos[1] + 10 * s), bearing, color)
+            elif key in ops_sun.SHADOW_KEYS:
+                color = SUN_COLOR
             elif key.startswith("hz"):
                 color = colors[axis_letter(settings.vp2_axis)] if settings.mode == "VP" else HORIZON_COLOR
             else:
