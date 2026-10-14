@@ -9,7 +9,7 @@ import math
 import bpy
 from bpy.app.handlers import persistent
 from bpy.app.translations import pgettext_iface as iface_
-from bpy.props import IntProperty
+from bpy.props import BoolProperty, IntProperty
 from bpy.types import Operator
 
 from . import calibrate, draw, ops_orientation, ops_sun
@@ -654,7 +654,54 @@ class FTC_OT_flip_axis(Operator):
         return {"FINISHED"}
 
 
-classes = (FTC_OT_calibrate, FTC_OT_apply, FTC_OT_reset, FTC_OT_flip_axis)
+class FTC_OT_vp_line(Operator):
+    bl_description = (
+        "Add a guide line to this vanishing point (up to 6), between its first two lines: more lines average out "
+        "the placement errors"
+    )
+
+    bl_idname = "ftc.vp_line"
+    bl_label = "Guide Lines"
+    bl_options = {"REGISTER", "UNDO"}
+
+    index: IntProperty(name="Vanishing Point", min=1, max=3, default=1, options={"SKIP_SAVE"})
+    remove: BoolProperty(name="Remove", options={"SKIP_SAVE"})
+
+    @classmethod
+    def poll(cls, context):
+        return _panel_camera(context) is not None
+
+    @classmethod
+    def description(cls, context, properties):
+        if properties.remove:
+            return "Remove the last guide line of this vanishing point (two stay)"
+        return (
+            "Add a guide line to this vanishing point (up to 6), between its first two lines: more lines "
+            "average out the placement errors"
+        )
+
+    def execute(self, context):
+        cam_obj = _panel_camera(context)
+        settings = cam_obj.data.ftc
+        count = calibrate.line_count(settings, self.index)
+        new = count - 1 if self.remove else count + 1
+        if not 2 <= new <= calibrate.MAX_LINES:
+            return {"CANCELLED"}
+        session = FTC_OT_calibrate._session
+        if session is not None and session.camera_name == cam_obj.name:
+            push_undo(session, snapshot(settings))
+        with calibrate.suspended():
+            if not self.remove:
+                first_two = {k: calibrate.handle(settings, k) for k in calibrate.vp_keys(self.index)}
+                a, b = calibrate.extra_line(first_two, self.index, new)
+                calibrate.set_handle(settings, f"vp{self.index}_{new}a", a)
+                calibrate.set_handle(settings, f"vp{self.index}_{new}b", b)
+            setattr(settings, f"vp{self.index}_lines", new)
+        calibrate.settings_changed(cam_obj.data, context, reset_pitch=True)
+        return {"FINISHED"}
+
+
+classes = (FTC_OT_calibrate, FTC_OT_apply, FTC_OT_reset, FTC_OT_flip_axis, FTC_OT_vp_line)
 
 
 def end_session() -> None:

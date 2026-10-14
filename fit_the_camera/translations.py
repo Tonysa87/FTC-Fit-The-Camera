@@ -357,6 +357,25 @@ _IT = {
     "HDRI sun and Sun light both give direct light: lower one of them": (
         "Il sole dell'HDRI e la luce Sole danno entrambi luce diretta: abbassa uno dei due"
     ),
+    # Extra guide lines
+    "Guide Lines": "Linee guida",
+    "Add a guide line to this vanishing point (up to 6), between its first two lines: more lines average out "
+    "the placement errors": (
+        "Aggiunge una linea guida a questo punto di fuga (fino a 6), tra le prime due: più linee mediano gli "
+        "errori di posizionamento"
+    ),
+    "Remove the last guide line of this vanishing point (two stay)": (
+        "Toglie l'ultima linea guida di questo punto di fuga (due restano)"
+    ),
+    "Guide lines of vanishing point 1 (2 to 6): more lines average out the placement errors": (
+        "Linee guida del punto di fuga 1 (da 2 a 6): più linee mediano gli errori di posizionamento"
+    ),
+    "Guide lines of vanishing point 2 (2 to 6): more lines average out the placement errors": (
+        "Linee guida del punto di fuga 2 (da 2 a 6): più linee mediano gli errori di posizionamento"
+    ),
+    "Guide lines of vanishing point 3 (2 to 6): more lines average out the placement errors": (
+        "Linee guida del punto di fuga 3 (da 2 a 6): più linee mediano gli errori di posizionamento"
+    ),
     # FTC orientation
     "FTC Orientation": "Orientamento FTC",
     "No 3D view to create the orientation from": "Nessuna vista 3D da cui creare l'orientamento",
@@ -402,6 +421,7 @@ _IT_FTC = {
     "Wall YZ": "Parete YZ",
     "Use Shadow North": "Usa il nord dell'ombra",
     "Follow the Sun": "Segui il sole",
+    "Lines": "Linee",
 }
 
 translations_dict = {"it_IT": {("*", en): it for en, it in _IT.items()}}

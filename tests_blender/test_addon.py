@@ -1576,6 +1576,33 @@ def fit_hdri_needs_an_equirectangular_world():
 
 
 @test
+def extra_guide_lines():
+    scene, cam, syn = _calibrated_camera((1920, 1080))
+    s = cam.data.ftc
+    assert s.vp1_lines == 2 and "vp1_3a" not in calibrate.active_handle_keys(s)
+    assert bpy.ops.ftc.vp_line(index=1) == {"FINISHED"} and s.vp1_lines == 3
+    keys = calibrate.active_handle_keys(s)
+    assert "vp1_3a" in keys and "vp1_3b" in keys and "vp1_4a" not in keys
+    a1, a2 = calibrate.handle(s, "vp1_1a"), calibrate.handle(s, "vp1_2a")
+    middle = ((a1[0] + a2[0]) / 2, (a1[1] + a2[1]) / 2)
+    assert math.dist(calibrate.handle(s, "vp1_3a"), middle) < 1e-6, "between the first two lines"
+    # On a real X edge the third line keeps the calibration exact.
+    w, h = syn.image_size
+    a, b = syn.segment((-2, 0, 1.5), (2, 0, 1.5))
+    calibrate.set_handle(s, "vp1_3a", (float(a[0] / w), float(a[1] / h)))
+    calibrate.set_handle(s, "vp1_3b", (float(b[0] / w), float(b[1] / h)))
+    assert calibrate.update(bpy.context, cam, apply=True) is not None, s.results.error
+    check_projection(scene, cam, syn)
+    for _ in range(5):
+        bpy.ops.ftc.vp_line(index=1)
+    assert s.vp1_lines == calibrate.MAX_LINES
+    for _ in range(6):
+        bpy.ops.ftc.vp_line(index=1, remove=True)
+    assert s.vp1_lines == 2 and "vp1_3a" not in calibrate.active_handle_keys(s)
+    assert len(s.handles) == len(calibrate.HANDLE_DEFAULTS)
+
+
+@test
 def every_button_has_a_tooltip():
     """Operators and the settings drawn as buttons all carry a description."""
     internal = {"loading", "active_vp", "handles", "anchor_matrix", "camera_data", "results", "image", "rna_type"}
@@ -1602,9 +1629,11 @@ def every_button_has_a_tooltip():
         "new_sun",
         "read_photo_time",
         "fit_hdri",
+        "vp_line",
     ):
-        if not getattr(bpy.ops.ftc, op).get_rna_type().description.strip():
-            missing.append("ftc." + op)
+        description = getattr(bpy.ops.ftc, op).get_rna_type().description
+        if not description.strip() or "\n" in description:
+            missing.append("ftc." + op)  # (a line break would miss the translation)
     settings = bpy.data.cameras.new("tooltips").ftc
     for rna in (settings.bl_rna, settings.camera_data.bl_rna, settings.sun.bl_rna):
         for prop in rna.properties:

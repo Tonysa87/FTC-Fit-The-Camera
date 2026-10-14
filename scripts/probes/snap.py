@@ -25,6 +25,7 @@ calibrate.set_handle(s, "cube_top", tuple(syn.project([1.0, 0.5, 1.0])[0] / (w, 
 calibrate.set_handle(s, "vp3_1a", tuple(syn.project([2, -2, 3])[0] / (w, h)))
 calibrate.set_handle(s, "vp3_1b", tuple(syn.project([2, -2, 0])[0] / (w, h)))
 s.scale_mode, s.use_third_line = "CUBE", True
+s.vp1_lines = 4  # extra guides (1.1), at their default places between lines 1 and 2
 W, H = 1200, 700
 view = draw.View(20.0, 20.0, 1180.0, 20.0 + 1160 * 1080 / 1920, (1920, 1080))
 session = SimpleNamespace(active_vp=0, hover=None, drag_key=None)

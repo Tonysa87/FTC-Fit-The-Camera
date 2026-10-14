@@ -62,6 +62,33 @@ HANDLE_DEFAULTS = {
     "shadow_tip": (0.55, 0.22),
 }
 
+# Guide lines per vanishing point: two by default, up to six (1.1).
+MAX_LINES = 6
+# Where an extra line goes between the first two lines of its group (fraction
+# from the first): spread so that each new line falls in a gap.
+EXTRA_LINE_T = {3: 0.5, 4: 0.25, 5: 0.75, 6: 0.125}
+
+
+def extra_line(layout: dict, index: int, n: int) -> tuple:
+    """Default ends of line ``n`` (3..6) of group ``index``, between its first
+    two lines in ``layout``: a line that already points near the vanishing point."""
+    t = EXTRA_LINE_T[n]
+    ends = []
+    for end in "ab":
+        p1, p2 = layout[f"vp{index}_1{end}"], layout[f"vp{index}_2{end}"]
+        ends.append((p1[0] + t * (p2[0] - p1[0]), p1[1] + t * (p2[1] - p1[1])))
+    return tuple(ends)
+
+
+def _add_extra_lines(layout: dict) -> None:
+    for index in (1, 2, 3):
+        for n in range(3, MAX_LINES + 1):
+            a, b = extra_line(layout, index, n)
+            layout[f"vp{index}_{n}a"], layout[f"vp{index}_{n}b"] = a, b
+
+
+_add_extra_lines(HANDLE_DEFAULTS)
+
 # Camera object name of the running calibration session, if any.
 session_camera: str | None = None
 
@@ -159,6 +186,7 @@ def default_handles(settings) -> dict:
             t = min(0.6, 0.3 / abs(vp[0] - a[0]))
             layout[f"vp{index}_{line}b"] = (a[0] + t * (vp[0] - a[0]), a[1] + t * (vp[1] - a[1]))
     layout.update(_default_rectangle(settings, focal, w, h))
+    _add_extra_lines(layout)
     return layout
 
 
@@ -228,9 +256,26 @@ def to_pixels(settings, co) -> tuple[float, float]:
     return co[0] * w, co[1] * h
 
 
-def vp_keys(index: int) -> list[str]:
-    """Handle keys of the two guide lines of vanishing point ``index`` (1-based)."""
-    return [f"vp{index}_1a", f"vp{index}_1b", f"vp{index}_2a", f"vp{index}_2b"]
+def vp_keys(index: int, count: int = 2) -> list[str]:
+    """Handle keys of the first ``count`` guide lines of vanishing point
+    ``index`` (1-based): a, b of line 1, then of line 2..."""
+    return [f"vp{index}_{n}{end}" for n in range(1, count + 1) for end in "ab"]
+
+
+def line_count(settings, index: int) -> int:
+    return getattr(settings, f"vp{index}_lines")
+
+
+def group_keys(settings, index: int) -> list[str]:
+    """Handle keys of every guide line of vanishing point ``index``."""
+    return vp_keys(index, line_count(settings, index))
+
+
+def group_lines(settings, index: int) -> list[tuple]:
+    """Guide lines (pixel segments) of vanishing point ``index``."""
+    keys = group_keys(settings, index)
+    pts = [to_pixels(settings, handle(settings, k)) for k in keys]
+    return [(pts[i], pts[i + 1]) for i in range(0, len(pts), 2)]
 
 
 def active_handle_keys(settings) -> list[str]:
@@ -239,7 +284,7 @@ def active_handle_keys(settings) -> list[str]:
     if settings.mode == "VP":
         count = int(settings.vp_count)
         for i in range(1, count + 1):
-            keys += vp_keys(i)
+            keys += group_keys(settings, i)
         if count == 1:
             keys += ["hz_a", "hz_b"]
         if count == 2 and settings.use_third_line:
@@ -386,8 +431,8 @@ def solve(settings, overrides: dict | None = None, distance: float | None = None
         count = int(settings.vp_count)
         lines = []
         for i in range(1, count + 1):
-            a1, b1, a2, b2 = _points(settings, vp_keys(i))
-            lines.append([(a1, b1), (a2, b2)])
+            pts = _points(settings, group_keys(settings, i))
+            lines.append([(pts[k], pts[k + 1]) for k in range(0, len(pts), 2)])
         axes = [settings.vp1_axis, settings.vp2_axis, settings.vp3_axis][: max(count, 2)]
         axis2_line = third_line = None
         focal = _focal_inputs(settings) if count >= 2 else {}

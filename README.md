@@ -255,8 +255,8 @@ the real ones. *Sun From* picks the source:
   rotation: strength, colour and angle stay yours. It follows the camera on
   *Apply* and while calibrating. A deleted or linked light, or constraints and
   keyframes that override the rotation, are reported.
-- *Display › North* draws the north (N) and the sun direction (dashed) on the
-  ground through the origin while calibrating.
+- *Display › North* (off by default) draws the north (N) and the sun direction
+  (dashed) on the ground through the origin while calibrating.
 
 #### Fit HDRI
 

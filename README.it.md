@@ -237,8 +237,8 @@ quelle vere. *Sole da* sceglie la fonte:
   rotazione: intensità, colore e angolo restano tuoi. Segue la camera con
   *Applica* e durante la calibrazione. Una luce cancellata o collegata, o vincoli
   e keyframe che ne sovrascrivono la rotazione, vengono segnalati.
-- *Visualizzazione › Nord* disegna il nord (N) e la direzione del sole
-  (tratteggiata) sul suolo per l'origine durante la calibrazione.
+- *Visualizzazione › Nord* (spento di default) disegna il nord (N) e la direzione
+  del sole (tratteggiata) sul suolo per l'origine durante la calibrazione.
 
 #### Fit HDRI
 
