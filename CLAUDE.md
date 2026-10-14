@@ -7,8 +7,8 @@ Extensions audience) and `README.it.md` (Italian); developer docs
 "Camera Match": the final name is **FTC**, package `fit_the_camera`, tab "FTC").
 
 ## Status / next session (bookmark 2026-10-14, night)
-- **RESUME HERE**: the user is GUI-testing **1.1.0-alpha.12** on Windows
-  (`dist/fit_the_camera-1.1.0-alpha.12.zip`, checklist `docs/TEST_GUI_1.1.md`).
+- **RESUME HERE**: the user is GUI-testing **1.1.0-alpha.13** on Windows
+  (`dist/fit_the_camera-1.1.0-alpha.13.zip`, checklist `docs/TEST_GUI_1.1.md`).
   Cabin photo (`samples/IMG_20260804_185218650.jpg`) DONE: Side **-Y** (not -X:
   +Y runs into the wall), Turn -16°, **Raise** -3.5° (16.0° -> 12.5°) -> the CG
   sign shadow matches the photo ("PERFETTO"). Raise (`sun.elevation_correction`,
@@ -27,7 +27,12 @@ Extensions audience) and `README.it.md` (Italian); developer docs
   Shadow** = `ftc.calibrate(shadow=True)`: `Session.shadow_only`, only
   `draw.session_keys` (shadow handles), no guides/cube/pitch/warnings,
   calibration shortcuts off, `calibrate.session_camera` not set, Enter never
-  writes the camera; clicking the other kind of Calibrate switches. Then the
+  writes the camera; clicking the other kind of Calibrate switches. alpha.13:
+  the white × (`draw.sun_mark`, label "Fit Sun") = the computed sun wherever
+  it meets a measure (shadow tip in the view, sun in the HDRI viewer), hints in
+  panel/header; *Check with a Shadow* (`use_shadow`) also with Side (*Shadow vs
+  Turn* = the Turn to add; *Shadow vs Date* = the Raise that matches). The
+  grey + is the principal point. Then the
   rest of the checklist, then release 1.1.0. He also asked whether the grid step
   should be labelled (offered, not decided).
 - **1.1 developed (2026-10-14): all phases S1–S4, A1, A2 done, audited, pushed.**

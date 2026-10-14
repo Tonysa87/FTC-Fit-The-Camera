@@ -511,10 +511,8 @@ class FTC_PT_main(Panel):
         """Shadow handles: the sun itself (Sun From Shadow), the north (North
         Shadow), or a check of the compass."""
         north = ops_sun.north_source(sun.id_data.ftc)
-        if sun.source == "TIME" and north == "SIDE":
-            return
         body.separator()
-        if sun.source == "TIME" and north == "COMPASS":
+        if sun.source == "TIME" and north != "SHADOW":
             body.prop(sun, "use_shadow")
             if not sun.use_shadow:
                 return
@@ -539,6 +537,15 @@ class FTC_PT_main(Panel):
             ),
             icon="INFO",
         )
+        if sun.source == "TIME":
+            if north == "SHADOW":
+                hint = iface_("×: where the Fit Sun sun puts the shadow tip; Raise moves it along the shadow")
+            else:
+                turn = iface_("Turn", "FTC") if north == "SIDE" else iface_("North Correction", "FTC")
+                hint = iface_(
+                    "×: where the Fit Sun sun puts the shadow tip; {} moves it sideways, Raise along the shadow"
+                ).format(turn)
+            wrapped(body, context, hint, icon="INFO")
         col = body.column(align=True)
         if state.shadow is not None:
             spread = f"  ±{state.shadow_spread:.1f}°" if math.isfinite(state.shadow_spread) else "  ±?"
@@ -560,7 +567,7 @@ class FTC_PT_main(Panel):
             noise = f"  ±{spread:.1f}°" if math.isfinite(spread) else "  ±?"
             info_row(
                 col,
-                iface_("Shadow vs Compass"),
+                iface_("Shadow vs Turn") if north == "SIDE" else iface_("Shadow vs Compass"),
                 f"{state.shadow_north_offset:+.1f}°{noise}",
                 alert=ops_sun.north_offset_alert(state),
             )

@@ -1468,6 +1468,21 @@ def shadow_checks_the_date_and_gives_the_north():
     # Turning the compass north by 10° shows in Shadow vs Compass.
     s.sun.north_correction = math.radians(10.0)
     assert angle_diff(ops_sun.evaluate(s).shadow_north_offset, first - 10.0) < 0.02
+    # Side + Check with a Shadow: Shadow vs Turn is the Turn to add, and the
+    # elevation offset the Raise that matches.
+    s.sun.north_source = "SIDE"
+    assert "shadow_foot" in calibrate.active_handle_keys(s)
+    s.sun.north_correction = 0.0
+    need = ops_sun.evaluate(s).shadow_north_offset
+    s.sun.north_correction = math.radians(need)
+    assert abs(ops_sun.evaluate(s).shadow_north_offset) < 0.02
+    s.sun.elevation_correction = math.radians(-3.0)
+    assert abs(ops_sun.evaluate(s).shadow_elevation_offset) < 0.02, "against the date, not the raised sun"
+    s.sun.elevation_correction = 0.0
+    s.sun.use_shadow = False
+    assert "shadow_foot" not in calibrate.active_handle_keys(s)
+    s.sun.use_shadow = True
+    s.sun.north_source = "COMPASS"
     # North from the shadow: the light follows the shadow, the turn is ignored.
     assert bpy.ops.ftc.new_sun() == {"FINISHED"}
     s.sun.north_source = "SHADOW"
