@@ -19,9 +19,11 @@ Zip: `\\wsl.localhost\Ubuntu-24.04\home\tony\Projects\FTC\dist\fit_the_camera-<v
    elevazione ~16,0°. *North* su **Side** (nessuna bussola: *Compass* è
    disattivato), lato −Y.
 3. Calibra sulla facciata. **New Sun** (icona del sole accanto a *Light*).
-   Nella foto l'ombra del cartello va verso destra: il sole arriva da sinistra,
-   cioè da **−X**. Premi −X: la luce si gira subito. Affina con **Turn**
-   guardando le ombre della CG (un cubo davanti al muro, *Prepare Render*).
+   Con il calibro asse 1 +X (lungo il muro), asse 2 +Z, il sole arriva da
+   **−Y** (dietro la camera, un po' da sinistra): Side −Y, **Turn** ~−16°
+   guardando le ombre della CG (un palo davanti al muro, *Prepare Render*).
+   Poi **Raise** finché l'ombra del palo è alta come quella del cartello: il
+   pannello mostra *Sun Elevation* 16,0° → valore usato.
 4. **Lago** (`IMG_20250630_152535968_HDR.jpg`): sole ~238,7° / 56,3°. Modalità
    *Horizon*, *Side*: scegli il lato da cui arriva la luce nella foto e ruota.
 5. **Ponte levatoio** (`IMG_20230108_110414.jpg`): l'ora letta deve essere

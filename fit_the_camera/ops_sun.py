@@ -236,8 +236,14 @@ def evaluate(settings, solution=None) -> SunState:
     elif shadow_bearing is not None:
         state.shadow_north_offset = (shadow_bearing - state.y_bearing + 180.0) % 360.0 - 180.0
         state.shadow_north_spread = azimuth_spread(state.shadow_spread, state.shadow)
-    state.direction = Vector(scene_direction(state.sun, state.y_bearing).tolist())
+    state.direction = Vector(scene_direction(raised(state.sun, sun), state.y_bearing).tolist())
     return state
+
+
+def raised(position: SunPosition, sun) -> SunPosition:
+    """The date's sun with the Elevation Correction, kept between the horizon and the zenith."""
+    elevation = position.elevation + math.degrees(sun.elevation_correction)
+    return SunPosition(position.azimuth, min(90.0, max(0.0, elevation)))
 
 
 def north_vector(y_bear: float) -> Vector:
