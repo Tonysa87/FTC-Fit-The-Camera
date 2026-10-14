@@ -225,6 +225,29 @@ Catcher*, *Holdout* or *No Role* to all the selected objects.
 - [Development](docs/DEVELOPMENT.md) (Italian): structure, conventions, tests,
   build
 
+## Credits
+
+FTC was inspired by [fSpy](https://github.com/stuffmatic/fSpy) by Per
+Gantelius (stuffmatic), the standalone camera matching app that many Blender
+users know: the idea was to do the same kind of calibration natively inside
+Blender, in the camera view. FTC's code is its own (a Python add-on with its
+own solver), not a fork or a port of fSpy. The interactive guides in the
+viewport take ideas from
+[Perspective Plotter](https://perspective-plotter.readthedocs.io/).
+
+The math comes from the literature that these tools build on too:
+
+- B. Caprile, V. Torre (1990), *Using vanishing points for camera
+  calibration*, International Journal of Computer Vision.
+- E. Guillou et al. (2000), *Using vanishing points for camera calibration and
+  coarse 3D reconstruction from a single image*, The Visual Computer.
+- Z. Zhang (2000), *A flexible new technique for camera calibration*, IEEE
+  TPAMI.
+- R. Hartley, A. Zisserman (2004), *Multiple View Geometry in Computer Vision*.
+
+FTC was designed and tested by Antonio Sartini and written with Claude (Anthropic) as
+coding assistant.
+
 ## License
 
 GPL-3.0-or-later, see [LICENSE](LICENSE). © 2026 Antonio Sartini.

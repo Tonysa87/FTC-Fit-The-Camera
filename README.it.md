@@ -210,6 +210,29 @@ Catcher*, *Holdout* o *No Role* a tutti gli oggetti selezionati.
 - **Raddrizza orizzonte** forza il rollio a 0: se la foto è inclinata la camera
   non segue più le guide (l'avviso indica quanti gradi ha tolto).
 
+## Riconoscimenti
+
+FTC nasce dall'esempio di [fSpy](https://github.com/stuffmatic/fSpy) di Per
+Gantelius (stuffmatic), l'app esterna di camera matching che molti utenti di
+Blender conoscono: l'idea era fare lo stesso tipo di calibrazione direttamente
+dentro Blender, nella vista camera. Il codice di FTC è suo (un add-on Python
+con un solver proprio), non un fork né una traduzione di fSpy. Le guide
+interattive nel viewport prendono spunto da
+[Perspective Plotter](https://perspective-plotter.readthedocs.io/).
+
+La matematica viene dalla letteratura su cui si basano anche questi strumenti:
+
+- B. Caprile, V. Torre (1990), *Using vanishing points for camera
+  calibration*, International Journal of Computer Vision.
+- E. Guillou et al. (2000), *Using vanishing points for camera calibration and
+  coarse 3D reconstruction from a single image*, The Visual Computer.
+- Z. Zhang (2000), *A flexible new technique for camera calibration*, IEEE
+  TPAMI.
+- R. Hartley, A. Zisserman (2004), *Multiple View Geometry in Computer Vision*.
+
+FTC è stato ideato e provato da Antonio Sartini e scritto con Claude (Anthropic)
+come assistente di programmazione.
+
 ## Licenza
 
 GPL-3.0-or-later, vedi [LICENSE](LICENSE).
