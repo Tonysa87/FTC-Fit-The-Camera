@@ -355,6 +355,10 @@ vivo come nelle altre modalità.
 
 - A1: fatta (fino a 6 linee, pulsanti − n +; la nuova linea punta
   all'incontro delle prime due).
+- A2: fatta. Report Markdown/JSON (`report.py`), permesso del manifest
+  "Read the photo and its EXIF metadata, save calibration reports" (il
+  validatore accetta al massimo 64 caratteri, senza punto finale);
+  `docs/CHANGELOG.md` in inglese, storia italiana in `docs/CHANGELOG.it.md`.
 
 ## Fasi
 

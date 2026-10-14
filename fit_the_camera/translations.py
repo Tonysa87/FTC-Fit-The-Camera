@@ -390,6 +390,17 @@ _IT = {
     "Guide lines of vanishing point 3 (2 to 6): more lines average out the placement errors": (
         "Linee guida del punto di fuga 3 (da 2 a 6): più linee mediano gli errori di posizionamento"
     ),
+    # Report
+    "Export Report": "Esporta report",
+    "Save the calibration report: focal length, sensor, field of view, camera position and rotation, "
+    "accuracy, guide fit, the source of every input and the sun, as Markdown or JSON": (
+        "Salva il report di calibrazione: focale, sensore, campo visivo, posizione e rotazione della camera, "
+        "precisione, aderenza delle guide, la fonte di ogni dato e il sole, in Markdown o JSON"
+    ),
+    "File format of the report": "Formato del file del report",
+    "A readable page (.md)": "Una pagina leggibile (.md)",
+    "Data for other programs (.json)": "Dati per altri programmi (.json)",
+    "Report saved: {}": "Report salvato: {}",
     # FTC orientation
     "FTC Orientation": "Orientamento FTC",
     "No 3D view to create the orientation from": "Nessuna vista 3D da cui creare l'orientamento",

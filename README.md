@@ -82,6 +82,8 @@ The rest of this page explains every option.
 - **Render over the photo**: one button sets colour management, transparent film
   and the compositor; shadow catcher and holdout roles for the objects that
   stand in for real surfaces and objects of the photo.
+- **Calibration report** (1.1, in development): Markdown or JSON, with the
+  source of every input.
 - **Fit Sun** (1.1, in development): a Sun light turned like the sun of the
   photo, from the EXIF date, time and GPS (or entered by hand), with the north
   from the compass, a map, a distant landmark or a shadow; or measured on a
@@ -102,8 +104,9 @@ Without the online extensions (offline, or a specific version):
 2. In Blender 5.2 or later: *Edit › Preferences › Get Extensions › ⌄ ›
    Install from Disk…* and pick the zip.
 
-The extension only reads the image file you load (and its EXIF metadata). It
-does not use the network.
+The extension only reads the image file you load (and its EXIF metadata) and,
+from 1.1, writes the calibration reports you export. It does not use the
+network.
 
 ## The panel, step by step
 
@@ -134,7 +137,8 @@ Open the sidebar of the 3D viewport (N) and the **FTC** tab.
 4. **Align to Scene** – place the calibrated plane (XY, XZ or YZ) on the 3D
    cursor, on the active face (Edit Mode) or on the active object.
 5. **Results** – focal length, field of view, camera height, angles, uncertainty
-   and guide fit, with warnings.
+   and guide fit, with warnings. **Export Report** (1.1) saves them, with the
+   source of every input and the sun, as Markdown or JSON.
 6. **Render** – see below.
 7. **Tools › FTC Orientation** – makes the "FTC" transform orientation the viewport's:
      the photo's calibrated axes in the scene (created on Apply and by Align to
@@ -305,7 +309,7 @@ ambient light, reflections and the Sun light then agree.
 
 ## Documentation
 
-- [Changelog](docs/CHANGELOG.md)
+- [Changelog](docs/CHANGELOG.md) (full Italian history: [CHANGELOG.it.md](docs/CHANGELOG.it.md))
 - [Italian user guide](README.it.md)
 - [Development](docs/DEVELOPMENT.md) (Italian): structure, conventions, tests,
   build

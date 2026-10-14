@@ -1623,6 +1623,46 @@ def extra_guide_lines():
 
 
 @test
+def export_report_json_and_markdown():
+    import json
+
+    cam = _sun_camera(sun_tiff())
+    s = cam.data.ftc
+    s.sun.north_source = "MAP"
+    s.sun.map_axis, s.sun.map_bearing = "+X", math.radians(90.0)
+    assert bpy.ops.ftc.new_sun() == {"FINISHED"}
+    path = os.path.join(SCRATCH, "report.json")
+    assert bpy.ops.ftc.export_report(filepath=path, format="JSON") == {"FINISHED"}
+    with open(path, encoding="utf-8") as f:
+        report = json.load(f)
+    assert report["camera"] == cam.name and report["ftc_version"].startswith("1.1")
+    assert report["camera_data"]["focal_35mm"] == {"value": 36.0, "source": "EXIF"}
+    res = report["results"]
+    assert res["valid"] and abs(res["focal_px"] - s.results.focal_px) < 1e-2
+    assert res["location"] == [round(v, 6) for v in cam.matrix_world.translation]
+    assert report["calibration"]["lines_per_vanishing_point"] == [2, 2]
+    sun = report["sun"]
+    assert abs(sun["azimuth_deg"] - SUN_AZIMUTH) < 0.05 and sun["light"] == s.sun.light.name
+    assert sun["utc"].startswith("2026-06-21T10:30:00") and sun["latitude"]["source"] == "EXIF"
+
+    path = os.path.join(SCRATCH, "report")
+    assert bpy.ops.ftc.export_report(filepath=path, format="MARKDOWN") == {"FINISHED"}
+    with open(path + ".md", encoding="utf-8") as f:
+        text = f.read()
+    assert text.startswith("# FTC calibration report") and "## Sun" in text and "| focal px |" in text
+
+    # A failed calibration still gives a report, with the error.
+    fresh_scene()
+    cam = load(write_photo("plain_report.jpg", (800, 600)))
+    calibrate.set_handle(cam.data.ftc, "vp1_1b", calibrate.handle(cam.data.ftc, "vp1_1a"))
+    calibrate.refresh(cam.data)
+    path = os.path.join(SCRATCH, "failed.json")
+    assert bpy.ops.ftc.export_report(filepath=path, format="JSON") == {"FINISHED"}
+    with open(path, encoding="utf-8") as f:
+        assert json.load(f)["results"]["valid"] is False
+
+
+@test
 def every_button_has_a_tooltip():
     """Operators and the settings drawn as buttons all carry a description."""
     internal = {"loading", "active_vp", "handles", "anchor_matrix", "camera_data", "results", "image", "rna_type"}
@@ -1650,6 +1690,7 @@ def every_button_has_a_tooltip():
         "read_photo_time",
         "fit_hdri",
         "vp_line",
+        "export_report",
     ):
         description = getattr(bpy.ops.ftc, op).get_rna_type().description
         if not description.strip() or "\n" in description:

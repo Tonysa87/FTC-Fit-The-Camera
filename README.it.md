@@ -10,7 +10,7 @@
 Estensione per Blender 5.2+ che calibra una camera su una singola immagine
 (foto, render, disegno): focale, sensore, posizione e rotazione, con scala reale;
 poi prepara la scena per renderizzare oggetti 3D sopra la foto. Storia delle
-versioni: [`docs/CHANGELOG.md`](docs/CHANGELOG.md). Sviluppo:
+versioni: [`docs/CHANGELOG.it.md`](docs/CHANGELOG.it.md) (in inglese: [`docs/CHANGELOG.md`](docs/CHANGELOG.md)). Sviluppo:
 [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md).
 
 ## Guida rapida
@@ -108,6 +108,8 @@ Sidebar del viewport (N) › tab **FTC**.
    faccia attiva (Edit Mode) o sull'oggetto attivo; Ruota 90° / Inverti.
 5. **Results** – focale, FOV, altezza, angoli, **incertezza** (focale ± %,
    orientamento ± °) e **aderenza guide** (scarto massimo); avvisi in giallo/rosso.
+   **Export Report** (1.1) li salva, con la fonte di ogni dato e il sole, in
+   Markdown o JSON.
 6. **Render** – **Prepare Render** prepara la scena per renderizzare la CG sopra la
    foto (vedi sotto); **Object Roles** elenca gli oggetti della scena: per ognuno
    si attiva *Shadow Catcher* o *Holdout*, oppure si assegnano ai selezionati con
