@@ -23,7 +23,16 @@ Riassunto delle regole di [extensions.blender.org](https://extensions.blender.or
    Blender non aggiorna da solo: l'utente vede l'aggiornamento in *Get
    Extensions*.
 
-## Materiale (2026-10-11: 1.0.0 inviata, in attesa di revisione)
+## Stato
+
+- 2026-10-11: 1.0.0 inviata.
+- 2026-10-14: **1.0.0 approvata**, pubblica su <https://extensions.blender.org/add-ons/fit-the-camera/>.
+  Unico commento del moderatore: togliere il tag `3D View` nelle prossime
+  versioni. Fatto nel manifest (`tags = ["Camera", "Render"]`): esce con la
+  prossima versione caricata. I tag si cambiano solo dal manifest, non dal
+  sito; la 1.0.0 online li tiene com'erano.
+
+## Materiale
 
 Il materiale sta in `extensions_listing/`, cartella locale esclusa da git (vedi
 il suo README): immagini in `extensions_listing/upload/`, testi e didascalie in
@@ -70,6 +79,9 @@ immagini incluse nello zip devono essere CC0 (FTC non ne include).
 
 ## Regole già verificate su FTC
 
+- Tag: solo quelli che descrivono davvero l'estensione (`Camera`, `Render`).
+  Niente `3D View` solo perché il pannello sta nella sidebar del viewport
+  (chiesto dal moderatore all'approvazione della 1.0.0).
 - Manifest: tutti i campi pieni; tagline ≤ 64 caratteri senza punto finale;
   `permissions.files` (una frase breve senza punto) perché legge l'immagine e
   l'EXIF; niente `network`. Niente sezione `[build]` con i valori di default

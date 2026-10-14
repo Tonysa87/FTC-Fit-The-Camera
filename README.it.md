@@ -2,6 +2,9 @@
 
 [English](README.md) · **Italiano**
 
+**Disponibile su [Blender Extensions](https://extensions.blender.org/add-ons/fit-the-camera/)** (oppure dalle
+[Release](https://github.com/Tonysa87/FTC-Fit-The-Camera/releases)).
+
 ![Un oggetto CG renderizzato in una foto calibrata con FTC](docs/images/ftc_hero.jpg)
 
 Estensione per Blender 5.2+ che calibra una camera su una singola immagine
@@ -12,9 +15,9 @@ versioni: [`docs/CHANGELOG.md`](docs/CHANGELOG.md). Sviluppo:
 
 ## Guida rapida
 
-1. **Installa** – scarica `fit_the_camera-<versione>.zip` dalle
-   [Release](https://github.com/Tonysa87/FTC-Fit-The-Camera/releases), poi in
-   Blender *Edit › Preferences › Get Extensions › ⌄ › Install from Disk…*
+1. **Installa** – in Blender *Edit › Preferences › Get Extensions* cerca
+   "Fit The Camera" e premi *Install* (pagina su
+   [Blender Extensions](https://extensions.blender.org/add-ons/fit-the-camera/)).
 2. **Carica la foto** – sidebar del viewport (**N**) › tab **FTC** › **Load
    Image**. La foto va sulla camera della scena (su una nuova camera col nome
    della foto, se quella ha già una foto) e la vista guarda da lì; focale e
@@ -54,6 +57,12 @@ versioni: [`docs/CHANGELOG.md`](docs/CHANGELOG.md). Sviluppo:
 Il resto della pagina spiega ogni opzione.
 
 ## Installazione
+
+FTC è su [Blender Extensions](https://extensions.blender.org/add-ons/fit-the-camera/): in Blender 5.2 o successivo apri
+*Edit › Preferences › Get Extensions*, cerca "Fit The Camera" e premi
+*Install*. Gli aggiornamenti poi arrivano da lì.
+
+Senza le estensioni online (offline, o per una versione precisa):
 
 1. Scarica `fit_the_camera-<versione>.zip` dalle
    [Release](https://github.com/Tonysa87/FTC-Fit-The-Camera/releases).
