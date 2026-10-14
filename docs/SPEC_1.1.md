@@ -8,7 +8,9 @@ La 1.0 copre bene le foto con linee parallele chiare: interni, facciate,
 pavimenti. La 1.1 porta FTC **all'aperto e nel mondo reale**:
 
 1. **Sole** – una luce solare orientata come quella della foto, dall'EXIF
-   (data, ora, GPS, bussola) o da un'ombra visibile nell'immagine.
+   (data, ora, GPS, bussola) o da un'ombra visibile nell'immagine; l'HDRI
+   del World si ruota attorno a Z per avere il suo sole nella stessa
+   direzione.
 2. **Punti noti** – nuova modalità di calibrazione da corrispondenze punto
    immagine ↔ punto 3D della scena, per le foto senza linee parallele (campi
    aperti, paesaggi, rovine).
@@ -289,6 +291,8 @@ Extensions. Dalla 1.1 il changelog va in inglese, con l'italiano nella guida.
 2. Punti noti: bastano oggetti, vertici e coordinate a mano, o servono anche
    punti da un CSV di rilievo? Il CSV può aspettare la 1.2.
 3. Import fSpy nella 1.1 o rimandato, se i tempi si allungano.
+4. Orient HDRI: solo Environment Texture equirettangolare, o anche altre
+   proiezioni? Proposta: solo equirettangolare, che copre quasi tutti gli HDRI.
 
 ## Fasi
 
@@ -298,15 +302,16 @@ Extensions. Dalla 1.1 il changelog va in inglese, con l'italiano nella guida.
 2. **S1 – EXIF data e ora**, `solver/sun.py` e test.
 3. **S2 – Sole**: sezione *Sun*, sorgente EXIF, luce, freccia del nord.
 4. **S3 – Sole dall'ombra** e confronto con la bussola.
-5. **P1 – `solver/pnp.py`** con test sintetici dei tre casi.
-6. **P2 – Modalità Punti noti**: lista, maniglie, scarti, incertezza.
-7. **A1 – Linee extra per punto di fuga.**
-8. **A2 – Import fSpy**, **A3 – Report**, changelog in inglese.
-9. **Rilascio 1.1.0**:
+5. **S4 – Orient HDRI**: probe `hdri` per le convenzioni, visore, rotazione Z.
+6. **P1 – `solver/pnp.py`** con test sintetici dei tre casi.
+7. **P2 – Modalità Punti noti**: lista, maniglie, scarti, incertezza.
+8. **A1 – Linee extra per punto di fuga.**
+9. **A2 – Import fSpy**, **A3 – Report**, changelog in inglese.
+10. **Rilascio 1.1.0**:
    - `pixi run check`, test GUI di Antonio su Windows, release GitHub e
      *Upload new version* su Extensions;
    - post di aggiornamento su r/blender con un video breve: punti noti su un
-     campo aperto e ombra del CG allineata a quella vera.
+     campo aperto, ombra del CG allineata a quella vera, HDRI che ruota sul sole.
 
 Ogni fase si chiude con `pixi run check` verde e un commit su `main`. Le fasi
 S e P sono indipendenti: se una delle due si blocca, l'altra può uscire da
