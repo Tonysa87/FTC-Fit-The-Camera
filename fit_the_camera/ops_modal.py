@@ -18,7 +18,7 @@ from .solver import cube_top_px
 
 FINE_FACTOR = 0.2
 # Handles that only place or scale the scene, not its orientation.
-SCALE_KEYS = {"origin", "ref_a", "ref_b", "cube_base", "cube_top", "landmark"}
+SCALE_KEYS = {"origin", "ref_a", "ref_b", "cube_base", "cube_top", *ops_sun.SUN_KEYS}
 UNDO_LIMIT = 100
 
 # Events left to the viewport so that pan and zoom keep working.
@@ -331,7 +331,7 @@ class FTC_OT_calibrate(Operator):
         push_undo(session, snap)
 
     def changed(self, context, cam_obj, *, reset_pitch=True, key=None):
-        if key == ops_sun.LANDMARK_KEY:
+        if key in ops_sun.SUN_KEYS:
             # Not a calibration input: no solve (nor uncertainty), only the sun.
             ops_sun.orient(cam_obj.data.ftc)
             calibrate.tag_redraw(context)
@@ -608,11 +608,12 @@ class FTC_OT_reset(Operator):
         session = FTC_OT_calibrate._session
         if session is not None and session.camera_name == cam_obj.name:
             push_undo(session, snapshot(settings))
-        landmark = calibrate.handle(settings, ops_sun.LANDMARK_KEY)
+        kept = {key: calibrate.handle(settings, key) for key in ops_sun.SUN_KEYS}
         with calibrate.suspended():
             calibrate.reset_handles(settings)
-            # A sun input, not a guide: it stays on its landmark.
-            calibrate.set_handle(settings, ops_sun.LANDMARK_KEY, landmark)
+            # Sun inputs, not guides: they stay on the landmark and the shadow.
+            for key, co in kept.items():
+                calibrate.set_handle(settings, key, co)
             settings.pitch_offset = 0.0
         calibrate.settings_changed(cam_obj.data, context, reset_pitch=True)
         return {"FINISHED"}

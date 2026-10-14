@@ -95,6 +95,7 @@ ctx = SimpleNamespace(
 )
 panel = SimpleNamespace(layout=Mock())
 panel.draw_alignment = lambda *a: ui.FTC_PT_main.draw_alignment(panel, *a)
+panel.draw_shadow = lambda *a: ui.FTC_PT_main.draw_shadow(panel, *a)
 for meth in ("draw_camera_data", "draw_calibration", "draw_display", "draw_results", "draw_tools"):
     pass
 count = 0
@@ -136,8 +137,10 @@ for mode, vp, scale, focal, cube, size, pp in itertools.product(
 light = bpy.data.objects.new("probe sun", bpy.data.lights.new("probe sun", "SUN"))
 bpy.context.collection.objects.link(light)
 data = s.camera_data
-for source, ref, has_light, time_state, offset_state, place, direction in itertools.product(
-    ("COMPASS", "MAP", "LANDMARK"),
+for sun_from, use_shadow, source, ref, has_light, time_state, offset_state, place, direction in itertools.product(
+    ("TIME", "SHADOW"),
+    (False, True),
+    ("COMPASS", "MAP", "LANDMARK", "SHADOW"),
     ("", "T", "M"),
     (True, False),
     ("MISSING", "EXIF", "MANUAL"),
@@ -148,6 +151,8 @@ for source, ref, has_light, time_state, offset_state, place, direction in iterto
     with calibrate.suspended():
         s.mode = "VP"
         s.sun.north_source = source
+        s.sun.source = sun_from
+        s.sun.use_shadow = use_shadow
         s.sun.light = light if has_light else None
         data.loading = True
         data.direction_ref = ref
@@ -160,6 +165,6 @@ for source, ref, has_light, time_state, offset_state, place, direction in iterto
     try:
         ui.FTC_PT_main.draw_sun(panel, ctx, Mock(), s)
     except Exception as exc:
-        problems.add(f"draw_sun {source} {ref} {time_state}: {type(exc).__name__}: {exc}")
+        problems.add(f"draw_sun {sun_from} {use_shadow} {source} {ref} {time_state}: {type(exc).__name__}: {exc}")
     count += 1
 print("configs", count, "problems:", *sorted(problems), sep="\n  ")

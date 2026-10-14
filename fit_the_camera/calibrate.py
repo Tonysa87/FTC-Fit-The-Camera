@@ -56,6 +56,10 @@ HANDLE_DEFAULTS = {
     "hz_b": (0.20, 0.55),
     # Distant landmark of known compass bearing (north from a landmark, Sun).
     "landmark": (0.50, 0.60),
+    # Shadow (Sun): foot and top of a vertical object, tip of its shadow.
+    "shadow_foot": (0.40, 0.25),
+    "shadow_top": (0.40, 0.45),
+    "shadow_tip": (0.55, 0.22),
 }
 
 # Camera object name of the running calibration session, if any.
@@ -253,8 +257,11 @@ def active_handle_keys(settings) -> list[str]:
         keys.append("cube_top")
     if settings.pp_mode == "MANUAL":
         keys.append("pp")
-    if settings.sun.north_source == "LANDMARK":
+    sun = settings.sun
+    if sun.source == "TIME" and sun.north_source == "LANDMARK":
         keys.append("landmark")
+    if sun.source == "SHADOW" or sun.use_shadow or sun.north_source == "SHADOW":
+        keys += ["shadow_foot", "shadow_top", "shadow_tip"]
     return keys
 
 
@@ -450,6 +457,7 @@ def solve(settings, overrides: dict | None = None, distance: float | None = None
 
 # Handles that only place or scale the result, not its orientation or focal length.
 POSE_ONLY_KEYS = {"origin", "ref_a", "ref_b", "cube_base", "cube_top", "pp", "landmark"}
+POSE_ONLY_KEYS |= {"shadow_foot", "shadow_top", "shadow_tip"}
 # Assumed placement error of a handle, as a fraction of the long image side.
 PLACEMENT_ERROR = 1e-3
 UNSTABLE_FOCAL = 0.05
