@@ -38,7 +38,8 @@ Una modalità di calibrazione da punti rilevati (PnP) è descritta in
 
 ## 1. Sole
 
-Nuova sezione **Sun** nel pannello, dopo *Render*. Funziona con qualsiasi
+Nuova sezione **Fit Sun** nel pannello, dopo *Render* (nomi *Fit Sun* / *Fit HDRI*
+scelti da Antonio il 2026-10-14: richiamano *Fit The Camera*, non si traducono). Funziona con qualsiasi
 modalità di calibrazione, a calibrazione applicata.
 
 ### Due sorgenti, stessa uscita
@@ -111,7 +112,15 @@ non a terra. Con l'origine nello spigolo muro–marciapiede il pavimento (XY) e
 il muro (XZ o YZ) passano entrambi per l'origine: la punta si interseca con il
 piano scelto per lei (pavimento di default, muro a scelta). È anche la foto di
 prova della S3: GPS da cella (`GPSProcessingMethod` = CELLID, errore di km,
-< 0,05° sul sole), ora UTC dal GPS, nessuna bussola. Queste funzioni esistono già in
+< 0,05° sul sole), ora UTC dal GPS, nessuna bussola.
+
+Altra foto di prova S3: `samples/IMG_20230108_110414.jpg` (ponte levatoio,
+sole ~162°/22°): ombre nette dei montanti della ringhiera sul piano del
+ponte, il caso da manuale (piede, cima, punta tutti sul pavimento).
+Grandangolo verso l'alto, 3 punti di fuga; EXIF senza equivalente 35 mm.
+L'ora GPS è di 22 s più vecchia dell'orologio: i telefoni scrivono l'ora
+dell'ultimo fix, quindi con orologio e GPS concordi l'istante viene
+dall'orologio e dal GPS solo il fuso. Queste funzioni esistono già in
 `solver/scale.py` e `solver/vp.py`. Direzione del sole = cima − punta,
 normalizzata. Dà azimut ed elevazione **senza EXIF e senza nord**.
 
@@ -141,7 +150,7 @@ finché il sole dell'HDRI coincide in azimut con il sole calcolato. Così luce
 ambiente, riflessi e luce diretta arrivano dalla stessa parte della foto.
 
 **Scelta del sole nell'HDRI**
-- Pulsante *Orient HDRI* nella sezione *Sun*, attivo quando il sole è già
+- Pulsante *Fit HDRI* nella sezione *Sun*, attivo quando il sole è già
   calcolato (da EXIF o da ombra) e il World ha un nodo *Environment Texture*
   in proiezione equirettangolare.
 - Si apre un **visore**: una miniatura dell'HDRI (~1024 px di lato lungo)
@@ -327,7 +336,7 @@ vivo come nelle altre modalità.
 
 1. Sole: pulsante *New Sun* esplicito; altrimenti la Sun attiva o
    selezionata.
-2. Orient HDRI: solo Environment Texture equirettangolare; con altre
+2. Fit HDRI: solo Environment Texture equirettangolare; con altre
    proiezioni il pulsante è disattivato e lo spiega.
 
 ## Fasi
@@ -338,7 +347,7 @@ vivo come nelle altre modalità.
 2. **S1 – EXIF data e ora**, `solver/sun.py` e test.
 3. **S2 – Sole**: sezione *Sun*, sorgente EXIF, luce, freccia del nord.
 4. **S3 – Sole dall'ombra** e confronto con la bussola.
-5. **S4 – Orient HDRI**: probe `hdri` per le convenzioni, visore, rotazione Z.
+5. **S4 – Fit HDRI**: probe `hdri` per le convenzioni, visore, rotazione Z.
 6. **A1 – Linee extra per punto di fuga.**
 7. **A2 – Report**, changelog in inglese.
 8. **Rilascio 1.1.0**:

@@ -8,7 +8,7 @@ import bpy
 from bpy.app.translations import pgettext_iface as iface_
 from bpy.types import Panel
 
-from . import calibrate, ops_orientation, ops_render
+from . import calibrate, ops_orientation, ops_render, ops_sun
 from .draw import plane_axes, remaining_axis, third_axis
 from .exif import is_native_aspect
 from .ops_load import background_for
@@ -42,6 +42,21 @@ def info_row(layout, label, value, alert=False):
     split.alert = alert
     split.label(text=label)
     split.label(text=value)
+
+
+def time_row(layout, label, data, props, state):
+    """Label, then several small fields on one line (date or time)."""
+    split = layout.split(factor=0.4, align=True)
+    split.alert = state == "MISSING"
+    sub = split.row()
+    sub.alignment = "RIGHT"
+    sub.label(text=label)
+    row = split.row(align=True)
+    for prop in props:
+        row.prop(data, prop, text="")
+    icon = row.row(align=True)
+    icon.alert = False
+    icon.label(text="", icon=STATE_ICONS[state])
 
 
 def draw_cube_size(layout, settings):
@@ -129,6 +144,7 @@ class FTC_PT_main(Panel):
         self.draw_display(context, layout, cam_obj, settings)
         self.draw_results(context, layout, settings)
         self.draw_render(context, layout, settings)
+        self.draw_sun(context, layout, settings)
         self.draw_tools(context, layout)
 
     # ------------------------------------------------------------------
@@ -304,6 +320,7 @@ class FTC_PT_main(Panel):
             sub.prop(settings, "cube_size", text="")
             if settings.cube_size == "CUSTOM":
                 sub.prop(settings, "cube_custom", text="")
+        body.prop(settings.sun, "show_north")
 
     def draw_results(self, context, layout, settings):
         header, body = layout.panel("ftc_results", default_closed=False)
@@ -360,6 +377,68 @@ class FTC_PT_main(Panel):
         body.label(text="Object Roles")
         body.template_list("FTC_UL_roles", "", scene, "objects", scene, "ftc_role_index", rows=4)
         body.operator_menu_enum("ftc.set_role", "role", icon="RESTRICT_SELECT_OFF")
+
+    def draw_sun(self, context, layout, settings):
+        header, body = layout.panel("ftc_sun", default_closed=True)
+        header.label(text="Fit Sun")
+        if body is None:
+            return
+        data = settings.camera_data
+        sun = settings.sun
+
+        col = body.column(align=True)
+        time_row(col, iface_("Date", "FTC"), data, ("day", "month", "year"), data.time_state)
+        time_row(col, iface_("Time", "FTC"), data, ("hour", "minute", "second"), data.time_state)
+        row = field(body, data, "utc_offset", data.offset_state)
+        if data.time_from_gps and data.offset_state == "EXIF" and data.utc_offset == 0.0:
+            row.label(text="UTC")
+        col = body.column(align=True)
+        state = ops_sun.location_state(data)
+        field(col, data, "gps_latitude", state)
+        field(col, data, "gps_longitude", state)
+        body.operator("ftc.read_photo_time", icon="FILE_REFRESH")
+
+        body.separator()
+        row = body.row(align=True)
+        row.use_property_split = False
+        row.prop(sun, "north_source", expand=True)
+        col = body.column()
+        if sun.north_source == "COMPASS":
+            if data.direction_state == "MISSING":
+                col.label(text="No compass direction in the photo: use Map or Landmark", icon="ERROR")
+            else:
+                row = field(col, data, "direction", data.direction_state)
+                if data.direction_ref:
+                    row.label(text=data.direction_ref)
+                if data.direction_ref.upper().startswith("M"):
+                    col.prop(sun, "declination")
+        elif sun.north_source == "MAP":
+            col.prop(sun, "map_axis")
+            col.prop(sun, "map_bearing")
+        else:
+            col.prop(sun, "landmark_bearing")
+            wrapped(col, context, iface_("Drag the Landmark handle (Calibrate) onto a distant feature"), icon="INFO")
+        col.prop(sun, "north_correction")
+
+        sun_state = ops_sun.evaluate(settings)
+        if sun_state.sun is not None:
+            box = body.column(align=True)
+            info_row(box, iface_("Sun Azimuth"), f"{sun_state.sun.azimuth:.1f}°")
+            info_row(
+                box, iface_("Sun Elevation"), f"{sun_state.sun.elevation:.1f}°", alert=sun_state.sun.elevation <= 0
+            )
+        if sun_state.error:
+            box = body.box()
+            box.alert = True
+            wrapped(box, context, iface_(sun_state.error), icon="ERROR")
+        for line in sun_state.warnings:
+            wrapped(body.box(), context, iface_(line), icon="ERROR")
+
+        row = body.row(align=True)
+        row.prop(sun, "light")
+        row.operator("ftc.new_sun", text="", icon="LIGHT_SUN")
+        if sun.light is None:
+            body.label(text="Pick a Sun light or add one: FTC turns it towards the sun", icon="INFO")
 
     def draw_tools(self, context, layout):
         header, body = layout.panel("ftc_tools", default_closed=False)

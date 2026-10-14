@@ -25,6 +25,9 @@ AXIS_ITEMS = [
     ("-Z", "-Z", "Negative Z axis"),
 ]
 
+# Context of the generic words (Map, Light, Time...): translated only for FTC.
+FTC_CONTEXT = "FTC"
+
 FIELD_STATE_ITEMS = [
     ("MISSING", "Missing", "Not found in the image metadata"),
     ("EXIF", "From EXIF", "Read from the image metadata"),
@@ -75,6 +78,34 @@ def _manual(field):
     return update
 
 
+def _manual_time(self, context):
+    if not self.loading:
+        self.time_state = "MANUAL"
+        _sun_changed(self, context)
+
+
+def _manual_offset(self, context):
+    if not self.loading:
+        self.offset_state = "MANUAL"
+        _sun_changed(self, context)
+
+
+def _manual_location(self, context):
+    if not self.loading:
+        self.location_state = "MANUAL"
+        _sun_changed(self, context)
+
+
+def _sun_changed(self, context):
+    from . import ops_sun
+
+    ops_sun.settings_changed(self.id_data, context)
+
+
+def _is_sun_light(self, obj):
+    return obj.type == "LIGHT" and obj.data.type == "SUN"
+
+
 class FTC_Handle(PropertyGroup):
     # ``name`` (inherited) is the handle key.
     co: FloatVectorProperty(name="Position", size=2, default=(0.5, 0.5), description="Normalised image position")
@@ -122,8 +153,26 @@ class FTC_CameraData(PropertyGroup):
     sensor_mm_state: EnumProperty(items=FIELD_STATE_ITEMS, default="MISSING")
 
     has_gps: BoolProperty()
-    gps_latitude: FloatProperty(name="Latitude", precision=6)
-    gps_longitude: FloatProperty(name="Longitude", precision=6)
+    gps_latitude: FloatProperty(
+        name="Latitude",
+        translation_context=FTC_CONTEXT,
+        description="Where the photo was taken, degrees north (negative south); a city is close enough for the sun",
+        min=-90.0,
+        max=90.0,
+        precision=6,
+        update=_manual_location,
+    )
+    gps_longitude: FloatProperty(
+        name="Longitude",
+        translation_context=FTC_CONTEXT,
+        description="Where the photo was taken, degrees east (negative west); a city is close enough for the sun",
+        min=-180.0,
+        max=180.0,
+        precision=6,
+        update=_manual_location,
+    )
+    # 1.0 files have has_gps but no state: ops_sun.location_state() reads both.
+    location_state: EnumProperty(items=FIELD_STATE_ITEMS, default="MISSING")
     gps_altitude: FloatProperty(name="Altitude", subtype="DISTANCE", unit="LENGTH")
     direction: FloatProperty(
         name="Direction",
@@ -134,6 +183,75 @@ class FTC_CameraData(PropertyGroup):
     )
     direction_state: EnumProperty(items=FIELD_STATE_ITEMS, default="MISSING")
     direction_ref: StringProperty(name="Direction Reference", description="T = true north, M = magnetic north")
+
+    # Shooting time: local date and time with its UTC offset (UTC itself, offset
+    # 0, when only the GPS time is known).
+    year: IntProperty(
+        name="Year",
+        translation_context=FTC_CONTEXT,
+        description="Year of the shot",
+        min=1900,
+        max=2100,
+        default=2000,
+        update=_manual_time,
+    )
+    month: IntProperty(
+        name="Month",
+        translation_context=FTC_CONTEXT,
+        description="Month of the shot",
+        min=1,
+        max=12,
+        default=1,
+        update=_manual_time,
+    )
+    day: IntProperty(
+        name="Day",
+        translation_context=FTC_CONTEXT,
+        description="Day of the shot",
+        min=1,
+        max=31,
+        default=1,
+        update=_manual_time,
+    )
+    hour: IntProperty(
+        name="Hour",
+        translation_context=FTC_CONTEXT,
+        description="Local hour of the shot",
+        min=0,
+        max=23,
+        default=12,
+        update=_manual_time,
+    )
+    minute: IntProperty(
+        name="Minute",
+        translation_context=FTC_CONTEXT,
+        description="Minute of the shot",
+        min=0,
+        max=59,
+        update=_manual_time,
+    )
+    second: IntProperty(
+        name="Second",
+        translation_context=FTC_CONTEXT,
+        description="Second of the shot",
+        min=0,
+        max=59,
+        update=_manual_time,
+    )
+    time_state: EnumProperty(items=FIELD_STATE_ITEMS, default="MISSING")
+    utc_offset: FloatProperty(
+        name="UTC Offset",
+        translation_context=FTC_CONTEXT,
+        description="Time zone of the local time, daylight saving included (e.g. +2 for Italy in summer)",
+        min=-12.0,
+        max=14.0,
+        step=25,
+        precision=2,
+        update=_manual_offset,
+    )
+    offset_state: EnumProperty(items=FIELD_STATE_ITEMS, default="MISSING")
+    time_from_gps: BoolProperty(description="The time is the GPS time (UTC) of the photo")
+    clock_mismatch: BoolProperty(description="The GPS time and the camera clock disagree")
 
 
 class FTC_Results(PropertyGroup):
@@ -157,6 +275,96 @@ class FTC_Results(PropertyGroup):
     focal_shift: FloatProperty()
     removed_roll: FloatProperty(name="Removed Roll", subtype="ANGLE")
     guide_misfit: FloatProperty(name="Guide Fit", subtype="ANGLE")
+
+
+class FTC_Sun(PropertyGroup):
+    """Sun of the photo: where the scene north is and which light follows it."""
+
+    light: PointerProperty(
+        name="Light",
+        translation_context=FTC_CONTEXT,
+        description="Sun light that FTC turns towards the sun of the photo (only its rotation is changed)",
+        type=bpy.types.Object,
+        poll=_is_sun_light,
+        update=_sun_changed,
+    )
+    north_source: EnumProperty(
+        name="North",
+        translation_context=FTC_CONTEXT,
+        description="How the north of the scene is found",
+        items=[
+            ("COMPASS", "Compass", "From the compass direction of the photo (EXIF), rarely written by Android phones"),
+            ("MAP", "Map", "From the compass bearing of a scene axis, read on a map along a facade or a street"),
+            (
+                "LANDMARK",
+                "Landmark",
+                "From a distant landmark in the photo (Landmark handle in Calibrate) and its bearing on a map",
+            ),
+        ],
+        default="COMPASS",
+        update=_sun_changed,
+    )
+    map_axis: EnumProperty(
+        name="Axis",
+        translation_context=FTC_CONTEXT,
+        description="Scene axis whose bearing is read on the map",
+        items=[
+            ("+X", "+X", "Positive X axis"),
+            ("+Y", "+Y", "Positive Y axis"),
+            ("-X", "-X", "Negative X axis"),
+            ("-Y", "-Y", "Negative Y axis"),
+        ],
+        default="+X",
+        update=_sun_changed,
+    )
+    map_bearing: FloatProperty(
+        name="Bearing",
+        translation_context=FTC_CONTEXT,
+        description="Compass bearing of the scene axis, clockwise from true north",
+        subtype="ANGLE",
+        min=0.0,
+        max=2.0 * 3.141592653589793,
+        update=_sun_changed,
+    )
+    landmark_bearing: FloatProperty(
+        name="Landmark Bearing",
+        translation_context=FTC_CONTEXT,
+        description="Compass bearing from the camera to the landmark, read on a map, clockwise from true north",
+        subtype="ANGLE",
+        min=0.0,
+        max=2.0 * 3.141592653589793,
+        update=_sun_changed,
+    )
+    declination: FloatProperty(
+        name="Declination",
+        translation_context=FTC_CONTEXT,
+        description=(
+            "Magnetic declination at the place, east positive: added to a magnetic compass direction "
+            "(look it up for the place and year)"
+        ),
+        subtype="ANGLE",
+        soft_min=-0.6,
+        soft_max=0.6,
+        update=_sun_changed,
+    )
+    north_correction: FloatProperty(
+        name="North Correction",
+        translation_context=FTC_CONTEXT,
+        description=(
+            "Turns the scene north, and the sun with it, about the vertical: phone compasses are often "
+            "5-15° off; adjust it until the CG shadows match the photo"
+        ),
+        subtype="ANGLE",
+        soft_min=-3.141592653589793,
+        soft_max=3.141592653589793,
+        update=_sun_changed,
+    )
+    show_north: BoolProperty(
+        name="North",
+        translation_context=FTC_CONTEXT,
+        description="Show the scene north and the sun direction on the reference plane while calibrating",
+        default=True,
+    )
 
 
 class FTC_Settings(PropertyGroup):
@@ -439,9 +647,10 @@ class FTC_Settings(PropertyGroup):
 
     camera_data: PointerProperty(type=FTC_CameraData)
     results: PointerProperty(type=FTC_Results)
+    sun: PointerProperty(type=FTC_Sun)
 
 
-classes = (FTC_Handle, FTC_CameraData, FTC_Results, FTC_Settings)
+classes = (FTC_Handle, FTC_CameraData, FTC_Results, FTC_Sun, FTC_Settings)
 
 
 def register():

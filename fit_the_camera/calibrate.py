@@ -54,6 +54,8 @@ HANDLE_DEFAULTS = {
     "rect_3": (0.34, 0.45),
     "hz_a": (0.80, 0.55),
     "hz_b": (0.20, 0.55),
+    # Distant landmark of known compass bearing (north from a landmark, Sun).
+    "landmark": (0.50, 0.60),
 }
 
 # Camera object name of the running calibration session, if any.
@@ -251,6 +253,8 @@ def active_handle_keys(settings) -> list[str]:
         keys.append("cube_top")
     if settings.pp_mode == "MANUAL":
         keys.append("pp")
+    if settings.sun.north_source == "LANDMARK":
+        keys.append("landmark")
     return keys
 
 
@@ -445,7 +449,7 @@ def solve(settings, overrides: dict | None = None, distance: float | None = None
 
 
 # Handles that only place or scale the result, not its orientation or focal length.
-POSE_ONLY_KEYS = {"origin", "ref_a", "ref_b", "cube_base", "cube_top", "pp"}
+POSE_ONLY_KEYS = {"origin", "ref_a", "ref_b", "cube_base", "cube_top", "pp", "landmark"}
 # Assumed placement error of a handle, as a fraction of the long image side.
 PLACEMENT_ERROR = 1e-3
 UNSTABLE_FOCAL = 0.05
@@ -750,6 +754,10 @@ def apply_solution(cam_obj, solution: CameraSolution) -> None:
     cam.shift_x = bc.shift_x
     cam.shift_y = bc.shift_y
     cam_obj.matrix_world = alignment_matrix(settings) @ Matrix(bc.matrix_world.tolist())
+    # The Sun light follows the camera's north (compass, landmark).
+    from . import ops_sun
+
+    ops_sun.orient(settings)
 
 
 def update(context, cam_obj, *, apply: bool) -> CameraSolution | None:
@@ -777,6 +785,11 @@ def settings_changed(cam_data, context, *, reset_pitch: bool) -> None:
     finally:
         _updating = False
     tag_redraw(context)
+
+
+def updating() -> bool:
+    """True inside ``suspended()`` or while a change is being solved."""
+    return _updating
 
 
 @contextmanager

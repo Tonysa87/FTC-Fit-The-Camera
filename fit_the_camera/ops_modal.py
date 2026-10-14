@@ -18,7 +18,7 @@ from .solver import cube_top_px
 
 FINE_FACTOR = 0.2
 # Handles that only place or scale the scene, not its orientation.
-SCALE_KEYS = {"origin", "ref_a", "ref_b", "cube_base", "cube_top"}
+SCALE_KEYS = {"origin", "ref_a", "ref_b", "cube_base", "cube_top", "landmark"}
 UNDO_LIMIT = 100
 
 # Events left to the viewport so that pan and zoom keep working.
