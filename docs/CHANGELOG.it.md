@@ -3,7 +3,7 @@
 Storia completa in italiano. Dalla 1.1 il changelog principale è in inglese:
 [`CHANGELOG.md`](CHANGELOG.md).
 
-## 1.1.1 – in sviluppo
+## 1.1.1 – 2026-10-15
 - Sweep di bug dopo la 1.1.0 (quattro revisioni in parallelo: solver, Fit Sun /
   EXIF / report, HDRI / render, sessione / interfaccia), chiesto da Antonio:
   - copia raddrizzata di foto a 16 bit o float non più scura dopo aver

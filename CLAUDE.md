@@ -7,21 +7,18 @@ Extensions audience) and `README.it.md` (Italian); developer docs
 "Camera Match": the final name is **FTC**, package `fit_the_camera`, tab "FTC").
 
 ## Status / next session (bookmark 2026-10-15)
-- **RESUME HERE**: **1.1.1-alpha.2 = bug sweep after 1.1.0** (asked by the user
-  2026-10-15: four parallel reviews, all findings fixed, see the 1.1.1 section of
-  `docs/CHANGELOG.md`) + **the whole UI in Italian** (user: English first, Italian
-  in parallel for everything; `translations.message` translates templated
-  messages, test `every_string_is_translated` enforces it: never f-strings for
-  shown messages). **Next session starts with his validation of 1.1.1** (he
-  disliked the first change he saw, the gizmo pass-through: every 1.1.1 change
-  must pass his check before release). **GUI test, ONE POINT AT A TIME**:
-  `docs/TEST_GUI_1.1.1.md`, build `dist/fit_the_camera-1.1.1-alpha.5.zip`.
-  All items 1-8 done (1-3 on alpha.3; 4 incl. panel keys + 5 on alpha.4, where
-  every FTC property is non-animatable: `props.not_animatable`, old keys inert;
-  6-7 by the user; 8 Italian checked by me on his request with probe `italian`,
-  which found only Yaw reading 360.00° -> alpha.5). The navigation-gizmo item was dropped: he
-  wants those clicks blocked (alpha.2 reverted the pass-through). Then release
-  1.1.1 (version, CHANGELOG date, GitHub release, Extensions upload).
+- **RESUME HERE**: **1.1.1 released on GitHub (2026-10-15)**, tag `v1.1.1`,
+  `dist/fit_the_camera-1.1.1.zip`: bug sweep after 1.1.0 + the whole UI in
+  Italian (`translations.message` for templated messages, test
+  `every_string_is_translated`, probe `italian`: never f-strings for shown
+  messages). GUI-tested by the user item by item (`docs/TEST_GUI_1.1.1.md`):
+  header text after workspace switch / Ctrl+Space (alpha.3), FTC properties
+  non-animatable (`props.not_animatable`, alpha.4, OK'd by him), Yaw never
+  360.00° (alpha.5); item 8 (Italian) checked by me on his request. The user
+  uploads it to extensions.blender.org himself (*Upload New Version*, release
+  notes given in chat). READMEs have a "New in 1.1.1" line under the install
+  links: update it at each release. Next version: new section in
+  `docs/CHANGELOG.md`.
 - **1.1.0 released on GitHub (2026-10-14)**, tag `v1.1.0`,
   `dist/fit_the_camera-1.1.0.zip`. The user uploads it to extensions.blender.org
   himself (*Upload New Version*, release notes + new description in the
