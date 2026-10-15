@@ -16,11 +16,10 @@ Extensions audience) and `README.it.md` (Italian); developer docs
   disliked the first change he saw, the gizmo pass-through: every 1.1.1 change
   must pass his check before release). **GUI test, ONE POINT AT A TIME**:
   `docs/TEST_GUI_1.1.1.md`, build `dist/fit_the_camera-1.1.1-alpha.4.zip`.
-  Items 1-3 passed on alpha.3 (header text fix confirmed). Item 4: I in the view OK;
-  I over panel fields keyed FTC settings -> alpha.4 makes every FTC property
-  non-animatable (`props.not_animatable`, OK'd by the user; old keys go inert).
-  Next: he tests item 4 (panel keys) + item 5 together on alpha.4, then 6-8. Explain each item in plain words: 4 (I key),
-  5 (Use Stored Target checkbox), 6 (cm scene Results), 7 (wall rectangle F×2),
+  Items 1-5 passed (1-3 on alpha.3; 4 incl. panel keys + 5 on alpha.4, where
+  every FTC property is non-animatable: `props.not_animatable`, old keys inert).
+  Next: item 6 onwards. Explain each item in plain words:
+  6 (cm scene Results), 7 (wall rectangle F×2),
   8 (Italian tooltips/warnings). The navigation-gizmo item was dropped: he
   wants those clicks blocked (alpha.2 reverted the pass-through). Then release
   1.1.1 (version, CHANGELOG date, GitHub release, Extensions upload).
