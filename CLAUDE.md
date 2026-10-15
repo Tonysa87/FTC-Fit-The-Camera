@@ -12,10 +12,15 @@ Extensions audience) and `README.it.md` (Italian); developer docs
   `docs/CHANGELOG.md`) + **the whole UI in Italian** (user: English first, Italian
   in parallel for everything; `translations.message` translates templated
   messages, test `every_string_is_translated` enforces it: never f-strings for
-  shown messages). Waiting for his GUI test (`docs/TEST_GUI_1.1.1.md`: session
-  pauses on workspace switch and follows Ctrl+Space via the region pointer,
-  panel changes in session undo); then
-  release 1.1.1 (version, CHANGELOG date, GitHub release, Extensions upload).
+  shown messages). **GUI test in progress, ONE POINT AT A TIME** (he asked):
+  `docs/TEST_GUI_1.1.1.md`, build `dist/fit_the_camera-1.1.1-alpha.2.zip`.
+  Paused 2026-10-15 before item 1 (workspace switch: Calibrate, Shading, back to
+  Layout, session still on, drag + Ctrl+Z work). Resume by explaining item 1
+  again in plain words, then 2 (Ctrl+Space), 3 (panel change + Ctrl+Z), 4 (I key),
+  5 (Use Stored Target checkbox), 6 (cm scene Results), 7 (wall rectangle F×2),
+  8 (Italian tooltips/warnings). The navigation-gizmo item was dropped: he
+  wants those clicks blocked (alpha.2 reverted the pass-through). Then release
+  1.1.1 (version, CHANGELOG date, GitHub release, Extensions upload).
 - **1.1.0 released on GitHub (2026-10-14)**, tag `v1.1.0`,
   `dist/fit_the_camera-1.1.0.zip`. The user uploads it to extensions.blender.org
   himself (*Upload New Version*, release notes + new description in the
