@@ -12,6 +12,7 @@
 #   sun       north arrow, sun direction, landmark and shadow overlays (sun_*.png)
 #   hdri      the Fit HDRI viewer over a synthetic sky (hdri_viewer.png)
 #   report    a sample calibration report (report.md, report.json)
+#   italian   every panel / overlay text in Italian (italian.txt), flags English and double translations
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 NAME="${1:?probe name}"

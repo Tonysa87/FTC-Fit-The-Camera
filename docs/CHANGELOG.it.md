@@ -9,7 +9,8 @@ Storia completa in italiano. Dalla 1.1 il changelog principale è in inglese:
   - copia raddrizzata di foto a 16 bit o float non più scura dopo aver
     riaperto il file (la copia float resta lineare); file della foto mancante =
     messaggio;
-  - Results: altezza e distanza con la Unit Scale della scena;
+  - Results: altezza e distanza con la Unit Scale della scena; Imbardata 0.00°
+    invece di 360.00° appena a ovest di +Y;
   - rettangolo su parete con gli angoli dal lato in alto (o F due volte): la
     camera non si capovolge più;
   - equivalente 35 mm senza sensore: la focale mostrata è quella inserita
