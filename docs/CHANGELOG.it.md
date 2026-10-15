@@ -28,7 +28,9 @@ Storia completa in italiano. Dalla 1.1 il changelog principale è in inglese:
   - sessione: Ctrl+Z annulla anche le modifiche del pannello; cambiare
     workspace non chiude la sessione (aspetta), Ctrl+Space la segue (in
     entrambi i casi l'intestazione viene riscritta); I non
-    mette keyframe sulla camera;
+    mette keyframe sulla camera; le impostazioni FTC non si animano più (I sul
+    pannello: i keyframe rimettevano la calibrazione a ogni cambio di frame;
+    quelli dei file vecchi non agiscono più);
   - tooltip del segno dell'asse corretto.
 - Interfaccia **tutta in italiano** (inglese lingua principale, italiano
   parallelo, chiesto da Antonio): tooltip, report e messaggi del solver, anche

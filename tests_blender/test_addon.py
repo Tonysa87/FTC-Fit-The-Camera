@@ -2270,12 +2270,52 @@ def every_string_is_translated():
     assert not missing, "no Italian translation:\n" + "\n".join(sorted(missing))
 
 
+def _animatable_ftc_props():
+    found, seen = [], set()
+
+    def walk(struct):
+        if struct.identifier in seen:
+            return
+        seen.add(struct.identifier)
+        for prop in struct.properties:
+            if prop.identifier == "rna_type":
+                continue
+            if prop.is_animatable:
+                found.append(f"{struct.identifier}.{prop.identifier}")
+            if prop.type in {"POINTER", "COLLECTION"} and prop.fixed_type.identifier.startswith("FTC_"):
+                walk(prop.fixed_type)
+
+    walk(bpy.types.Camera.bl_rna.properties["ftc"].fixed_type)
+    for owner in (bpy.types.Camera, bpy.types.Object, bpy.types.Scene):
+        found += [
+            f"{owner.__name__}.{p.identifier}"
+            for p in owner.bl_rna.properties
+            if p.identifier.startswith("ftc") and p.is_animatable
+        ]
+    return found
+
+
+@test
+def settings_cannot_be_keyframed():
+    """I over a panel field must not key FTC settings: the keys would put the
+    calibration back at every frame change."""
+    fresh_scene()
+    cam = bpy.data.cameras.new("Cam")
+    assert not _animatable_ftc_props(), _animatable_ftc_props()
+    for path in ("ftc.vp_count", "ftc.camera_data.focal_mm", "ftc.sun.north_correction"):
+        with contextlib.suppress(TypeError, RuntimeError):
+            cam.keyframe_insert(path)
+    assert cam.animation_data is None or not cam.animation_data.action, "a key was inserted"
+    assert cam.keyframe_insert("lens"), "the camera's own lens stays animatable"
+
+
 @test
 def disable_and_enable():
     bpy.ops.preferences.addon_disable(module=PKG)
     assert not hasattr(bpy.types.Camera, "ftc")
     bpy.ops.preferences.addon_enable(module=PKG)
     assert hasattr(bpy.types.Camera, "ftc")
+    assert not _animatable_ftc_props(), "re-registered properties are animatable again"
 
 
 def main():

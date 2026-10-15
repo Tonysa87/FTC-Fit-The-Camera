@@ -782,10 +782,19 @@ class FTC_Settings(PropertyGroup):
 classes = (FTC_Handle, FTC_CameraData, FTC_Results, FTC_Sun, FTC_Settings)
 
 
+def not_animatable(cls) -> None:
+    """Drop ANIMATABLE (on by default) from every property of ``cls``: a keyframe
+    (I over a panel field) would put the calibration back at each frame change."""
+    for prop in cls.__annotations__.values():
+        options = set(prop.keywords.get("options", {"ANIMATABLE"}))
+        prop.keywords["options"] = options - {"ANIMATABLE"}
+
+
 def register():
     for cls in classes:
+        not_animatable(cls)
         bpy.utils.register_class(cls)
-    bpy.types.Camera.ftc = PointerProperty(type=FTC_Settings)
+    bpy.types.Camera.ftc = PointerProperty(type=FTC_Settings, options=set())
 
 
 def unregister():

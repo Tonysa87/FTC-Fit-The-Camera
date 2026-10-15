@@ -396,15 +396,18 @@ def register():
         description=ROLE_ITEMS[0][2],
         get=lambda obj: obj.is_shadow_catcher,
         set=_set_catcher,
+        options=set(),
     )
     bpy.types.Object.ftc_holdout = BoolProperty(
         name="Holdout",
         description=ROLE_ITEMS[1][2],
         get=lambda obj: obj.is_holdout,
         set=_set_holdout,
+        options=set(),
     )
     bpy.types.Scene.ftc_role_index = IntProperty(
-        name="Active Object", description="Object selected in the roles list", update=_role_index_changed
+        name="Active Object", description="Object selected in the roles list", update=_role_index_changed,
+        options=set(),
     )
 
 
