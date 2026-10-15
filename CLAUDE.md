@@ -16,9 +16,7 @@ Extensions audience) and `README.it.md` (Italian); developer docs
   disliked the first change he saw, the gizmo pass-through: every 1.1.1 change
   must pass his check before release). **GUI test, ONE POINT AT A TIME**:
   `docs/TEST_GUI_1.1.1.md`, build `dist/fit_the_camera-1.1.1-alpha.3.zip`.
-  Item 1 passed on alpha.2 except the header text (lost after a workspace
-  switch): fixed in alpha.3 (also after Ctrl+Space). Next: re-check the header
-  on alpha.3, then item 2 onwards. Explain each item in plain words: 2 (Ctrl+Space), 3 (panel change + Ctrl+Z), 4 (I key),
+  Item 1 passed on alpha.3 (header text fix confirmed). Next: item 2 onwards. Explain each item in plain words: 2 (Ctrl+Space), 3 (panel change + Ctrl+Z), 4 (I key),
   5 (Use Stored Target checkbox), 6 (cm scene Results), 7 (wall rectangle F×2),
   8 (Italian tooltips/warnings). The navigation-gizmo item was dropped: he
   wants those clicks blocked (alpha.2 reverted the pass-through). Then release
