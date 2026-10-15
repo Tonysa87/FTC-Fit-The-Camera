@@ -7,14 +7,14 @@ Extensions audience) and `README.it.md` (Italian); developer docs
 "Camera Match": the final name is **FTC**, package `fit_the_camera`, tab "FTC").
 
 ## Status / next session (bookmark 2026-10-15)
-- **RESUME HERE**: **1.1.1-alpha.1 = bug sweep after 1.1.0** (asked by the user
+- **RESUME HERE**: **1.1.1-alpha.2 = bug sweep after 1.1.0** (asked by the user
   2026-10-15: four parallel reviews, all findings fixed, see the 1.1.1 section of
   `docs/CHANGELOG.md`) + **the whole UI in Italian** (user: English first, Italian
   in parallel for everything; `translations.message` translates templated
   messages, test `every_string_is_translated` enforces it: never f-strings for
   shown messages). Waiting for his GUI test (`docs/TEST_GUI_1.1.1.md`: session
   pauses on workspace switch and follows Ctrl+Space via the region pointer,
-  navigation gizmo clicks pass through, panel changes in session undo); then
+  panel changes in session undo); then
   release 1.1.1 (version, CHANGELOG date, GitHub release, Extensions upload).
 - **1.1.0 released on GitHub (2026-10-14)**, tag `v1.1.0`,
   `dist/fit_the_camera-1.1.0.zip`. The user uploads it to extensions.blender.org
@@ -97,6 +97,9 @@ Extensions audience) and `README.it.md` (Italian); developer docs
   Tools), rectangle sides named after the plane axes, Display panel (cube off by
   default in RECT/HORIZON), Load Image camera choice + `ftc.use_camera`, VP photos
   start with Reference Distance, Shift magnifier (see Magnifier).
+- **Navigation gizmo clicks stay blocked in a session** (a pass-through was
+  added in 1.1.1-alpha.1 and removed on request: "Blender users use shortcuts
+  and the mouse"). Do not add special handling for Blender's own gizmos.
 - **Removed on the user's request after his GUI test**: Move Along View and a
   "Ray Gizmo" (handle to move the selection along the camera rays). He found them
   broken and wants only native gizmos: do NOT reintroduce custom transform

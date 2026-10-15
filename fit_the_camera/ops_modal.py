@@ -215,30 +215,6 @@ def mouse_in_region(area, region, event) -> tuple[float, float] | None:
     return x - region.x, y - region.y
 
 
-def over_navigation(area, region, mouse) -> bool:
-    """``mouse`` (region pixels) is on the navigation gizmo: the axes ball and the
-    zoom / pan / camera / projection buttons below it, top right of the visible
-    part of the region (left of an overlapping sidebar, below overlapping headers)."""
-    space = area.spaces.active
-    if mouse is None or not (space.show_gizmo and space.show_gizmo_navigate):
-        return False
-    right, top = float(region.width), float(region.height)
-    for other in area.regions:
-        if other.type == "WINDOW" or other.width <= 1 or other.height <= 1:
-            continue
-        inside_x = region.x <= other.x < region.x + region.width
-        inside_y = region.y <= other.y < region.y + region.height
-        if inside_x and inside_y and other.height > region.height / 2 and other.x > region.x + region.width / 2:
-            right = min(right, other.x - region.x)  # overlapping sidebar
-        elif inside_x and inside_y and other.width > region.width / 2 and other.y > region.y + region.height / 2:
-            top = min(top, other.y - region.y)  # overlapping header
-    s = draw.ui_scale()
-    size = bpy.context.preferences.view.gizmo_size_navigate_v3d
-    width = (size + 20.0) * s
-    height = (size + 4 * 34.0 + 20.0) * s
-    return right - width <= mouse[0] <= right and top - height <= mouse[1] <= top
-
-
 MIN_CUBE_PX = 4.0
 
 
@@ -619,14 +595,10 @@ class FTC_OT_calibrate(Operator):
             return {"PASS_THROUGH"}
 
         if event.value != "PRESS":
-            if event.type == "LEFTMOUSE" and not over_navigation(area, region, mouse):
-                return {"RUNNING_MODAL"}
-            return {"PASS_THROUGH"}
+            return {"RUNNING_MODAL"} if event.type == "LEFTMOUSE" else {"PASS_THROUGH"}
 
         if event.type == "LEFTMOUSE":
             key = self.pick(settings, view, mouse) if view is not None else None
-            if key is None and over_navigation(area, region, mouse):
-                return {"PASS_THROUGH"}  # Blender's navigation buttons
             if key is not None:
                 calibrate.defer_uncertainty = True
                 session.drag_key = key

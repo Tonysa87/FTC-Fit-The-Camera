@@ -2025,9 +2025,6 @@ def third_audit_fixes():
     ops_modal.restore(s, snap)
     assert s.vp_count == "2" and s.cube_size != "5" and ops_modal.snapshot(s) == snap
 
-    # The navigation gizmo lookup uses names that exist.
-    assert "show_gizmo_navigate" in bpy.types.SpaceView3D.bl_rna.properties
-    assert "gizmo_size_navigate_v3d" in bpy.types.PreferencesView.bl_rna.properties
     assert ops_sun.scene_y_bearing(s, ops_sun.evaluate(s)) is not None
 
 
