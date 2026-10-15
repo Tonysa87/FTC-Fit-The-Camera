@@ -95,7 +95,9 @@ Sidebar del viewport (N) › tab **FTC**.
 3. **Calibration** – modalità e parametri, poi **Calibrate** (operatore modale nel
    viewport camera). Scorciatoie nell'header: trascina = sposta maniglia,
    Shift = fine, con una lente ×4 sulla maniglia, Ctrl = snap, 1/2/3 = asse, F = inverti verso, H = raddrizza,
-   Ctrl+Z / Ctrl+Shift+Z = undo/redo interni, Invio = applica, Esc/RMB = esci.
+   Ctrl+Z / Ctrl+Shift+Z = undo/redo interni (anche delle modifiche fatte nel pannello nel frattempo),
+   Invio = applica, Esc/RMB = esci. La sessione aspetta mentre è mostrato un altro workspace e segue
+   la vista massimizzata con Ctrl+Space.
    Con *Live Update* (default) la camera segue le guide mentre trascini; Invio o
    **Apply** la scrivono e chiudono la sessione. Fuori dalla sessione, le
    modifiche fatte nel pannello spostano la camera solo con **Apply**. Nella vista
@@ -109,7 +111,8 @@ Sidebar del viewport (N) › tab **FTC**.
    guide*, *Solo nota*. **Scala**: *Misura di riferimento* (default per le
    foto nuove) o *Cubo di scala*.
 4. **Align to Scene** – porta il piano calibrato (XY, XZ, YZ) sul 3D cursor, sulla
-   faccia attiva (Edit Mode) o sull'oggetto attivo; Ruota 90° / Inverti.
+   faccia attiva (Edit Mode) o sull'oggetto attivo; Ruota 90° / Inverti. La camera
+   si sposta subito, anche attivando o disattivando il bersaglio salvato.
 5. **Results** – focale, FOV, altezza, angoli, **incertezza** (focale ± %,
    orientamento ± °) e **aderenza guide** (scarto massimo); avvisi in giallo/rosso.
    **Esporta report** (*Export Report*) li salva, con la fonte di ogni dato e il sole, in

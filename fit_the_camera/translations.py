@@ -5,7 +5,10 @@ Only add-on specific phrases are listed: registered translations apply to the
 whole interface, and generic words are already translated by Blender itself.
 """
 
+import re
+
 import bpy
+from bpy.app.translations import pgettext_iface
 
 _IT = {
     # Operators
@@ -241,8 +244,7 @@ _IT = {
     "From a shadow in the photo (shadow handles in Calibrate Shadow) and the sun of the date and place": (
         "Da un'ombra nella foto (maniglie dell'ombra in Calibra ombra) e dal sole di data e luogo"
     ),
-    "Calibrate Shadow: orange handles on the foot and the top of something vertical, and on the tip of "
-    "its shadow": (
+    "Calibrate Shadow: orange handles on the foot and the top of something vertical, and on the tip of its shadow": (
         "Calibra ombra: maniglie arancioni sul piede e sulla cima di qualcosa di verticale, e sulla punta della "
         "sua ombra"
     ),
@@ -323,8 +325,7 @@ _IT = {
         "Il vettore dell'HDRI arriva da altri nodi (non un Mapping): Fit HDRI non può ruotarlo"
     ),
     "The rotation of the HDRI's Mapping comes from nodes FTC cannot follow back: Fit HDRI cannot turn it": (
-        "La rotazione del Mapping dell'HDRI arriva da nodi che FTC non sa ripercorrere: Fit HDRI non può "
-        "ruotarlo"
+        "La rotazione del Mapping dell'HDRI arriva da nodi che FTC non sa ripercorrere: Fit HDRI non può ruotarlo"
     ),
     "The rotation of the HDRI is keyframed or driven: Fit HDRI cannot turn it": (
         "La rotazione dell'HDRI ha keyframe o driver: Fit HDRI non può ruotarlo"
@@ -441,8 +442,7 @@ _IT = {
     "The HDRI's node group is used several times: only this instance's rotation input turns": (
         "Il gruppo di nodi dell'HDRI è usato più volte: ruota solo l'input di rotazione di questa istanza"
     ),
-    "Show the cube of known size on the reference plane, to check the scale by eye "
-    "(known rectangle and horizon)": (
+    "Show the cube of known size on the reference plane, to check the scale by eye (known rectangle and horizon)": (
         "Mostra il cubo di dimensione nota sul piano di riferimento, per verificare la scala a occhio "
         "(rettangolo noto e orizzonte)"
     ),
@@ -476,6 +476,285 @@ _IT = {
     # FTC orientation
     "FTC Orientation": "Orientamento FTC",
     "No 3D view to create the orientation from": "Nessuna vista 3D da cui creare l'orientamento",
+    # Settings (tooltips)
+    "Original image file": "File originale dell'immagine",
+    "What in the image defines the camera": "Cosa nell'immagine definisce la camera",
+    "Calibrate from parallel lines converging to 1, 2 or 3 vanishing points": (
+        "Calibra da linee parallele che convergono in 1, 2 o 3 punti di fuga"
+    ),
+    "Calibrate from the four corners of a rectangle of known size": (
+        "Calibra dai quattro angoli di un rettangolo di dimensioni note"
+    ),
+    "Calibrate from the horizon line and the camera height": (
+        "Calibra dalla linea dell'orizzonte e dall'altezza della camera"
+    ),
+    "Number of vanishing points to draw": "Numero di punti di fuga da tracciare",
+    "One vanishing point: needs the focal length and the horizon direction": (
+        "Un punto di fuga: servono la focale e la direzione dell'orizzonte"
+    ),
+    "Two vanishing points: solves the focal length": "Due punti di fuga: risolve la focale",
+    "Three vanishing points: solves focal length and principal point": (
+        "Tre punti di fuga: risolve focale e punto principale"
+    ),
+    "Vanishing Point 1": "Punto di fuga 1",
+    "Vanishing Point 2": "Punto di fuga 2",
+    "Vanishing Point 3": "Punto di fuga 3",
+    "World axis of the first guide pair: + runs along its first guide, from the first handle to the second "
+    "(the arrow)": (
+        "Asse del mondo della prima coppia di guide: il + va lungo la sua prima guida, dalla prima maniglia "
+        "alla seconda (la freccia)"
+    ),
+    "World axis of the second guide pair, or of the axis line with one vanishing point": (
+        "Asse del mondo della seconda coppia di guide, o della linea d'asse con un punto di fuga"
+    ),
+    "World axis of the third guide pair (follows from the first two)": (
+        "Asse del mondo della terza coppia di guide (deriva dalle prime due)"
+    ),
+    "Positive X axis": "Asse X positivo",
+    "Negative X axis": "Asse X negativo",
+    "Positive Y axis": "Asse Y positivo",
+    "Negative Y axis": "Asse Y negativo",
+    "Positive Z axis": "Asse Z positivo",
+    "Negative Z axis": "Asse Z negativo",
+    "How the real-world size of the scene is set": "Come si fissa la dimensione reale della scena",
+    "A cube of known size standing on the reference plane: drag its top handle until it matches something "
+    "of that height in the photo": (
+        "Un cubo di dimensione nota appoggiato sul piano di riferimento: trascina la maniglia in cima finché "
+        "corrisponde a qualcosa di quell'altezza nella foto"
+    ),
+    "A known length between two points of a plane (Measured On), or a height above it": (
+        "Una lunghezza nota tra due punti di un piano (Misurata su), o un'altezza sopra di esso"
+    ),
+    "Edge length of the scale cube": "Lunghezza dello spigolo del cubo di scala",
+    "Cube edge of 10 cm": "Spigolo del cubo di 10 cm",
+    "Cube edge of 20 cm": "Spigolo del cubo di 20 cm",
+    "Cube edge of 50 cm": "Spigolo del cubo di 50 cm",
+    "Cube edge of 1 m": "Spigolo del cubo di 1 m",
+    "Cube edge of 2 m": "Spigolo del cubo di 2 m",
+    "Cube edge of 5 m": "Spigolo del cubo di 5 m",
+    "Cube edge of 10 m": "Spigolo del cubo di 10 m",
+    "Enter the edge length": "Inserisci la lunghezza dello spigolo",
+    "The reference length runs along X": "La lunghezza di riferimento corre lungo X",
+    "The reference length runs along Y": "La lunghezza di riferimento corre lungo Y",
+    "The reference length runs along Z": "La lunghezza di riferimento corre lungo Z",
+    "Real length between the two reference handles": "Lunghezza reale tra le due maniglie di riferimento",
+    "Plane through the origin that holds the reference distance: both ends along an axis of it, or a height "
+    "along its normal from the first end": (
+        "Piano per l'origine che contiene la misura di riferimento: entrambi gli estremi lungo un suo asse, "
+        "o un'altezza lungo la sua normale dal primo estremo"
+    ),
+    "Floor or any horizontal plane": "Pavimento o qualsiasi piano orizzontale",
+    "Wall facing -Y, with Z up": "Parete rivolta verso -Y, con Z in alto",
+    "Wall facing +X, with Z up": "Parete rivolta verso +X, con Z in alto",
+    "Where the focal length comes from (vanishing points and rectangle)": (
+        "Da dove viene la focale (punti di fuga e rettangolo)"
+    ),
+    "Start from the focal length in Camera Data and let the guides correct it as far as they measure it; "
+    "when it is unknown, solve it from the guides": (
+        "Parte dalla focale in Dati camera e lascia che le guide la correggano per quanto la misurano; "
+        "se è sconosciuta, la risolve dalle guide"
+    ),
+    "Solve the focal length from the guides, ignoring Camera Data": (
+        "Risolve la focale dalle guide, ignorando Dati camera"
+    ),
+    "Use the focal length in Camera Data as it is: the guides only set the orientation": (
+        "Usa la focale di Dati camera così com'è: le guide fissano solo l'orientamento"
+    ),
+    "Height of the camera above the ground": "Altezza della camera dal suolo",
+    "Where the camera heading comes from": "Da dove viene la direzione della camera",
+    "Use the image direction from GPS metadata": "Usa la direzione dell'immagine dai metadati GPS",
+    "Enter the heading by hand": "Inserisci la direzione a mano",
+    "Heading of the camera, clockwise from +Y": "Direzione della camera, in senso orario da +Y",
+    "Point of the image hit by the optical axis": "Punto dell'immagine colpito dall'asse ottico",
+    "Principal point at the image centre": "Punto principale al centro dell'immagine",
+    "Drag the principal point in the viewport": "Trascina il punto principale nella vista",
+    "Three vanishing points only: solve it as their orthocentre (unstable when one is far away)": (
+        "Solo con tre punti di fuga: lo risolve come loro ortocentro (instabile se uno è lontano)"
+    ),
+    "Force zero roll": "Forza il rollio a zero",
+    "Manual tilt from the horizon handle; reset when the guides change": (
+        "Inclinazione manuale dalla maniglia dell'orizzonte; azzerata quando cambiano le guide"
+    ),
+    "Write the camera on every change while calibrating": "Scrive la camera a ogni modifica durante la calibrazione",
+    "Lock the guides against accidental edits": "Blocca le guide contro modifiche accidentali",
+    "Show the verification grid on the reference plane": "Mostra la griglia di verifica sul piano di riferimento",
+    "Opacity of the verification grid": "Opacità della griglia di verifica",
+    "Calibrated plane used for the rectangle, the grid, the scale cube and the scene alignment": (
+        "Piano calibrato usato per il rettangolo, la griglia, il cubo di scala e l'allineamento alla scena"
+    ),
+    "Place the reference plane on the stored scene target (3D cursor, face or object)": (
+        "Mette il piano di riferimento sul bersaglio salvato nella scena (3D cursor, faccia od oggetto)"
+    ),
+    "Scene target of the alignment": "Bersaglio dell'allineamento nella scena",
+    "Quarter turns of the reference plane about its normal on the target": (
+        "Quarti di giro del piano di riferimento attorno alla sua normale sul bersaglio"
+    ),
+    "Turn the reference plane over on the target": "Capovolge il piano di riferimento sul bersaglio",
+    "{} (face)": "{} (faccia)",
+    "Normalised image position": "Posizione normalizzata nell'immagine",
+    # Camera data (tooltips)
+    "EXIF orientation (1 = upright)": "Orientamento EXIF (1 = dritta)",
+    "Real focal length of the lens": "Focale reale dell'obiettivo",
+    "Focal length equivalent on a 36x24 mm frame": "Focale equivalente su un formato 36x24 mm",
+    "Long side of the camera sensor, as in its specifications (for cropped photos too)": (
+        "Lato lungo del sensore della fotocamera, come nelle specifiche (anche per foto ritagliate)"
+    ),
+    "Not found in the image metadata": "Non trovato nei metadati dell'immagine",
+    "Read from the image metadata": "Letto dai metadati dell'immagine",
+    "Entered by hand": "Inserito a mano",
+    "Compass bearing of the view, degrees clockwise from north": (
+        "Direzione di bussola della vista, gradi in senso orario dal nord"
+    ),
+    "Direction Reference": "Riferimento della direzione",
+    "T = true north, M = magnetic north": "T = nord geografico, M = nord magnetico",
+    # Results (names)
+    "Focal (px)": "Focale (px)",
+    "Distance to Origin": "Distanza dall'origine",
+    "Focal Uncertainty": "Incertezza focale",
+    "Angle Uncertainty": "Incertezza angoli",
+    # Render roles
+    "Stand-in for a real surface of the photo: shows the photo, receives the shadows and light of the CG "
+    "objects and hides what is behind it (Cycles only)": (
+        "Sostituto di una superficie reale della foto: mostra la foto, riceve ombre e luce degli oggetti CG "
+        "e nasconde ciò che sta dietro (solo Cycles)"
+    ),
+    "Stand-in for a real object in front: shows the photo and hides the CG objects behind it. It still casts "
+    "shadows: turn off Object > Visibility > Shadow if its shadow is already in the photo": (
+        "Sostituto di un oggetto reale davanti: mostra la foto e nasconde gli oggetti CG dietro. Proietta "
+        "comunque ombre: disattiva Oggetto > Visibilità > Ombra se la sua ombra è già nella foto"
+    ),
+    "Object selected in the roles list": "Oggetto selezionato nella lista dei ruoli",
+    "Cycles is not available (add-on disabled): engine unchanged": (
+        "Cycles non è disponibile (add-on disattivato): motore invariato"
+    ),
+    "Custom colour configuration: set a view that leaves the photo unchanged by hand": (
+        "Configurazione colore personalizzata: imposta a mano una vista che lasci la foto invariata"
+    ),
+    "The photo file is missing: the render will have no background": (
+        "Il file della foto manca: il render non avrà sfondo"
+    ),
+    "Compositing turned off for the transparent output": "Compositing disattivato per l'uscita trasparente",
+    # Reports
+    "Render height changed to the image's aspect ratio": "Altezza del render adattata alle proporzioni dell'immagine",
+    "Calibration ended: its 3D view was closed": "Calibrazione terminata: la sua vista 3D è stata chiusa",
+    "Cannot read the image": "Impossibile leggere l'immagine",
+    "The image is stored rotated: use 'Make Upright Copy' in Camera Data": (
+        "L'immagine è salvata ruotata: usa 'Crea copia raddrizzata' in Dati camera"
+    ),
+    "Focal length not found in the image metadata": "Focale non trovata nei metadati dell'immagine",
+    "The photo cannot be read: is its file missing?": "Impossibile leggere la foto: manca il file?",
+    "Select one face (or make one face active)": "Seleziona una faccia (o rendine attiva una)",
+    "The face has no area: select another face": "La faccia non ha area: selezionane un'altra",
+    "The HDRI image cannot be read: is its file missing?": "Impossibile leggere l'immagine HDRI: manca il file?",
+    "The HDRI's Mapping has a Location, an X or Y rotation or a scale: its sun is matched about Z only, check it": (
+        "Il Mapping dell'HDRI ha una Location, una rotazione X o Y o una scala: il suo sole è allineato solo "
+        "attorno a Z, controllalo"
+    ),
+    "The HDRI's vector comes from a Texture Coordinate output other than Generated: Fit HDRI cannot turn it": (
+        "Il vettore dell'HDRI arriva da un'uscita di Texture Coordinate diversa da Generated: Fit HDRI non può ruotarlo"
+    ),
+    "The alignment stands the chosen side axis upright: pick another side": (
+        "L'allineamento mette in verticale l'asse del lato scelto: scegli un altro lato"
+    ),
+    # Solver messages (shown in the panel and on the photo)
+    "no image loaded": "nessuna immagine caricata",
+    "the focal length is unknown: enter it in Camera Data": "la focale è sconosciuta: inseriscila in Dati camera",
+    "one vanishing point needs the focal length: enter it in Camera Data": (
+        "un punto di fuga richiede la focale: inseriscila in Dati camera"
+    ),
+    "the horizon mode needs the focal length: enter it in Camera Data": (
+        "la modalità orizzonte richiede la focale: inseriscila in Dati camera"
+    ),
+    "unstable calibration (focal ±{}%, angles ±{}°): use longer guides further apart, add a third axis line "
+    "or a third vanishing point, or use the known focal length": (
+        "calibrazione instabile (focale ±{}%, angoli ±{}°): usa guide più lunghe e più distanti, aggiungi una "
+        "linea del terzo asse o un terzo punto di fuga, oppure usa la focale nota"
+    ),
+    "the guides disagree with the known focal length by up to {}°: the photo may be cropped or zoomed, "
+    "try solving the focal length": (
+        "le guide non concordano con la focale nota fino a {}°: la foto può essere ritagliata o zoomata, "
+        "prova a risolvere la focale"
+    ),
+    "the guides do not meet consistently (up to {}° off): some lines may not be parallel to their axis": (
+        "le guide non si incontrano in modo coerente (fino a {}° di scarto): alcune linee potrebbero non "
+        "essere parallele al loro asse"
+    ),
+    "the guides overrule the known focal length ({}%): the photo may be cropped or zoomed": (
+        "le guide correggono la focale nota ({}%): la foto può essere ritagliata o zoomata"
+    ),
+    "straighten horizon removed {}° of roll: the camera no longer matches the guides": (
+        "raddrizza orizzonte ha tolto {}° di rollio: la camera non corrisponde più alle guide"
+    ),
+    "a vanishing point needs at least two lines": "un punto di fuga richiede almeno due linee",
+    "a guide line has zero length": "una guida ha lunghezza nulla",
+    "the guide lines of a vanishing point lie on one line: move them apart": (
+        "le guide di un punto di fuga stanno su una sola retta: separale"
+    ),
+    "the reference point lies on a line parallel to its axis": (
+        "il punto di riferimento sta su una retta parallela al suo asse"
+    ),
+    "the three vanishing points are collinear": "i tre punti di fuga sono allineati",
+    "the reference distance is zero": "la misura di riferimento è nulla",
+    "the first reference handle is beyond the horizon of its plane: move it closer": (
+        "la prima maniglia di riferimento è oltre l'orizzonte del suo piano: avvicinala"
+    ),
+    "the second reference handle is beyond the horizon of its plane: move it closer": (
+        "la seconda maniglia di riferimento è oltre l'orizzonte del suo piano: avvicinala"
+    ),
+    "the vanishing points do not fit a real camera: the two directions are probably not perpendicular in "
+    "reality (e.g. two facades that are nearly parallel), or one vanishes too far away; use the known focal "
+    "length or other lines": (
+        "i punti di fuga non corrispondono a una camera reale: le due direzioni probabilmente non sono "
+        "perpendicolari nella realtà (es. due facciate quasi parallele), o una fugge troppo lontano; usa la "
+        "focale nota o altre linee"
+    ),
+    "the second axis line has zero length": "la linea del secondo asse ha lunghezza nulla",
+    "the second axis line points at the first vanishing point": (
+        "la linea del secondo asse punta verso il primo punto di fuga"
+    ),
+    "guide lines are parallel in the image: the vanishing point is at infinity": (
+        "le guide sono parallele nell'immagine: il punto di fuga è all'infinito"
+    ),
+    "use 1, 2 or 3 vanishing points": "usa 1, 2 o 3 punti di fuga",
+    "two axes are required": "servono due assi",
+    "the first two vanishing points must use different axes": "i primi due punti di fuga devono usare assi diversi",
+    "one vanishing point needs a known focal length": "un punto di fuga richiede una focale nota",
+    "one vanishing point needs a line along the second axis": (
+        "un punto di fuga richiede una linea lungo il secondo asse"
+    ),
+    "the camera distance must be positive": "la distanza della camera deve essere positiva",
+    "the camera is below the XY plane: flip an axis if this is not intended": (
+        "la camera è sotto il piano XY: inverti un asse se non è voluto"
+    ),
+    "the horizon mode needs a known focal length": "la modalità orizzonte richiede una focale nota",
+    "the camera height must be positive": "l'altezza della camera deve essere positiva",
+    "the horizon line has zero length": "la linea dell'orizzonte ha lunghezza nulla",
+    "the camera looks straight up or down: the horizon is undefined": (
+        "la camera guarda dritta in alto o in basso: l'orizzonte non è definito"
+    ),
+    "a homography needs four point pairs": "un'omografia richiede quattro coppie di punti",
+    "the rectangle corners are degenerate (three corners are collinear)": (
+        "gli angoli del rettangolo sono degeneri (tre angoli allineati)"
+    ),
+    "the rectangle size must be positive": "le dimensioni del rettangolo devono essere positive",
+    "the rectangle needs four corners": "il rettangolo richiede quattro angoli",
+    "the rectangle corners must form a convex shape, in order": (
+        "gli angoli del rettangolo devono formare una figura convessa, in ordine"
+    ),
+    "the focal length cannot be estimated from this rectangle": "la focale non si può stimare da questo rettangolo",
+    "the rectangle is almost facing the camera: the focal length estimate is unstable": (
+        "il rettangolo è quasi di fronte alla camera: la stima della focale è instabile"
+    ),
+    "the scale cube's base corner is beyond the horizon of the reference plane: move it closer": (
+        "l'angolo di base del cubo di scala è oltre l'orizzonte del piano di riferimento: avvicinalo"
+    ),
+    "the scale cube size must be positive": "la dimensione del cubo di scala deve essere positiva",
+    "the scale cube's vertical edge points at the camera": (
+        "lo spigolo verticale del cubo di scala punta verso la camera"
+    ),
+    "the scale cube has no height: drag its top handle away from the base": (
+        "il cubo di scala non ha altezza: allontana dalla base la maniglia in cima"
+    ),
 }
 
 # Generic words, translated only where FTC asks with its own context ("FTC"):
@@ -518,11 +797,52 @@ _IT_FTC = {
     "Wall YZ": "Parete YZ",
     "Follow the Sun": "Segui il sole",
     "Lines": "Linee",
+    # Mode and yaw: "Horizon", "Manual"... alone are generic words.
+    "Mode": "Modalità",
+    "Vanishing Points": "Punti di fuga",
+    "Known Rectangle": "Rettangolo noto",
+    "Horizon": "Orizzonte",
+    "From EXIF": "Da EXIF",
+    "Manual": "Manuale",
+    "Model": "Modello",
+    # Development builds' north sources (kept for the enum index, never offered)
+    "Map": "Mappa",
+    "Landmark": "Punto di riferimento",
 }
 
 translations_dict = {"it_IT": {("*", en): it for en, it in _IT.items()}}
 translations_dict["it_IT"].update({(CONTEXT, en): it for en, it in _IT_FTC.items()})
 translations_dict["it_IT"].update({("Operator", en): it for en, it in _IT.items()})
+
+
+def _template(key: str):
+    """Regular expression matching ``key`` with any text in its ``{}`` fields."""
+    parts = [re.escape(p) for p in key.split("{}")]
+    return re.compile("^" + "(.+?)".join(parts) + "$", re.DOTALL)
+
+
+# Messages with numbers or names in them (solver warnings, reports...), held in
+# English in the results and the report: matched here and translated on screen.
+_TEMPLATES = [(_template(key), key) for key in _IT if "{}" in key and "{:" not in key]
+
+
+def message(text: str, translate=pgettext_iface) -> str:
+    """``text`` translated for display, also when it was filled from a template.
+    Fields that are phrases (an error inside a report) are translated too; single
+    words are names (an object's) and stay."""
+    if not text:
+        return text
+    out = translate(text)
+    if out != text:
+        return out
+    for regex, key in _TEMPLATES:
+        match = regex.match(text)
+        if match is not None:
+            done = translate(key)
+            if done != key:
+                fields = (message(g, translate) if " " in g else g for g in match.groups())
+                return done.format(*fields)
+    return text
 
 
 def register():

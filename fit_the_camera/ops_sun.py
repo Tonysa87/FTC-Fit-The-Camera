@@ -34,6 +34,7 @@ from .solver.sun import (
     sun_position,
     y_bearing,
 )
+from .translations import message
 
 SUN_NAME = "FTC Sun"
 AXIS_VECTORS = {"+X": (1.0, 0.0, 0.0), "+Y": (0.0, 1.0, 0.0), "-X": (-1.0, 0.0, 0.0), "-Y": (0.0, -1.0, 0.0)}
@@ -54,12 +55,16 @@ class SunState:
 
     utc: datetime | None = None
     sun: SunPosition | None = None
-    y_bearing: float | None = None  # compass bearing of the scene +Y, degrees
+    # Compass bearing (degrees) of the calibrated world's +Y: the scene +Y when the
+    # alignment only turns about Z (``scene_y_bearing`` otherwise).
+    y_bearing: float | None = None
     direction: Vector | None = None  # towards the sun, in the scene
     error: str = ""
     warnings: list[str] = field(default_factory=list)
-    # Sun measured on the shadow (scene), its spread (degrees) or why not.
+    # Sun measured on the shadow (scene; ``shadow_world`` in the calibrated
+    # world, Z up), its spread (degrees) or why not.
     shadow: Vector | None = None
+    shadow_world: np.ndarray | None = None
     shadow_spread: float = 0.0
     shadow_error: str = ""
     # Shadow minus date/place: north (degrees, the sign of North Correction)
@@ -102,6 +107,7 @@ def measure_shadow(settings, solution, state) -> None:
     except SolverError as exc:
         state.shadow_error = str(exc)
         return
+    state.shadow_world = np.asarray(d, float)
     state.shadow = Vector((scene_rotation(settings) @ d).tolist())
     if all(math.dist(calibrate.handle(settings, k), calibrate.HANDLE_DEFAULTS[k]) < 1e-6 for k in SHADOW_KEYS):
         state.warnings.append("Place the shadow handles on the photo (Calibrate Shadow)")
@@ -144,8 +150,8 @@ def scene_rotation(settings) -> np.ndarray:
 
 
 def compass_north(settings, solution) -> tuple[float | None, str]:
-    """Compass bearing of the scene +Y (degrees) from the photo's compass, or
-    ``None`` and why."""
+    """Compass bearing of the calibrated world's +Y (degrees) from the photo's
+    compass, or ``None`` and why."""
     data = settings.camera_data
     if data.direction_state == "MISSING":
         return None, "No compass direction in the photo: use Side or Shadow"
@@ -154,8 +160,7 @@ def compass_north(settings, solution) -> tuple[float | None, str]:
     bearing = data.direction
     if data.direction_ref.upper().startswith("M"):
         bearing += math.degrees(settings.sun.declination)
-    view = scene_rotation(settings) @ solution.rotation @ np.array([0.0, 0.0, -1.0])
-    result = y_bearing(bearing, view)
+    result = y_bearing(bearing, solution.forward)
     return result, "" if result is not None else "The camera looks straight up or down: no north from its compass"
 
 
@@ -164,7 +169,11 @@ STEEP_VIEW_DEG = 70.0
 
 
 def evaluate(settings, solution=None) -> SunState:
-    """Sun of the photo for ``settings``. Never writes: safe in draw callbacks."""
+    """Sun of the photo for ``settings``. Never writes: safe in draw callbacks.
+
+    Worked out in the calibrated world, whose Z is the photo's vertical, then
+    turned into the scene: an alignment that tilts Z (a sloped face) tilts the
+    sky with it, as it does the measured shadow."""
     state = SunState()
     data = settings.camera_data
     sun = settings.sun
@@ -214,15 +223,14 @@ def evaluate(settings, solution=None) -> SunState:
     if north == "COMPASS" and data.direction_state != "MISSING" and solution is not None:
         if data.direction_ref.upper().startswith("M") and sun.declination == 0.0:
             state.warnings.append("Magnetic compass: enter the declination of the place")
-        view = scene_rotation(settings) @ solution.forward
-        if abs(math.degrees(math.asin(max(-1.0, min(1.0, float(view[2])))))) > STEEP_VIEW_DEG:
+        if abs(math.degrees(math.asin(max(-1.0, min(1.0, float(solution.forward[2])))))) > STEEP_VIEW_DEG:
             state.warnings.append("The camera looks steeply up or down: its compass is unreliable, check the north")
 
     # North implied by the shadow: the sun's bearing minus the shadow's heading.
     shadow_bearing = None
-    if state.shadow is not None and heading(state.shadow) is not None:
-        shadow_bearing = y_bearing(state.sun.azimuth, state.shadow)
-        state.shadow_elevation_offset = elevation_of(state.shadow) - state.sun.elevation
+    if state.shadow_world is not None and heading(state.shadow_world) is not None:
+        shadow_bearing = y_bearing(state.sun.azimuth, state.shadow_world)
+        state.shadow_elevation_offset = elevation_of(state.shadow_world) - state.sun.elevation
     if north == "SHADOW":
         if shadow_bearing is None:
             state.error = state.shadow_error or "The sun is almost overhead: its shadow gives no north"
@@ -230,17 +238,32 @@ def evaluate(settings, solution=None) -> SunState:
         # Measured, not estimated: no turn by eye.
         state.y_bearing = shadow_bearing % 360.0
     elif north == "SIDE":
-        # The sun comes from the chosen axis, turned by eye: the north follows.
-        state.y_bearing = (y_bearing(state.sun.azimuth, AXIS_VECTORS[sun.sun_side]) + correction) % 360.0
+        # The sun comes from the chosen scene axis, turned by eye: the north follows.
+        side = scene_rotation(settings).T @ np.array(AXIS_VECTORS[sun.sun_side])
+        side_bearing = y_bearing(state.sun.azimuth, side)
+        if side_bearing is None:
+            state.error = "The alignment stands the chosen side axis upright: pick another side"
+            return state
+        state.y_bearing = (side_bearing + correction) % 360.0
     elif state.y_bearing is None:
         state.error = north_error
         return state
     if north != "SHADOW" and shadow_bearing is not None:
         # The turn the shadow asks for (add it to Turn / North Correction).
         state.shadow_north_offset = (shadow_bearing - state.y_bearing + 180.0) % 360.0 - 180.0
-        state.shadow_north_spread = azimuth_spread(state.shadow_spread, state.shadow)
-    state.direction = Vector(scene_direction(raised(state.sun, sun), state.y_bearing).tolist())
+        state.shadow_north_spread = azimuth_spread(state.shadow_spread, state.shadow_world)
+    world = scene_direction(raised(state.sun, sun), state.y_bearing)
+    state.direction = Vector((scene_rotation(settings) @ world).tolist())
     return state
+
+
+def scene_y_bearing(settings, state) -> float | None:
+    """Compass bearing of the scene +Y; ``None`` without a north or when the
+    alignment stands +Y upright."""
+    if state.y_bearing is None:
+        return None
+    h = heading(scene_rotation(settings).T @ np.array([0.0, 1.0, 0.0]))
+    return None if h is None else (state.y_bearing + h) % 360.0
 
 
 def raised(position: SunPosition, sun) -> SunPosition:
@@ -344,7 +367,7 @@ class FTC_OT_new_sun(Operator):
         obj.location = origin + (state.direction or Vector((0.0, 0.0, 1.0))) * reach
         settings.sun.light = obj  # orients it
         if state.error:
-            self.report({"WARNING"}, bpy.app.translations.pgettext_tip(state.error))
+            self.report({"WARNING"}, message(state.error, bpy.app.translations.pgettext_rpt))
         return {"FINISHED"}
 
 
@@ -370,7 +393,7 @@ class FTC_OT_read_photo_time(Operator):
         if exif.capture_time() is None and exif.gps_latitude is None:
             self.report({"WARNING"}, "No date, time or place found in the photo")
             return {"CANCELLED"}
-        ops_load.load_time_place(settings.camera_data, exif)
+        ops_load.load_time_place(settings.camera_data, exif, keep_entered=True)
         settings_changed(settings.id_data, context)
         return {"FINISHED"}
 

@@ -3,6 +3,57 @@
 From 1.1 the changelog is in English. The full history in Italian, with every
 release since 0.1, is in [`CHANGELOG.it.md`](CHANGELOG.it.md).
 
+## 1.1.1 – unreleased
+
+*A bug sweep after 1.1.0, and the whole interface in Italian.*
+
+### Fixes
+
+- **Make Upright Copy** of a 16-bit or float photo no longer comes back darker
+  after saving and reopening the file. When the photo's file is missing it
+  gives a message instead of an error.
+- **Results**: *Camera Height* and *Distance* follow the scene's Unit Scale (a
+  centimetre scene showed "160 m" for 1.6 m).
+- **Known Rectangle on a wall**: corners placed from the top edge (or F pressed
+  twice) no longer turn the camera upside down.
+- **35 mm equivalent without a sensor size**: the focal length shown in Results
+  and in the report is the one entered (27.04 mm was shown for 26 mm on a 4:3
+  photo). The Blender camera was already right.
+- **Two guide lines on one straight line** are reported instead of giving an
+  arbitrary vanishing point.
+- **Align to Scene**: switching *Use Stored Target* on or off moves the camera at
+  once, like Rotate 90° and Flip. A plane change also updates the "FTC"
+  orientation.
+- **Fit Sun**:
+  - *Read from Photo* keeps a place or time zone typed by hand when the photo
+    has none.
+  - The date-and-place sun follows an alignment that tilts the vertical (a
+    sloped face), as the measured shadow already did.
+  - Export Report no longer writes the place of the shot once the Fit Sun light
+    has been deleted or the fitted HDRI is no longer the World's.
+  - EXIF dates at the ends of the calendar no longer stop Load Image.
+- **Fit HDRI**:
+  - A Mapping with a Location now gets the "matched about Z only" warning.
+  - A Texture Coordinate output other than *Generated* (e.g. *Object*, an HDRI
+    turned by an Empty) is refused instead of giving a wrong sun.
+  - A muted link into the HDRI is no longer switched back on.
+  - A node group with a fake user is no longer called "used elsewhere".
+  - An HDRI whose file vanished gives a message instead of an error.
+- **Calibration session**:
+  - Ctrl+Z also undoes the settings changed in the panel during the session.
+  - Switching workspace no longer ends the session (it waits for its view), and
+    it follows the view maximized with Ctrl+Space.
+  - The navigation gizmo (axes, zoom, pan) works during the session.
+  - I no longer inserts a keyframe on the camera.
+- The tooltip of *Vanishing Point 1* describes the axis sign correctly (along
+  the first guide, from its first handle to its second).
+
+### Italian
+
+Every tooltip, label, report and solver message is now translated, also those
+with numbers in them (e.g. *calibrazione instabile (focale ±12%…)*). A test
+checks that nothing is left in English.
+
 ## 1.1.0 – 2026-10-14
 
 *FTC now gets the real sun: the light, the shadows and the HDRI match the photo.*

@@ -7,7 +7,8 @@ measures ``height``. The rectangle is centred on the world origin. The plane is
 XY (floor, the default), XZ or YZ (walls, with the second edge vertical). If the
 corners are ordered so that the camera would end up behind the plane, the first
 (horizontal) axis is flipped, so the camera looks at the rectangle's front while
-the vertical stays up on walls.
+the vertical stays up on walls. On walls, corners ordered from the top edge
+(the order turned by 180°) are turned back: a wall's vertical always points up.
 """
 
 from __future__ import annotations
@@ -179,9 +180,9 @@ def solve_rectangle(
     centred = img - p
     warnings: list[str] = []
 
-    def solve_for(x_sign: float):
+    def solve_for(x_sign: float, y_sign: float = 1.0):
         hw, hh = width / 2.0, height / 2.0
-        plane = np.array([[-hw, -hh], [hw, -hh], [hw, hh], [-hw, hh]]) * [x_sign, 1.0]
+        plane = np.array([[-hw, -hh], [hw, -hh], [hw, hh], [-hw, hh]]) * [x_sign, y_sign]
         hmat = homography(plane, centred)
         f = focal_px
         if not f:
@@ -200,9 +201,14 @@ def solve_rectangle(
         position = -world_to_cam.T @ origin_cam
         return f, world_to_cam, origin_cam, position
 
-    f, world_to_cam, origin_cam, position = solve_for(1.0)
+    x_sign = 1.0
+    f, world_to_cam, origin_cam, position = solve_for(x_sign)
     if position[2] < 0.0:
-        f, world_to_cam, origin_cam, position = solve_for(-1.0)
+        x_sign = -1.0
+        f, world_to_cam, origin_cam, position = solve_for(x_sign)
+    if plane != "XY" and world_to_cam[1, 1] < 0.0:
+        # Upside down on a wall (local y is the world's up): turn the corners by 180°.
+        f, world_to_cam, origin_cam, position = solve_for(-x_sign, -1.0)
 
     if not (focal_px or known_focal_px):
         # Angle between the plane normal and the optical axis.

@@ -129,8 +129,9 @@ Open the sidebar of the 3D viewport (N) and the **FTC** tab.
 3. **Calibration** – pick a mode and press **Calibrate**: drag the handles of the
    guides onto edges of the image that are parallel in the real world.
    Shift = fine, with a ×4 magnifier on the handle, Ctrl = snap, 1/2/3 = axis,
-   F = flip the direction, H = straighten the horizon, Ctrl+Z / Ctrl+Shift+Z = undo / redo, Enter = apply,
-   Esc / right click = exit. The **− n +** buttons next to an axis add a
+   F = flip the direction, H = straighten the horizon, Ctrl+Z / Ctrl+Shift+Z = undo / redo (also of
+   the panel changes made meanwhile), Enter = apply, Esc / right click = exit. The session waits while
+   another workspace is shown and follows the view maximized with Ctrl+Space. The **− n +** buttons next to an axis add a
    guide line between its first two, up to six, or remove the last: more lines
    on long edges average out the placement errors. With *Live Update* (default) the camera follows the
    guides while you drag; Enter or **Apply** writes it and ends the session.
@@ -138,7 +139,8 @@ Open the sidebar of the 3D viewport (N) and the **FTC** tab.
    **Apply**. In the camera view the photo moves with the camera: to see the
    result, look at the scene objects or at the camera's location.
 4. **Align to Scene** – place the calibrated plane (XY, XZ or YZ) on the 3D
-   cursor, on the active face (Edit Mode) or on the active object.
+   cursor, on the active face (Edit Mode) or on the active object. The camera
+   moves at once, also when the stored target is switched on or off.
 5. **Results** – focal length, field of view, camera height, angles, uncertainty
    and guide fit, with warnings. **Export Report** saves them, with the
    source of every input and the sun, as Markdown or JSON.

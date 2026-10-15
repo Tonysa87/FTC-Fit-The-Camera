@@ -97,7 +97,7 @@ def environment(world):
         return None, "The HDRI's node group is linked from a library: make it local to fit its HDRI"
     if any(n.image != node.image for n in found):
         return node, "Several Environment Textures reach the World output: using the first by name"
-    if node.id_data != tree and node.id_data.users > 1:
+    if node.id_data != tree and real_users(node.id_data) > 1:
         return node, "The HDRI's node group is used elsewhere too: it turns there as well"
     return node, ""
 
@@ -108,8 +108,14 @@ def same_image(env):
     return [n for n in env.id_data.nodes if n.type == "TEX_ENVIRONMENT" and n.image == env.image]
 
 
-def _upstream(socket):
-    """Node feeding ``socket``, through reroutes; ``None`` when unlinked (or muted)."""
+def real_users(block) -> int:
+    """Users of a data-block, its fake user left out."""
+    return block.users - int(block.use_fake_user)
+
+
+def _upstream_socket(socket):
+    """Output socket feeding ``socket``, through reroutes; ``None`` when unlinked
+    (or muted)."""
     while socket.links:
         link = socket.links[0]
         if not link.is_valid or link.is_muted:
@@ -117,8 +123,14 @@ def _upstream(socket):
         if link.from_node.type == "REROUTE":
             socket = link.from_node.inputs[0]
             continue
-        return link.from_node
+        return link.from_socket
     return None
+
+
+def _upstream(socket):
+    """Node feeding ``socket``, through reroutes; ``None`` when unlinked (or muted)."""
+    source = _upstream_socket(socket)
+    return None if source is None else source.node
 
 
 def mapping_of(env):
@@ -133,6 +145,8 @@ ANIMATED = "The rotation of the HDRI is keyframed or driven: Fit HDRI cannot tur
 LINKED = "The rotation of the HDRI is in a node group linked from a library: make it local to fit its HDRI"
 MUTED = "The HDRI's Mapping node is muted: unmute it or remove it"
 SHARED = "The HDRI's node group is used several times: only this instance's rotation input turns"
+TILTED = "The HDRI's Mapping has a Location, an X or Y rotation or a scale: its sun is matched about Z only, check it"
+COORDINATES = "The HDRI's vector comes from a Texture Coordinate output other than Generated: Fit HDRI cannot turn it"
 
 
 @dataclass
@@ -330,9 +344,13 @@ def rotation_control(mapping, path=(), component: int = 2):
 def vector_problem(env, world=None, path=None) -> str:
     """Why FTC cannot turn ``env``'s HDRI about Z; empty when it can. ``path``:
     the group nodes leading to ``env``'s tree (found from ``world`` when None)."""
-    node = _upstream(env.inputs["Vector"])
-    if node is None or node.type == "TEX_COORD":
+    source = _upstream_socket(env.inputs["Vector"])
+    node = None if source is None else source.node
+    if node is None:
         return ""
+    if node.type == "TEX_COORD":
+        # The other outputs are not the world direction (Object: turned by an object).
+        return "" if source.identifier == "Generated" else COORDINATES
     if node.type != "MAPPING":
         return "The HDRI's vector comes from other nodes (not a Mapping): Fit HDRI cannot turn it"
     if node.mute:
@@ -348,7 +366,8 @@ def ensure_mapping(tree, env):
     if mapping is not None:
         return mapping
     vector = env.inputs["Vector"]
-    source = vector.links[0].from_socket if vector.links else None
+    # A muted link counts as none: the new Mapping replaces it, from Generated.
+    source = vector.links[0].from_socket if _upstream_socket(vector) is not None else None
     mapping = tree.nodes.new("ShaderNodeMapping")
     mapping.vector_type = "POINT"
     mapping[MAPPING_TAG] = True
@@ -387,11 +406,16 @@ def set_z(mapping, angle: float, path=()) -> None:
 
 
 def tilted(mapping, path=()) -> bool:
-    """X/Y rotation or a mirrored / uneven X-Y scale: the sun is matched about Z
-    only. An X/Y rotation that cannot be followed back counts as tilted."""
+    """X/Y rotation, a mirrored / uneven X-Y scale or a Location (it shifts the
+    directions of a Point or Texture mapping): the sun is matched about Z only.
+    An X/Y rotation that cannot be followed back counts as tilted."""
     for axis in (0, 1):
         control = rotation_control(mapping, path, axis)
         if isinstance(control, str) or abs(control.get()) > 1e-6:
+            return True
+    if mapping.vector_type in {"POINT", "TEXTURE"}:
+        location = mapping.inputs["Location"]
+        if location.is_linked or any(abs(v) > 1e-6 for v in location.default_value):
             return True
     scale = mapping.inputs["Scale"]
     if scale.is_linked:
@@ -429,6 +453,9 @@ def thumbnail(image, long_side=THUMB_LONG_SIDE) -> np.ndarray:
         copy.scale(tw, th)
         px = np.empty(tw * th * 4, dtype=np.float32)
         copy.pixels.foreach_get(px)
+    except RuntimeError:
+        # The copy reloads the file: moved or deleted since it was opened.
+        raise ValueError("The HDRI image cannot be read: is its file missing?") from None
     finally:
         bpy.data.images.remove(copy)
     return px.reshape(th, tw, 4)[..., :3]
@@ -471,13 +498,13 @@ def fit(settings, scene, uv, state=None):
             control = rotation_control(mapping, path)
             control.target(-angle if mapping.vector_type == "TEXTURE" else angle)
             owner = control.socket.node
-            if owner.type == "GROUP" and owner.node_tree is not None and owner.node_tree.users > 1:
+            if owner.type == "GROUP" and owner.node_tree is not None and real_users(owner.node_tree) > 1:
                 warning = SHARED
     for node in nodes:
         mapping = ensure_mapping(node.id_data, node)
         set_z(mapping, angle, path)
         if tilted(mapping, path):
-            warning = "The HDRI's Mapping has an X or Y rotation or scale: its sun is matched about Z only, check it"
+            warning = TILTED
     sun_elevation = math.degrees(math.asin(max(-1.0, min(1.0, state.direction.z))))
     return angle, elevation(uv[1]) - sun_elevation, warning
 

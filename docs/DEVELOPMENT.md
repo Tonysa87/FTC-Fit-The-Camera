@@ -62,8 +62,12 @@ docs/TEST_GUI_1.1.md     # checklist del test a mano della 1.1
 - Segno degli assi: lungo la prima guida del gruppo (prima → seconda maniglia),
   calcolato con la velocità d'immagine, stabile anche con punti di fuga all'infinito.
 - Yaw in gradi, orario da +Y (bussola con il nord su +Y).
-- Sole (1.1): azimut e direzioni in gradi orari dal nord visti dall'alto; il nord
-  della scena è la direzione di bussola dell'asse +Y (`solver/sun.y_bearing`).
+- Sole (1.1): azimut e direzioni in gradi orari dal nord visti dall'alto.
+  `ops_sun.evaluate` lavora nel mondo calibrato (Z = verticale della foto):
+  `state.y_bearing` è la direzione di bussola del +Y calibrato, `shadow_world`
+  l'ombra calibrata; solo `state.direction` / `state.shadow` sono ruotati nella
+  scena (`scene_rotation`), così un allineamento che inclina Z inclina anche il
+  cielo (1.1.1). Il +Y della scena: `ops_sun.scene_y_bearing`.
   Una luce Sole illumina lungo il suo −Z: FTC punta il suo +Z verso il sole.
 - HDRI (1.1): convenzione equirettangolare di Cycles, u = 0,5 guarda +X, u
   cresce in senso orario visto dall'alto, v = 0,5 orizzonte; il Mapping (tipo
@@ -88,7 +92,21 @@ docs/TEST_GUI_1.1.md     # checklist del test a mano della 1.1
 - Piano di riferimento: XY (pavimento), XZ (parete rivolta a −Y), YZ (parete
   rivolta a +X), y locale verso l'alto sulle pareti.
 - Sensore = lato lungo del sensore intero; la parte coperta dall'immagine si
-  ricava dal formato nativo (`exif.native_frame`).
+  ricava dal formato nativo (`exif.native_frame`). Senza sensore si usa quello
+  equivalente 35 mm sulla diagonale del formato nativo (`calibrate.image_sensor_mm`).
+- Traduzioni: testi dell'interfaccia in inglese, italiano in `translations.py`
+  (solo frasi specifiche dell'add-on nel contesto "*"; parole generiche come
+  "Horizon" o "Yaw" nel contesto "FTC" della proprietà). I messaggi con numeri
+  sono modelli con `{}` (es. `calibrate.UNSTABLE`): restano in inglese nei
+  risultati e nel report e si traducono a schermo con `translations.message`
+  (pannello `ui.wrapped`, overlay, report degli operatori). Mai f-string per un
+  messaggio mostrato: il test Blender `every_string_is_translated` estrae ogni
+  nome, tooltip, voce di enum, etichetta, report e messaggio del solver e
+  fallisce se manca la traduzione o se un messaggio è una f-string.
+- Undo della sessione: `ops_modal.snapshot` salva maniglie e tutte le
+  impostazioni (tranne visualizzazione, foto, HDRI); le modifiche fatte nel
+  pannello tra due eventi diventano un passo (`track_panel_changes`). Cambiare
+  foto svuota la cronologia.
 
 ## Ambiente di sviluppo (Ubuntu / WSL)
 

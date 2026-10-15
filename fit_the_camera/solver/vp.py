@@ -60,7 +60,10 @@ def orthocenter(a, b, c) -> np.ndarray:
     return np.linalg.solve(m, rhs)
 
 
-BEYOND_HORIZON_REF = "the {} reference handle is beyond the horizon of its plane: move it closer"
+BEYOND_HORIZON_REF = (
+    "the first reference handle is beyond the horizon of its plane: move it closer",
+    "the second reference handle is beyond the horizon of its plane: move it closer",
+)
 
 
 def reference_distance(reference: ReferenceDistance, origin_ray, world_to_cam, p, f) -> float:
@@ -72,14 +75,14 @@ def reference_distance(reference: ReferenceDistance, origin_ray, world_to_cam, p
     frame = plane_frame(reference.plane)
     start = plane_point(reference.start, origin_ray, world_to_cam, frame[:, 2], p, f)
     if start is None:
-        raise SolverError(BEYOND_HORIZON_REF.format("first"))
+        raise SolverError(BEYOND_HORIZON_REF[0])
     if abs(frame[k, 2]) > 0.5:
         # A height: the end is on the line along the normal through the start.
         unit_length = abs(closest_param_on_line(start, world_to_cam[:, k], ray(reference.end, p, f)))
     else:
         end = plane_point(reference.end, origin_ray, world_to_cam, frame[:, 2], p, f)
         if end is None:
-            raise SolverError(BEYOND_HORIZON_REF.format("second"))
+            raise SolverError(BEYOND_HORIZON_REF[1])
         unit_length = float(np.linalg.norm(end - start))
     if unit_length < 1e-9 * np.linalg.norm(start):
         raise SolverError("the reference distance is zero")

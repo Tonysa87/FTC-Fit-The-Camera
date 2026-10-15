@@ -51,14 +51,31 @@ def _scale_mode_changed(self, context):
     calibrate.settings_changed(self.id_data, context, reset_pitch=False)
 
 
+def _move_aligned(settings, context):
+    """The camera and the "FTC" orientation follow an alignment change at once,
+    like Rotate 90° and Flip (a session writes the camera itself; settings
+    written together, ``suspended``, move nothing)."""
+    if calibrate.session_camera is not None or calibrate.updating():
+        return
+    cam = calibrate.view_camera(context)
+    if cam is not None and cam.data == settings.id_data:
+        calibrate.update(context, cam, apply=True)
+        from . import ops_orientation  # (it imports calibrate, like this module)
+
+        # Only an existing orientation: creating one runs an operator.
+        ops_orientation.sync(context, cam, create_missing=False)
+
+
 def _plane_changed(self, context):
     calibrate.seed_cube(self.id_data)
     calibrate.settings_changed(self.id_data, context, reset_pitch=True)
-    if self.use_anchor and calibrate.session_camera is None:
-        # Aligned to a target: the camera moves at once, like Rotate 90° and Flip.
-        cam = calibrate.view_camera(context)
-        if cam is not None and cam.data == self.id_data:
-            calibrate.update(context, cam, apply=True)
+    if self.use_anchor:
+        _move_aligned(self, context)
+
+
+def _anchor_changed(self, context):
+    calibrate.settings_changed(self.id_data, context, reset_pitch=False)
+    _move_aligned(self, context)
 
 
 def _third_axis_changed(self, context):
@@ -132,7 +149,7 @@ class FTC_CameraData(PropertyGroup):
     loading: BoolProperty(options={"HIDDEN", "SKIP_SAVE"})
 
     make: StringProperty(name="Make")
-    model: StringProperty(name="Model")
+    model: StringProperty(name="Model", translation_context=FTC_CONTEXT)
     lens: StringProperty(name="Lens")
     image_width: IntProperty(name="Width", subtype="PIXEL", min=0)
     image_height: IntProperty(name="Height", subtype="PIXEL", min=0)
@@ -284,7 +301,7 @@ class FTC_Results(PropertyGroup):
     distance: FloatProperty(name="Distance to Origin", subtype="DISTANCE", unit="LENGTH")
     pitch: FloatProperty(name="Pitch", subtype="ANGLE")
     roll: FloatProperty(name="Roll", subtype="ANGLE")
-    yaw: FloatProperty(name="Yaw", subtype="ANGLE")
+    yaw: FloatProperty(name="Yaw", translation_context=FTC_CONTEXT, subtype="ANGLE")
     focal_error: FloatProperty(name="Focal Uncertainty", subtype="FACTOR")
     angle_error: FloatProperty(name="Angle Uncertainty")
     focal_solved: BoolProperty()
@@ -444,6 +461,8 @@ class FTC_Settings(PropertyGroup):
 
     mode: EnumProperty(
         name="Mode",
+        # "Horizon" alone is a generic word: translated in FTC's own context.
+        translation_context=FTC_CONTEXT,
         description="What in the image defines the camera",
         items=[
             ("VP", "Vanishing Points", "Calibrate from parallel lines converging to 1, 2 or 3 vanishing points"),
@@ -466,7 +485,10 @@ class FTC_Settings(PropertyGroup):
     )
     vp1_axis: EnumProperty(
         name="Vanishing Point 1",
-        description="World axis of the first guide pair (the sign says which way it runs, away from the camera)",
+        description=(
+            "World axis of the first guide pair: + runs along its first guide, from the first handle "
+            "to the second (the arrow)"
+        ),
         items=AXIS_ITEMS,
         default="+X",
         update=_guides_changed,
@@ -574,7 +596,11 @@ class FTC_Settings(PropertyGroup):
             "Direction of the reference distance: along the reference plane both ends lie on the plane, "
             "anywhere on it; along its normal it is a height above the first end"
         ),
-        items=[("X", "X", ""), ("Y", "Y", ""), ("Z", "Z", "")],
+        items=[
+            ("X", "X", "The reference length runs along X"),
+            ("Y", "Y", "The reference length runs along Y"),
+            ("Z", "Z", "The reference length runs along Z"),
+        ],
         default="X",
         update=_changed,
     )
@@ -663,13 +689,18 @@ class FTC_Settings(PropertyGroup):
     )
     yaw_source: EnumProperty(
         name="Yaw",
+        translation_context=FTC_CONTEXT,
         description="Where the camera heading comes from",
-        items=[("EXIF", "From EXIF", "Use the image direction from GPS metadata"), ("MANUAL", "Manual", "")],
+        items=[
+            ("EXIF", "From EXIF", "Use the image direction from GPS metadata"),
+            ("MANUAL", "Manual", "Enter the heading by hand"),
+        ],
         default="EXIF",
         update=_changed,
     )
     yaw: FloatProperty(
         name="Yaw",
+        translation_context=FTC_CONTEXT,
         description="Heading of the camera, clockwise from +Y",
         subtype="ANGLE",
         update=_changed,
@@ -729,7 +760,7 @@ class FTC_Settings(PropertyGroup):
     use_anchor: BoolProperty(
         name="Align to Scene",
         description="Place the reference plane on the stored scene target (3D cursor, face or object)",
-        update=_changed,
+        update=_anchor_changed,
     )
     # Scene target frame: origin, x axis, y axis and normal of the target plane.
     anchor_matrix: FloatVectorProperty(size=(4, 4), subtype="MATRIX")

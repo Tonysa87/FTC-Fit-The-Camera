@@ -35,8 +35,8 @@ def to_blender(
     """Blender camera data for ``solution``.
 
     ``sensor_long_side_mm`` is the sensor size along the longer image side; with no
-    known sensor a 36 mm sensor is used, which gives the 35 mm equivalent focal
-    length. The fit follows the image orientation, so the sensor size always
+    sensor a 36 mm one is used (the 35 mm equivalent of 3:2 images only: callers
+    pass the equivalent sensor of other aspects). The fit follows the image orientation, so the sensor size always
     applies to the longer side.
     """
     w, h = solution.image_size

@@ -148,13 +148,30 @@ def results(settings, cam_obj) -> dict:
     }
 
 
+def light_in_use(sun) -> bool:
+    """A Fit Sun light still in a scene: a deleted one lives on in the pointer."""
+    return sun.light is not None and bool(sun.light.users_scene)
+
+
+def hdri_in_use(sun, scene) -> bool:
+    """The HDRI fitted by Fit HDRI is still the scene's World HDRI."""
+    from . import ops_hdri  # (it imports draw, which imports ops_sun)
+
+    if not sun.hdri_image or scene is None:
+        return False
+    env, _problem = ops_hdri.environment(scene.world)
+    return env is not None and env.image is not None and env.image.name == sun.hdri_image
+
+
 def sun_report(settings, scene) -> dict | None:
     """The sun block, only when Fit Sun is in use (a light, a fitted HDRI or a
     shadow): the place of the shot is not written for photos that merely carry
     GPS in their EXIF."""
     sun = settings.sun
     data = settings.camera_data
-    if sun.light is None and not sun.hdri_image and not ops_sun.shadow_in_use(settings):
+    light = light_in_use(sun)
+    hdri = hdri_in_use(sun, scene)
+    if not light and not hdri and not ops_sun.shadow_in_use(settings):
         return None
     state = ops_sun.evaluate(settings)
     out = {"from": sun.source}
@@ -178,14 +195,15 @@ def sun_report(settings, scene) -> dict | None:
         out["azimuth_deg"] = round(state.sun.azimuth, 3)
         out["elevation_deg"] = round(state.sun.elevation, 3)
         out["light_elevation_deg"] = round(ops_sun.raised(state.sun, sun).elevation, 3)
-    if state.y_bearing is not None:
-        out["scene_y_bearing_deg"] = round(state.y_bearing, 3)
+    scene_y = ops_sun.scene_y_bearing(settings, state)
+    if scene_y is not None:
+        out["scene_y_bearing_deg"] = round(scene_y, 3)
     if state.direction is not None:
         out["direction_in_scene"] = [round(v, 6) for v in state.direction]
     if state.shadow is not None:
         out["shadow"] = {
             "plane": sun.shadow_plane,
-            "elevation_deg": round(ops_sun.elevation_of(state.shadow), 3),
+            "elevation_deg": round(ops_sun.elevation_of(state.shadow_world), 3),
             "spread_deg": round(state.shadow_spread, 3) if math.isfinite(state.shadow_spread) else None,
             "vs_date_elevation_deg": _num(state.shadow_elevation_offset, 3),
             "vs_north_deg": _num(state.shadow_north_offset, 3),
@@ -194,9 +212,9 @@ def sun_report(settings, scene) -> dict | None:
         out["error"] = state.error
     if state.warnings:
         out["warnings"] = list(state.warnings)
-    if sun.light is not None:
+    if light:
         out["light"] = sun.light.name
-    if sun.hdri_image:
+    if hdri:
         out["hdri"] = {
             "image": sun.hdri_image,
             "sun_point_uv": [round(v, 5) for v in sun.hdri_point],

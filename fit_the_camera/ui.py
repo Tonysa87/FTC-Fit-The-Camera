@@ -9,10 +9,11 @@ from bpy.app.translations import pgettext_iface as iface_
 from bpy.types import Panel
 
 from . import calibrate, ops_hdri, ops_orientation, ops_render, ops_sun
-from .draw import plane_axes, remaining_axis, third_axis
+from .draw import length_text, plane_axes, remaining_axis, third_axis
 from .exif import is_native_aspect
 from .ops_load import background_for
 from .ops_modal import FTC_OT_calibrate
+from .translations import message
 
 OVERRIDDEN = "Keyframes, drivers or constraints on the camera (or its parent) override the calibration"
 STATE_ICONS = {"EXIF": "CHECKMARK", "MISSING": "ERROR", "MANUAL": "GREASEPENCIL"}
@@ -29,12 +30,13 @@ def field(layout, data, prop, state):
 
 
 def wrapped(layout, context, text, icon="NONE"):
-    """Label split over several lines to fit the sidebar width."""
+    """Label split over several lines to fit the sidebar width, translated whole
+    first (also a message with numbers: ``translations.message``)."""
     width = context.region.width if context.region else 300
     chars = max(20, int(width / (6.5 * context.preferences.system.ui_scale)))
     col = layout.column(align=True)
-    for i, line in enumerate(textwrap.wrap(text, chars)):
-        col.label(text=line, icon=icon if i == 0 else "BLANK1")
+    for i, line in enumerate(textwrap.wrap(message(text), chars)):
+        col.label(text=line, icon=icon if i == 0 else "BLANK1", translate=False)
 
 
 def info_row(layout, label, value, alert=False):
@@ -307,7 +309,7 @@ class FTC_PT_main(Panel):
             row.operator("ftc.align_flip", icon="ARROW_LEFTRIGHT", depress=settings.align_flip)
         elif any(settings.anchor_matrix[i][i] != 0.0 for i in range(4)):
             # A target is stored but switched off: offer to switch it back on.
-            body.prop(settings, "use_anchor", text=iface_("Use Stored Target") + f" ({settings.align_source})")
+            body.prop(settings, "use_anchor", text=iface_("Use Stored Target") + f" ({message(settings.align_source)})")
 
     def draw_display(self, context, layout, cam_obj, settings):
         header, body = layout.panel("ftc_display", default_closed=False)
@@ -362,8 +364,8 @@ class FTC_PT_main(Panel):
         info_row(col, iface_("Sensor"), f"{res.sensor:.2f} mm")
         info_row(col, iface_("Field of View"), f"{math.degrees(res.fov_h):.2f}° × {math.degrees(res.fov_v):.2f}°")
         unit = context.scene.unit_settings.system
-        info_row(col, iface_("Camera Height"), bpy.utils.units.to_string(unit, "LENGTH", res.height, precision=3))
-        info_row(col, iface_("Distance"), bpy.utils.units.to_string(unit, "LENGTH", res.distance, precision=3))
+        info_row(col, iface_("Camera Height"), length_text(unit, res.height))
+        info_row(col, iface_("Distance"), length_text(unit, res.distance))
         info_row(col, iface_("Pitch"), f"{math.degrees(res.pitch):.2f}°")
         info_row(col, iface_("Roll"), f"{math.degrees(res.roll):.2f}°")
         info_row(col, iface_("Yaw", "FTC"), f"{math.degrees(res.yaw):.2f}°")
@@ -552,7 +554,7 @@ class FTC_PT_main(Panel):
         col = body.column(align=True)
         if state.shadow is not None:
             spread = f"  ±{state.shadow_spread:.1f}°" if math.isfinite(state.shadow_spread) else "  ±?"
-            info_row(col, iface_("Shadow Elevation"), f"{ops_sun.elevation_of(state.shadow):.1f}°{spread}")
+            info_row(col, iface_("Shadow Elevation"), f"{ops_sun.elevation_of(state.shadow_world):.1f}°{spread}")
         elif state.shadow_error and state.error != state.shadow_error:
             box = body.box()
             box.alert = True
