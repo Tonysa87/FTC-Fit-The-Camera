@@ -42,7 +42,8 @@ release since 0.1, is in [`CHANGELOG.it.md`](CHANGELOG.it.md).
 - **Calibration session**:
   - Ctrl+Z also undoes the settings changed in the panel during the session.
   - Switching workspace no longer ends the session (it waits for its view), and
-    it follows the view maximized with Ctrl+Space.
+    it follows the view maximized with Ctrl+Space (header text written again
+    in both cases).
   - I no longer inserts a keyframe on the camera.
 - The tooltip of *Vanishing Point 1* describes the axis sign correctly (along
   the first guide, from its first handle to its second).

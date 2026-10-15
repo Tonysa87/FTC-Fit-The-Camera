@@ -1,6 +1,6 @@
 [workspace]
 name = "fit-the-camera"
-version = "1.1.1-alpha.2"
+version = "1.1.1-alpha.3"
 description = "FTC – Fit The Camera: single-image camera calibration extension for Blender 5.2+"
 authors = ["Antonio Sartini"]
 channels = ["conda-forge"]
