@@ -514,6 +514,8 @@ class FTC_OT_calibrate(Operator):
         if area is None:
             if region_exists(session):
                 # Another workspace is shown: the session waits for its view.
+                # Blender clears the header text there: write it again on return.
+                session.status = ""
                 return {"PASS_THROUGH"}
             self.report({"WARNING"}, "Calibration ended: its 3D view was closed")
             return self.finish(context, apply=False)
@@ -521,6 +523,7 @@ class FTC_OT_calibrate(Operator):
             # Maximized (Ctrl+Space) or back: the view lives in another area now.
             clear_header(session)
             session.area_ptr = area.as_pointer()
+            session.status = ""
         if calibrate.space_camera(area.spaces.active, context.scene) != cam_obj or cam_obj.data.ftc.image is None:
             # The view now looks through another camera (or the image is gone).
             return self.finish(context, apply=False)
