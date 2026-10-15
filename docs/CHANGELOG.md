@@ -14,6 +14,7 @@ release since 0.1, is in [`CHANGELOG.it.md`](CHANGELOG.it.md).
   gives a message instead of an error.
 - **Results**: *Camera Height* and *Distance* follow the scene's Unit Scale (a
   centimetre scene showed "160 m" for 1.6 m).
+- **Results**: *Yaw* reads 0.00° instead of 360.00° a hair west of +Y.
 - **Known Rectangle on a wall**: corners placed from the top edge (or F pressed
   twice) no longer turn the camera upside down.
 - **35 mm equivalent without a sensor size**: the focal length shown in Results

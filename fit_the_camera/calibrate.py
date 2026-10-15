@@ -778,7 +778,8 @@ def _store_results(settings, solution: CameraSolution | None, error: str) -> Non
     res.fov_v = math.radians(fov_v)
     res.pitch = math.radians(solution.pitch)
     res.roll = math.radians(solution.roll)
-    res.yaw = math.radians(solution.yaw)
+    # 359.999° would read 360.00° in the panel and the report.
+    res.yaw = math.radians(solution.yaw if round(solution.yaw, 2) < 360.0 else 0.0)
     res.height = solution.camera_height
     res.distance = float((solution.position @ solution.position) ** 0.5)
 

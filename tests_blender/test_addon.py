@@ -2296,6 +2296,18 @@ def _animatable_ftc_props():
 
 
 @test
+def yaw_never_reads_360():
+    _, cam, _ = _calibrated_camera((1920, 1080))
+    s = cam.data.ftc
+    with calibrate.suspended():
+        s.camera_data.focal_35mm = 35.0
+        s.mode, s.yaw_source, s.yaw = "HORIZON", "MANUAL", math.radians(359.999)
+    calibrate.refresh(cam.data)
+    assert not s.results.error, s.results.error
+    assert f"{math.degrees(s.results.yaw):.2f}" == "0.00", math.degrees(s.results.yaw)
+
+
+@test
 def settings_cannot_be_keyframed():
     """I over a panel field must not key FTC settings: the keys would put the
     calibration back at every frame change."""

@@ -15,10 +15,11 @@ Extensions audience) and `README.it.md` (Italian); developer docs
   shown messages). **Next session starts with his validation of 1.1.1** (he
   disliked the first change he saw, the gizmo pass-through: every 1.1.1 change
   must pass his check before release). **GUI test, ONE POINT AT A TIME**:
-  `docs/TEST_GUI_1.1.1.md`, build `dist/fit_the_camera-1.1.1-alpha.4.zip`.
-  Items 1-7 passed (1-3 on alpha.3; 4 incl. panel keys + 5 on alpha.4, where
-  every FTC property is non-animatable: `props.not_animatable`, old keys inert).
-  Next: item 8  (Italian tooltips/warnings). The navigation-gizmo item was dropped: he
+  `docs/TEST_GUI_1.1.1.md`, build `dist/fit_the_camera-1.1.1-alpha.5.zip`.
+  All items 1-8 done (1-3 on alpha.3; 4 incl. panel keys + 5 on alpha.4, where
+  every FTC property is non-animatable: `props.not_animatable`, old keys inert;
+  6-7 by the user; 8 Italian checked by me on his request with probe `italian`,
+  which found only Yaw reading 360.00° -> alpha.5). The navigation-gizmo item was dropped: he
   wants those clicks blocked (alpha.2 reverted the pass-through). Then release
   1.1.1 (version, CHANGELOG date, GitHub release, Extensions upload).
 - **1.1.0 released on GitHub (2026-10-14)**, tag `v1.1.0`,
@@ -145,7 +146,8 @@ Extensions audience) and `README.it.md` (Italian); developer docs
   864 configs), `dragsim` (modal drag code on the cube handles), `planes`,
   `timing`, `snap` (overlay PNGs), `render` (Cycles render through Prepare
   Render), `lens` (magnifier snapshot), `sun` (north arrow, sun direction,
-  landmark and shadow), `hdri` (Fit HDRI viewer), `report` (sample report). Panels cannot be drawn headless otherwise; set ui_scale in mocks (it is
+  landmark and shadow), `hdri` (Fit HDRI viewer), `report` (sample report), `italian` (every
+  panel/overlay text in Italian, flags English leftovers and double translations). Panels cannot be drawn headless otherwise; set ui_scale in mocks (it is
   0 in background mode).
 
 ## Architecture
