@@ -130,8 +130,12 @@ class ExifData:
         return None
 
     def capture_time(self) -> CaptureTime | None:
-        """When the photo was taken, from the best source available."""
-        return capture_time(self.datetime_original, self.offset_minutes, self.gps_datetime)
+        """When the photo was taken, from the best source available; ``None``
+        for dates at the ends of the calendar (year 1 or 9999 shifted by a zone)."""
+        try:
+            return capture_time(self.datetime_original, self.offset_minutes, self.gps_datetime)
+        except OverflowError:
+            return None
 
 
 # The GPS time and the camera clock agree when they differ by a time zone
@@ -314,7 +318,10 @@ def _gps_datetime(date, time) -> datetime | None:
     h, m, sec = time
     if h > 24 or m >= 60 or sec >= 61:
         return None
-    return (day + timedelta(hours=h, minutes=m, seconds=sec)).replace(tzinfo=UTC)
+    try:
+        return (day + timedelta(hours=h, minutes=m, seconds=sec)).replace(tzinfo=UTC)
+    except OverflowError:
+        return None
 
 
 # Plausible focal lengths (mm): anything else is a corrupt tag.
@@ -455,5 +462,5 @@ def _read(f) -> ExifData:
         if block is None:
             return ExifData()
         return parse_tiff(block)
-    except (ValueError, struct.error, OSError, KeyError, TypeError):
+    except (ValueError, struct.error, OSError, KeyError, TypeError, OverflowError):
         return ExifData()

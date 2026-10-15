@@ -4,6 +4,7 @@
 Usage: blender --background --python tests_blender/test_addon.py -- <project root> <scratch dir>
 """
 
+import ast
 import contextlib
 import importlib
 import math
@@ -190,7 +191,11 @@ def blender_projection_matches_landscape():
     scene, cam, syn = _calibrated_camera((1920, 1080))
     check_projection(scene, cam, syn)
     assert cam.data.sensor_fit == "HORIZONTAL"
-    assert abs(cam.data.lens - 35.0) < 0.05  # 36 mm sensor fallback: 35 mm equivalent
+    # Unknown sensor: the 35 mm equivalent one, on the diagonal of the native 4:3
+    # frame (1920 x 1440) like an entered 35 mm equivalent focal length.
+    sensor = math.hypot(36.0, 24.0) * 1920 / math.hypot(1920, 1440)
+    assert abs(cam.data.sensor_width - sensor) < 1e-4
+    assert abs(cam.data.lens - 35.0 * sensor / 36.0) < 0.05
 
 
 @test
@@ -1913,6 +1918,359 @@ def every_button_has_a_tooltip():
         if not bpy.types.Object.bl_rna.properties[prop].description.strip():
             missing.append("Object." + prop)
     assert not missing, missing
+
+
+@test
+def third_audit_fixes():
+    """1.1.1: upright copy of a 16-bit photo, Read from Photo, report privacy,
+    Align to Scene checkbox, tilted alignment and the sun, session undo."""
+    ops_modal = importlib.import_module(PKG + ".ops_modal")
+    ops_sun = importlib.import_module(PKG + ".ops_sun")
+    report = importlib.import_module(PKG + ".report")
+
+    # A 16-bit photo turned upright keeps its brightness after save and reopen.
+    scene = fresh_scene()
+    img = bpy.data.images.new("flat16", 6, 4, float_buffer=True)
+    px = np.zeros((4, 6, 4), np.float32)
+    px[..., 3], px[..., :3] = 1.0, 0.2
+    img.pixels.foreach_set(px.ravel())
+    img.update()
+    path = os.path.join(SCRATCH, "flat16.png")
+    scene.render.image_settings.file_format = "PNG"
+    scene.render.image_settings.color_depth = "16"
+    img.save_render(path, scene=scene)
+    bpy.data.images.remove(img)
+    cam = load(path)
+    s = cam.data.ftc
+    s.camera_data.orientation = 3
+    assert bpy.ops.ftc.upright_image() == {"FINISHED"}
+    blend = os.path.join(SCRATCH, "upright16.blend")
+    bpy.ops.wm.save_as_mainfile(filepath=blend)
+    bpy.ops.wm.open_mainfile(filepath=blend)
+    image = bpy.context.scene.camera.data.ftc.image
+    assert abs(image.pixels[0] - 0.2) < 0.01, image.pixels[0]
+
+    # Make Upright Copy of a photo whose file is gone: a message, no traceback.
+    fresh_scene()
+    path = write_photo("gone.jpg", (40, 30))
+    cam = load(path)
+    s = cam.data.ftc
+    s.camera_data.orientation = 6
+    os.remove(path)
+    s.image.reload()
+    try:
+        result = bpy.ops.ftc.upright_image()
+    except RuntimeError:
+        result = {"CANCELLED"}
+    assert result == {"CANCELLED"} and s.image.name == "gone.jpg"
+
+    # Read from Photo keeps a place typed by hand when the photo has none.
+    fresh_scene()
+    tiff = build_tiff(
+        ifd0=[(exif.TAG_MAKE, ASCII, "NoGps")],
+        exif_ifd=[
+            (exif.TAG_DATETIME_ORIGINAL, ASCII, "2026:06:21 12:30:00"),
+            (exif.TAG_OFFSET_TIME_ORIGINAL, ASCII, "+02:00"),
+        ],
+    )
+    cam = load(write_photo("nogps.jpg", (800, 600), tiff))
+    data = cam.data.ftc.camera_data
+    assert data.location_state == "MISSING" and data.time_state == "EXIF"
+    data.gps_latitude, data.gps_longitude = 45.46, 9.19
+    data.hour = 9
+    assert data.location_state == "MANUAL" and data.time_state == "MANUAL"
+    assert bpy.ops.ftc.read_photo_time() == {"FINISHED"}
+    assert data.hour == 12 and data.time_state == "EXIF"
+    assert data.location_state == "MANUAL" and abs(data.gps_latitude - 45.46) < 1e-4
+
+    # The report leaves out the place once the Fit Sun light is deleted
+    # (the pointer still holds it, in no scene).
+    cam = _sun_camera(sun_tiff())
+    s = cam.data.ftc
+    assert bpy.ops.ftc.new_sun() == {"FINISHED"}
+    assert report.sun_report(s, bpy.context.scene) is not None
+    light = s.sun.light
+    for collection in light.users_collection:
+        collection.objects.unlink(light)
+    assert s.sun.light is not None and not s.sun.light.users_scene
+    assert report.sun_report(s, bpy.context.scene) is None
+
+    # A tilted alignment tilts the sky with it: the date's sun keeps its height
+    # above the photo's ground (the plane's normal in the scene).
+    cam = _sun_camera(sun_tiff())
+    s = cam.data.ftc
+    assert bpy.ops.ftc.new_sun() == {"FINISHED"}
+    for north in ("COMPASS", "SIDE"):
+        s.sun.north_source = north
+        s.use_anchor = False
+        level = light_dir(s.sun.light).copy()
+        tilt = Matrix.Rotation(math.radians(20.0), 4, "X")
+        s.anchor_matrix = tilt
+        s.use_anchor = True
+        tilted = light_dir(s.sun.light)
+        assert math.degrees(tilted.angle(tilt.to_3x3() @ level)) < 0.05, north
+    # The Align to Scene checkbox moves the camera at once, like Rotate 90°.
+    s.sun.north_source = "COMPASS"
+    before = cam.matrix_world.copy()
+    s.use_anchor = False
+    assert (cam.matrix_world.translation - before.translation).length > 1e-3
+    s.use_anchor = True
+    assert (cam.matrix_world.translation - before.translation).length < 1e-6
+
+    # The session's undo brings back the settings changed in the panel too.
+    snap = ops_modal.snapshot(s)
+    s.vp_count = "3"
+    s.cube_size = "5"
+    calibrate.set_handle(s, "vp1_1a", (0.1, 0.1))
+    ops_modal.restore(s, snap)
+    assert s.vp_count == "2" and s.cube_size != "5" and ops_modal.snapshot(s) == snap
+
+    # The navigation gizmo lookup uses names that exist.
+    assert "show_gizmo_navigate" in bpy.types.SpaceView3D.bl_rna.properties
+    assert "gizmo_size_navigate_v3d" in bpy.types.PreferencesView.bl_rna.properties
+    assert ops_sun.scene_y_bearing(s, ops_sun.evaluate(s)) is not None
+
+
+@test
+def fit_hdri_edge_cases():
+    """1.1.1: a Mapping with a Location warns, other Texture Coordinate outputs
+    and muted links are not taken for the world direction, a fake user does
+    not make a group "shared", a vanished file gives a message."""
+    ops_hdri = importlib.import_module(PKG + ".ops_hdri")
+    cam = _sun_camera(sun_tiff())
+    s = cam.data.ftc
+    scene = bpy.context.scene
+    world, env = world_with(synthetic_hdri(0.3, 0.6, size=(64, 32)))
+    tree = world.node_tree
+
+    mapping = tree.nodes.new("ShaderNodeMapping")
+    tree.links.new(mapping.outputs["Vector"], env.inputs["Vector"])
+    assert ops_hdri.fit(s, scene, (0.3, 0.6))[2] == ""
+    mapping.inputs["Location"].default_value = (0.0, 0.0, 1.0)
+    assert ops_hdri.fit(s, scene, (0.3, 0.6))[2] == ops_hdri.TILTED
+    mapping.vector_type = "VECTOR"  # (no location for directions)
+    assert ops_hdri.fit(s, scene, (0.3, 0.6))[2] == ""
+
+    coords = tree.nodes.new("ShaderNodeTexCoord")
+    tree.nodes.remove(mapping)
+    tree.links.new(coords.outputs["Object"], env.inputs["Vector"])
+    assert ops_hdri.vector_problem(env) == ops_hdri.COORDINATES
+    tree.links.new(coords.outputs["Generated"], env.inputs["Vector"])
+    assert ops_hdri.vector_problem(env) == ""
+
+    # A muted link from an old Mapping: the new Mapping starts from Generated.
+    old = tree.nodes.new("ShaderNodeMapping")
+    old.inputs["Rotation"].default_value[2] = 1.0
+    link = tree.links.new(old.outputs["Vector"], env.inputs["Vector"])
+    link.is_muted = True
+    fitted = ops_hdri.ensure_mapping(tree, env)
+    assert fitted != old and not old.outputs["Vector"].links
+    source = fitted.inputs["Vector"].links[0].from_socket
+    assert source.node.type == "TEX_COORD" and source.identifier == "Generated"
+
+    # A group with a fake user, used once, is not "shared".
+    group = bpy.data.node_groups.new("one use", "ShaderNodeTree")
+    group.use_fake_user = True
+    assert ops_hdri.real_users(group) == 0
+
+    # The HDRI file vanished while its pixels are in memory.
+    big = bpy.data.images.new("big", 2400, 1200, float_buffer=True)
+    path = os.path.join(SCRATCH, "big.exr")
+    big.filepath_raw = path
+    big.file_format = "OPEN_EXR"
+    big.save()
+    bpy.data.images.remove(big)
+    big = bpy.data.images.load(path)
+    assert tuple(big.size) == (2400, 1200)
+    os.remove(path)
+    try:
+        ops_hdri.thumbnail(big)
+    except ValueError as exc:
+        assert "file" in str(exc)
+    else:
+        raise AssertionError("no error for a vanished HDRI file")
+
+
+# The same in Italian: names, units, axes.
+SAME_IN_ITALIAN = {"FTC", "Fit The Camera", "Fit Sun", "Fit HDRI", "GPS", "UTC", "Render", "Camera", "Catcher"}
+SAME_IN_ITALIAN |= {
+    "Camera: {}",
+    "max {:.2f}°",
+    "XY",
+    "XZ",
+    "YZ",
+    "10 cm",
+    "20 cm",
+    "50 cm",
+    "1 m",
+    "2 m",
+    "5 m",
+    "10 m",
+}
+SAME_IN_ITALIAN |= {s + a for s in ("", "+", "-") for a in "XYZ"}
+TRANSLATORS = ("iface_", "tip_", "rpt_", "pgettext_iface", "pgettext_tip", "pgettext_rpt", "message")
+
+
+def _literal(node):
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return node.value
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+        a, b = _literal(node.left), _literal(node.right)
+        if a is not None and b is not None:
+            return a + b
+    return None
+
+
+def _source_strings():
+    """(where, kind, context, text) of the messages written in the source: the
+    translated calls, reports, labels, solver errors, warnings and message
+    constants. Kind "fstring": a formatted message no translation can match."""
+    folder = os.path.join(ROOT, "fit_the_camera")
+    paths = [os.path.join(folder, f) for f in sorted(os.listdir(folder)) if f.endswith(".py")]
+    paths += [os.path.join(folder, "solver", f) for f in sorted(os.listdir(os.path.join(folder, "solver")))]
+    found = []
+
+    def add(where, node, kind, value, ctxt="*"):
+        text = _literal(value)
+        if text is not None:
+            found.append((f"{where}:{node.lineno}", kind, ctxt, text))
+        elif isinstance(value, ast.JoinedStr):
+            found.append((f"{where}:{node.lineno}", "fstring", ctxt, ast.unparse(value)))
+
+    for path in paths:
+        if not path.endswith(".py") or path.endswith("translations.py"):
+            continue
+        where = os.path.relpath(path, ROOT)
+        with open(path, encoding="utf-8") as f:
+            tree = ast.parse(f.read())
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Call):
+                fn = node.func
+                name = fn.attr if isinstance(fn, ast.Attribute) else getattr(fn, "id", "")
+                kw = {k.arg: k.value for k in node.keywords}
+                if name in TRANSLATORS and node.args:
+                    ctxt = _literal(node.args[1]) if len(node.args) > 1 else None
+                    add(where, node, "tip" if "tip" in name else "iface", node.args[0], ctxt or "*")
+                elif name == "report" and len(node.args) > 1:
+                    add(where, node, "report", node.args[1])
+                elif (name == "SolverError" or name == "ValueError" and "ops_" in path) and node.args:
+                    add(where, node, "message", node.args[0])  # (other ValueErrors: parsing, never shown)
+                elif name in ("append", "insert") and "warning" in ast.unparse(fn) and node.args:
+                    add(where, node, "message", node.args[-1])
+                elif name == "format" and isinstance(fn, ast.Attribute):
+                    text = _literal(fn.value)
+                    if text is not None and "{" in text:
+                        found.append((f"{where}:{node.lineno}", "message", "*", text))
+                translate = kw.get("translate")
+                if "text" in kw and not (isinstance(translate, ast.Constant) and translate.value is False):
+                    add(where, node, "iface", kw["text"], _literal(kw["text_ctxt"]) if "text_ctxt" in kw else "*")
+                if "heading" in kw:
+                    add(where, node, "iface", kw["heading"])
+            elif isinstance(node, ast.Assign) and len(node.targets) == 1:
+                target = node.targets[0]
+                if isinstance(target, ast.Attribute) and target.attr in ("error", "shadow_error"):
+                    add(where, node, "message", node.value)
+                if isinstance(target, ast.Name) and target.id.isupper():
+                    for value in node.value.elts if isinstance(node.value, ast.Tuple) else [node.value]:
+                        text = _literal(value)
+                        if text is not None and len(text.split()) > 3:
+                            found.append((f"{where}:{node.lineno}", "message", "*", text))
+    return found
+
+
+def _rna_strings():
+    """(where, kind, context, text) of the registered names, tooltips and enum items."""
+    found = []
+    inherited = {
+        p.identifier
+        for base in (bpy.types.Operator, bpy.types.Panel, bpy.types.UIList, bpy.types.PropertyGroup)
+        for p in base.bl_rna.properties
+    }
+
+    def props(owner, rna):
+        for prop in rna.properties:
+            if prop.identifier in inherited or prop.name == prop.identifier:
+                continue  # unnamed: internal, never drawn
+            ctxt = prop.translation_context or "*"
+            where = f"{owner}.{prop.identifier}"
+            found.append((where, "iface", ctxt, prop.name))
+            if prop.description:
+                found.append((where, "tip", "*", prop.description))
+            if prop.type == "ENUM":
+                for item in prop.enum_items:
+                    found.append((f"{where}:{item.identifier}", "iface", ctxt, item.name))
+                    if item.description:
+                        found.append((f"{where}:{item.identifier}", "tip", "*", item.description))
+
+    for name in dir(bpy.types):
+        if not name.startswith("FTC_"):
+            continue
+        cls = getattr(bpy.types, name)
+        if "_OT_" in name or "_PT_" in name:
+            ctxt = getattr(cls, "bl_translation_context", None) or ("Operator" if "_OT_" in name else "*")
+            found.append((name, "iface", ctxt, cls.bl_label))
+            if "_OT_" in name:
+                found.append((name, "tip", "*", cls.bl_rna.description))
+        props(name, cls.bl_rna)
+    # Property groups are not in bpy.types: walked from the Camera's pointer.
+    seen = set()
+
+    def walk(struct):
+        if struct.identifier not in seen:
+            seen.add(struct.identifier)
+            props(struct.identifier, struct)
+            for prop in struct.properties:
+                if prop.type in {"POINTER", "COLLECTION"} and prop.fixed_type.identifier.startswith("FTC_"):
+                    walk(prop.fixed_type)
+
+    walk(bpy.types.Camera.bl_rna.properties["ftc"].fixed_type)
+    for owner in (bpy.types.Object, bpy.types.Scene):
+        props(
+            owner.__name__,
+            SimpleNamespace(properties=[p for p in owner.bl_rna.properties if p.identifier.startswith("ftc")]),
+        )
+    return found
+
+
+@test
+def every_string_is_translated():
+    """Every name, tooltip, enum item, label, report and message of the
+    interface has its Italian translation (formatted messages are templates:
+    ``translations.message``)."""
+    view = bpy.context.preferences.view
+    previous = (view.language, view.use_translate_interface, view.use_translate_tooltips, view.use_translate_reports)
+    view.language = "it_IT"
+    view.use_translate_interface = view.use_translate_tooltips = view.use_translate_reports = True
+    try:
+        from bpy.app.translations import pgettext_iface, pgettext_tip
+
+        missing, formatted = set(), []
+        for where, kind, ctxt, text in _rna_strings() + _source_strings():
+            if kind == "fstring":
+                formatted.append(f"{where}: {text}")
+                continue
+            if not any(c.isalpha() for c in text) or text in SAME_IN_ITALIAN:
+                continue
+            if kind == "iface":
+                done = pgettext_iface(text, ctxt) if ctxt != "*" else pgettext_iface(text)
+            else:
+                done = pgettext_tip(text)
+            if done == text:
+                missing.add(f"{where} [{ctxt}] {text!r}")
+        message = importlib.import_module(PKG + ".translations").message
+        assert message(
+            "unstable calibration (focal ±12%, angles ±3.4°): use longer guides further apart, add a "
+            "third axis line or a third vanishing point, or use the known focal length"
+        ).startswith("calibrazione instabile (focale ±12%, angoli ±3.4°)")
+        assert message("Camera not updated: the rectangle needs four corners") == (
+            "Camera non aggiornata: il rettangolo richiede quattro angoli"
+        )
+        assert message("Plane (face)") == "Plane (faccia)"  # a name stays
+    finally:
+        view.language = previous[0]
+        view.use_translate_interface, view.use_translate_tooltips, view.use_translate_reports = previous[1:]
+    assert not formatted, "formatted messages cannot be translated: use a template\n" + "\n".join(formatted)
+    assert not missing, "no Italian translation:\n" + "\n".join(sorted(missing))
 
 
 @test

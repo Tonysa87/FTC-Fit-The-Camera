@@ -9,6 +9,7 @@ import math
 import bpy
 from bpy.app.handlers import persistent
 from bpy.app.translations import pgettext_iface as iface_
+from bpy.app.translations import pgettext_rpt as rpt_
 from bpy.app.translations import pgettext_tip as tip_
 from bpy.props import BoolProperty, IntProperty
 from bpy.types import Operator
@@ -16,6 +17,7 @@ from bpy.types import Operator
 from . import calibrate, draw, ops_orientation, ops_sun
 from .ops_load import match_image_aspect
 from .solver import cube_top_px
+from .translations import message
 
 FINE_FACTOR = 0.2
 # Handles that only place or scale the scene, not its orientation.
@@ -74,6 +76,7 @@ class Session:
         self.last_mouse = (0.0, 0.0)
         self.pitch_drag: tuple[float, float] | None = None
         self.stop_requested = False
+        self.last_snap = None  # settings after the last event (panel changes)
         self.status = ""
         self.handler = None
         # Magnifier on the dragged handle (Shift); the system cursor is hidden
@@ -82,25 +85,79 @@ class Session:
         self.cursor_window = None
 
 
-def snapshot(settings) -> dict:
+# Not part of the session's undo: data, display toggles, results and what lives
+# outside the settings (the photo and what it says of itself, the light, the
+# World's HDRI).
+SNAPSHOT_SKIP = {
+    "rna_type",
+    "loading",
+    "image",
+    "source_path",
+    "make",
+    "model",
+    "lens",
+    "image_width",
+    "image_height",
+    "orientation",
+    "active_vp",
+    "live",
+    "freeze",
+    "show_grid",
+    "grid_opacity",
+    "show_cube",
+    "show_north",
+    "hdri_point",
+    "hdri_image",
+    "hdri_angle",
+    "hdri_fitted",
+}
+
+
+def _plain(value):
+    """Property value as nested tuples (arrays and matrices compare and copy)."""
+    if isinstance(value, str) or not hasattr(value, "__len__"):
+        return value
+    return tuple(_plain(v) for v in value)
+
+
+def _values(group) -> dict:
     return {
+        prop.identifier: _plain(getattr(group, prop.identifier))
+        for prop in group.bl_rna.properties
+        if prop.identifier not in SNAPSHOT_SKIP and not prop.is_readonly and prop.type not in {"POINTER", "COLLECTION"}
+    }
+
+
+def snapshot(settings) -> dict:
+    """Everything the session's Ctrl+Z brings back: the handles and the settings
+    (also those changed in the panel during the session)."""
+    return {
+        "photo": settings.image.as_pointer() if settings.image is not None else 0,
         "handles": {h.name: tuple(h.co) for h in settings.handles},
-        "pitch_offset": settings.pitch_offset,
-        "axes": (settings.vp1_axis, settings.vp2_axis, settings.vp3_axis),
-        "straighten": settings.straighten,
-        "lines": (settings.vp1_lines, settings.vp2_lines, settings.vp3_lines),
+        "settings": _values(settings),
+        "camera_data": _values(settings.camera_data),
+        "sun": _values(settings.sun),
     }
 
 
 def restore(settings, snap: dict) -> None:
+    data = settings.camera_data
     with calibrate.suspended():
+        data.loading = True  # (no "entered by hand" marks)
+        try:
+            for group, values in (
+                (settings, snap["settings"]),
+                (data, snap["camera_data"]),
+                (settings.sun, snap["sun"]),
+            ):
+                for key, value in values.items():
+                    if _plain(getattr(group, key)) != value:
+                        setattr(group, key, value)
+        finally:
+            data.loading = False
+        # Last: seeding callbacks of the settings above may have moved handles.
         for key, co in snap["handles"].items():
             calibrate.set_handle(settings, key, co)
-        settings.pitch_offset = snap["pitch_offset"]
-        settings.vp1_axis, settings.vp2_axis, settings.vp3_axis = snap["axes"]
-        settings.straighten = snap["straighten"]
-        if "lines" in snap:
-            settings.vp1_lines, settings.vp2_lines, settings.vp3_lines = snap["lines"]
 
 
 def session_camera(session):
@@ -120,16 +177,18 @@ def clear_header(session) -> None:
                 return
 
 
-def area_exists(session) -> bool:
-    return any(a.as_pointer() == session.area_ptr for s in bpy.data.screens for a in s.areas)
+def region_exists(session) -> bool:
+    """The session's region is in some screen (another workspace's, too)."""
+    return any(r.as_pointer() == session.region_ptr for s in bpy.data.screens for a in s.areas for r in a.regions)
 
 
-def find_region(window, area_ptr, region_ptr):
+def find_region(window, region_ptr):
+    """(area, region) of the region in the window's current screen. Found by the
+    region: Ctrl+Space moves the regions into another area and back."""
     for area in window.screen.areas:
-        if area.as_pointer() == area_ptr:
-            for region in area.regions:
-                if region.as_pointer() == region_ptr:
-                    return area, region
+        for region in area.regions:
+            if region.as_pointer() == region_ptr:
+                return area, region
     return None, None
 
 
@@ -154,6 +213,30 @@ def mouse_in_region(area, region, event) -> tuple[float, float] | None:
         if other.x <= x < other.x + other.width and other.y <= y < other.y + other.height:
             return None
     return x - region.x, y - region.y
+
+
+def over_navigation(area, region, mouse) -> bool:
+    """``mouse`` (region pixels) is on the navigation gizmo: the axes ball and the
+    zoom / pan / camera / projection buttons below it, top right of the visible
+    part of the region (left of an overlapping sidebar, below overlapping headers)."""
+    space = area.spaces.active
+    if mouse is None or not (space.show_gizmo and space.show_gizmo_navigate):
+        return False
+    right, top = float(region.width), float(region.height)
+    for other in area.regions:
+        if other.type == "WINDOW" or other.width <= 1 or other.height <= 1:
+            continue
+        inside_x = region.x <= other.x < region.x + region.width
+        inside_y = region.y <= other.y < region.y + region.height
+        if inside_x and inside_y and other.height > region.height / 2 and other.x > region.x + region.width / 2:
+            right = min(right, other.x - region.x)  # overlapping sidebar
+        elif inside_x and inside_y and other.width > region.width / 2 and other.y > region.y + region.height / 2:
+            top = min(top, other.y - region.y)  # overlapping header
+    s = draw.ui_scale()
+    size = bpy.context.preferences.view.gizmo_size_navigate_v3d
+    width = (size + 20.0) * s
+    height = (size + 4 * 34.0 + 20.0) * s
+    return right - width <= mouse[0] <= right and top - height <= mouse[1] <= top
 
 
 MIN_CUBE_PX = 4.0
@@ -260,7 +343,7 @@ class FTC_OT_calibrate(Operator):
 
     def invoke(self, context, event):
         session = FTC_OT_calibrate._session
-        if session is not None and not area_exists(session):
+        if session is not None and not region_exists(session):
             # Left over by a modal handler Blender dropped (window closed).
             end_session()
         elif session is not None and session.shadow_only == self.shadow:
@@ -326,7 +409,7 @@ class FTC_OT_calibrate(Operator):
                 session.status = text
                 area.header_text_set(text)
             return
-        mode = iface_(MODE_NAMES[settings.mode])
+        mode = iface_(MODE_NAMES[settings.mode], "FTC")
         if settings.mode == "VP":
             mode += f" ({settings.vp_count})"
         if settings.freeze:
@@ -344,7 +427,7 @@ class FTC_OT_calibrate(Operator):
         if apply and cam_obj is not None and not session.shadow_only:
             if calibrate.update(context, cam_obj, apply=True) is None:
                 error = cam_obj.data.ftc.results.error or "the calibration cannot be solved"
-                self.report({"WARNING"}, iface_("Camera not updated: {}").format(error))
+                self.report({"WARNING"}, rpt_("Camera not updated: {}").format(message(error, rpt_)))
             else:
                 ops_orientation.sync(context, cam_obj)
         end_session()
@@ -396,6 +479,27 @@ class FTC_OT_calibrate(Operator):
     def push_undo(self, session, snap) -> None:
         push_undo(session, snap)
 
+    def track_panel_changes(self, *, record=True) -> None:
+        """Settings changed in the panel since the last event become a step of the
+        session's undo (Ctrl+Z is always the session's). ``record=False`` only
+        remembers the state after an event, whose own changes push their steps."""
+        session = FTC_OT_calibrate._session
+        if session is None or not self.owns_session() or session.drag_key is not None:
+            return
+        cam_obj = session_camera(session)
+        if cam_obj is None:
+            return
+        now = snapshot(cam_obj.data.ftc)
+        last = session.last_snap
+        if last is not None and now["photo"] != last["photo"]:
+            # Another photo (Load Image, Make Upright Copy): the steps were about the old one.
+            session.undo.clear()
+            session.redo.clear()
+        # A panel operator (Flip, Reset Guides...) may have pushed its step already.
+        elif record and last is not None and now != last and not (session.undo and session.undo[-1] == last):
+            push_undo(session, last)
+        session.last_snap = now
+
     def changed(self, context, cam_obj, *, reset_pitch=True, key=None):
         if key in ops_sun.SUN_KEYS:
             # Not a calibration input: no solve (nor uncertainty), only the sun.
@@ -411,7 +515,10 @@ class FTC_OT_calibrate(Operator):
 
     def modal(self, context, event):
         try:
-            return self._modal(context, event)
+            self.track_panel_changes()
+            result = self._modal(context, event)
+            self.track_panel_changes(record=False)
+            return result
         except Exception:
             # Blender would drop the handler without cancel(): never leave a
             # session behind that nothing can end.
@@ -425,9 +532,19 @@ class FTC_OT_calibrate(Operator):
             # Ended, or replaced by another session (Calibrate <-> Calibrate Shadow).
             return {"CANCELLED"}
         cam_obj = session_camera(session)
-        area, region = find_region(context.window, session.area_ptr, session.region_ptr)
-        if session.stop_requested or cam_obj is None or area is None:
+        area, region = find_region(context.window, session.region_ptr)
+        if session.stop_requested or cam_obj is None:
             return self.finish(context, apply=False)
+        if area is None:
+            if region_exists(session):
+                # Another workspace is shown: the session waits for its view.
+                return {"PASS_THROUGH"}
+            self.report({"WARNING"}, "Calibration ended: its 3D view was closed")
+            return self.finish(context, apply=False)
+        if area.as_pointer() != session.area_ptr:
+            # Maximized (Ctrl+Space) or back: the view lives in another area now.
+            clear_header(session)
+            session.area_ptr = area.as_pointer()
         if calibrate.space_camera(area.spaces.active, context.scene) != cam_obj or cam_obj.data.ftc.image is None:
             # The view now looks through another camera (or the image is gone).
             return self.finish(context, apply=False)
@@ -502,10 +619,14 @@ class FTC_OT_calibrate(Operator):
             return {"PASS_THROUGH"}
 
         if event.value != "PRESS":
-            return {"RUNNING_MODAL"} if event.type == "LEFTMOUSE" else {"PASS_THROUGH"}
+            if event.type == "LEFTMOUSE" and not over_navigation(area, region, mouse):
+                return {"RUNNING_MODAL"}
+            return {"PASS_THROUGH"}
 
         if event.type == "LEFTMOUSE":
             key = self.pick(settings, view, mouse) if view is not None else None
+            if key is None and over_navigation(area, region, mouse):
+                return {"PASS_THROUGH"}  # Blender's navigation buttons
             if key is not None:
                 calibrate.defer_uncertainty = True
                 session.drag_key = key
@@ -555,7 +676,7 @@ class FTC_OT_calibrate(Operator):
             self.changed(context, cam_obj)
             return {"RUNNING_MODAL"}
 
-        if event.type == "LEFTMOUSE" or event.type in {"A", "B", "C", "X", "DEL", "G", "R", "S", "TAB"}:
+        if event.type == "LEFTMOUSE" or event.type in {"A", "B", "C", "I", "X", "DEL", "G", "R", "S", "TAB"}:
             # Keep the scene safe from accidental edits while calibrating.
             return {"RUNNING_MODAL"}
         return {"PASS_THROUGH"}
@@ -657,7 +778,7 @@ class FTC_OT_apply(Operator):
         cam_obj = _panel_camera(context)
         solution = calibrate.update(context, cam_obj, apply=True)
         if solution is None:
-            self.report({"ERROR"}, cam_obj.data.ftc.results.error or "The calibration cannot be solved")
+            self.report({"ERROR"}, message(cam_obj.data.ftc.results.error, rpt_) or "The calibration cannot be solved")
             return {"CANCELLED"}
         ops_orientation.sync(context, cam_obj)
         if match_image_aspect(context.scene, calibrate.image_size(cam_obj.data.ftc)):

@@ -22,6 +22,7 @@ from . import calibrate, ops_sun
 from .solver.common import SolverError, plane_frame, vanishing_point
 from .solver.scale import CUBE_EDGES, cube_corners, cube_top_px
 from .solver.sun import shadow_tip_for
+from .translations import message
 
 HANDLE_RADIUS = 8.0
 HANDLE_TICK = 3.5
@@ -466,16 +467,18 @@ def _north(view, solution, settings):
         return
     o = view.px_to_region(origin)
     s = ui_scale()
+    # Calibrated world (Z up): the bearing is of its +Y.
     north = np.array(ops_sun.north_vector(state.y_bearing))
     arrows = [(north, WHITE, "N", True)]
     if state.direction is not None:
-        flat = np.array([state.direction.x, state.direction.y, 0.0])
+        sky = to_calibrated @ np.array(state.direction)
+        flat = np.array([sky[0], sky[1], 0.0])
         if np.linalg.norm(flat) > 1e-6:
             arrows.append(
                 (flat / np.linalg.norm(flat), SUN_COLOR, bpy.app.translations.pgettext_iface("Sun", "FTC"), False)
             )
     for vec, color, label, solid in arrows:
-        tip = project(solution, [to_calibrated @ vec * length])[0]
+        tip = project(solution, [vec * length])[0]
         if np.isnan(tip).any():
             continue
         t = view.px_to_region(tip)
@@ -705,10 +708,10 @@ def draw_guides(view, settings, solution, session, unit_system):
 
         res = settings.results
         if not res.valid and res.error:
-            text((view.x0 + 10 * s, view.y1 - 22 * s), res.error, ERROR_COLOR, 13.0)
+            text((view.x0 + 10 * s, view.y1 - 22 * s), message(res.error), ERROR_COLOR, 13.0)
         elif res.warnings and not shadow_only:
             chars = max(30, int((view.x1 - view.x0 - 20 * s) / (6.5 * s)))
-            wrapped = [w for line in res.warnings.splitlines() for w in textwrap.wrap(line, chars)]
+            wrapped = [w for line in res.warnings.splitlines() for w in textwrap.wrap(message(line), chars)]
             for i, line in enumerate(wrapped):
                 text((view.x0 + 10 * s, view.y1 - (22 + 16 * i) * s), line, HORIZON_COLOR, 12.0)
     finally:

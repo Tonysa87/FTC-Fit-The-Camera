@@ -10,7 +10,7 @@ import bpy
 import numpy as np
 from mathutils import Matrix
 
-from .exif import native_frame
+from .exif import FULL_FRAME_DIAGONAL_MM, native_frame
 from .solver import (
     CameraSolution,
     ReferenceDistance,
@@ -358,13 +358,16 @@ def known_sensor_mm(settings) -> float | None:
     return None
 
 
-def image_sensor_mm(settings) -> float | None:
-    """Sensor size covered by the image's long side (smaller for a cropped image)."""
+def image_sensor_mm(settings) -> float:
+    """Sensor size covered by the image's long side (smaller for a cropped image).
+    Unknown sensor: the 35 mm equivalent one (on the native frame's diagonal, like
+    ``focal_px_from_35mm``), so the lens reads as the 35 mm equivalent focal."""
+    size = image_size(settings)
+    long_side, short_side = native_frame(size)
     sensor = known_sensor_mm(settings)
     if sensor is None:
-        return None
-    size = image_size(settings)
-    return sensor * max(size) / native_frame(size)[0]
+        return FULL_FRAME_DIAGONAL_MM * max(size) / math.hypot(long_side, short_side)
+    return sensor * max(size) / long_side
 
 
 def known_focal_px(settings) -> float | None:
@@ -719,6 +722,19 @@ def forget_solutions() -> None:
     _solutions.clear()
 
 
+# Warnings with numbers: templates the panel translates ({} = the number as text).
+UNSTABLE = (
+    "unstable calibration (focal ±{}%, angles ±{}°): use longer guides further apart, add a third axis line "
+    "or a third vanishing point, or use the known focal length"
+)
+MISFIT_KNOWN = (
+    "the guides disagree with the known focal length by up to {}°: the photo may be cropped or zoomed, "
+    "try solving the focal length"
+)
+MISFIT = "the guides do not meet consistently (up to {}° off): some lines may not be parallel to their axis"
+OVERRULED = "the guides overrule the known focal length ({}%): the photo may be cropped or zoomed"
+
+
 def _store_results(settings, solution: CameraSolution | None, error: str) -> None:
     res = settings.results
     res.valid = solution is not None
@@ -742,30 +758,16 @@ def _store_results(settings, solution: CameraSolution | None, error: str) -> Non
     res.focal_solved = focal_solved
     res.focal_shift = solution.focal_px / known_focal_px(settings) - 1.0 if source == "AUTO" else 0.0
     if (focal_solved and focal_err > UNSTABLE_FOCAL) or angle_err > UNSTABLE_ANGLE_DEG:
-        warnings.insert(
-            0,
-            f"unstable calibration (focal ±{100 * min(focal_err, 9.99):.0f}%, angles ±{min(angle_err, 99):.1f}°): "
-            "use longer guides further apart, add a third axis line or a third vanishing point, "
-            "or use the known focal length",
-        )
+        warnings.insert(0, UNSTABLE.format(f"{100 * min(focal_err, 9.99):.0f}", f"{min(angle_err, 99):.1f}"))
     res.guide_misfit = math.radians(solution.guide_misfit)
     # Independent checks: a misfit names its cause even when the focal also moved.
     head = []
     if source == "KNOWN" and solution.guide_misfit > MISFIT_KNOWN_FOCAL_DEG:
-        head.append(
-            f"the guides disagree with the known focal length by up to {solution.guide_misfit:.1f}°: "
-            "the photo may be cropped or zoomed, try solving the focal length"
-        )
+        head.append(MISFIT_KNOWN.format(f"{solution.guide_misfit:.1f}"))
     elif solution.guide_misfit > MISFIT_DEG:
-        head.append(
-            f"the guides do not meet consistently (up to {solution.guide_misfit:.1f}° off): "
-            "some lines may not be parallel to their axis"
-        )
+        head.append(MISFIT.format(f"{solution.guide_misfit:.1f}"))
     if abs(res.focal_shift) > FOCAL_SHIFT:
-        head.append(
-            f"the guides overrule the known focal length ({100 * res.focal_shift:+.0f}%): "
-            "the photo may be cropped or zoomed"
-        )
+        head.append(OVERRULED.format(f"{100 * res.focal_shift:+.0f}"))
     warnings[:0] = head
     res.warnings = "\n".join(warnings)
     res.removed_roll = math.radians(solution.removed_roll)

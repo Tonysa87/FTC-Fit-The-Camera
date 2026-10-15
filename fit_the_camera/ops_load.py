@@ -176,15 +176,21 @@ def load_camera_data(settings, exif, size) -> None:
             settings.sun.north_source = "SIDE"
 
 
-def load_time_place(data, exif) -> None:
-    """Shooting time and place from EXIF; absent values are marked missing."""
+def load_time_place(data, exif, keep_entered=False) -> None:
+    """Shooting time and place from EXIF; absent values are marked missing, or
+    with ``keep_entered`` (Read from Photo) left as they are: a place or a zone
+    typed by hand survives a photo without them."""
     data.loading = True
     try:
-        data.has_gps = exif.gps_latitude is not None and exif.gps_longitude is not None
-        data.gps_latitude = exif.gps_latitude or 0.0
-        data.gps_longitude = exif.gps_longitude or 0.0
-        data.location_state = "EXIF" if data.has_gps else "MISSING"
+        has_gps = exif.gps_latitude is not None and exif.gps_longitude is not None
+        if has_gps or not keep_entered:
+            data.has_gps = has_gps
+            data.gps_latitude = exif.gps_latitude or 0.0
+            data.gps_longitude = exif.gps_longitude or 0.0
+            data.location_state = "EXIF" if has_gps else "MISSING"
         when = exif.capture_time()
+        if when is None and keep_entered:
+            return
         data.time_from_gps = when is not None and when.source == "GPS"
         data.clock_mismatch = when is not None and when.clock_mismatch
         if when is None:
@@ -200,8 +206,9 @@ def load_time_place(data, exif) -> None:
         data.year, data.month, data.day = local.year, local.month, local.day
         data.hour, data.minute, data.second = local.hour, local.minute, local.second
         data.time_state = "EXIF"
-        data.utc_offset = (offset or 0) / 60.0
-        data.offset_state = "EXIF" if offset is not None else "MISSING"
+        if offset is not None or not keep_entered:
+            data.utc_offset = (offset or 0) / 60.0
+            data.offset_state = "EXIF" if offset is not None else "MISSING"
     finally:
         data.loading = False
 
@@ -378,6 +385,9 @@ class FTC_OT_upright_image(Operator):
         settings = cam_obj.data.ftc
         src = settings.image
         w, h = src.size
+        if w * h == 0:
+            self.report({"ERROR"}, "The photo cannot be read: is its file missing?")
+            return {"CANCELLED"}
         buf = np.empty(w * h * src.channels, dtype=np.float32)
         src.pixels.foreach_get(buf)
         # Blender stores rows bottom-up; EXIF orientation is defined top-down.
@@ -387,7 +397,10 @@ class FTC_OT_upright_image(Operator):
 
         name = os.path.splitext(src.name)[0] + " (upright)"
         image = bpy.data.images.new(name, nw, nh, alpha=src.channels == 4, float_buffer=src.is_float)
-        image.colorspace_settings.name = src.colorspace_settings.name
+        if not src.is_float:
+            # A float copy keeps its linear default: the pixels read above are
+            # already linear, and it is packed as OpenEXR.
+            image.colorspace_settings.name = src.colorspace_settings.name
         if src.channels == 4:
             image.pixels.foreach_set(upright.ravel())
         else:

@@ -316,3 +316,10 @@ def test_more_lines_average_out_the_noise(camera):
             )
             errors[count].append(angle_between(sol.rotation, camera.rotation))
     assert np.mean(errors[4]) < 0.8 * np.mean(errors[2]), (np.mean(errors[2]), np.mean(errors[4]))
+
+
+def test_guides_on_one_line_are_rejected():
+    from solver.common import vanishing_point
+
+    with pytest.raises(SolverError):
+        vanishing_point([((0.0, 0.0), (100.0, 10.0)), ((200.0, 20.0), (300.0, 30.0))], 1000.0)

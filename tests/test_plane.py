@@ -102,3 +102,22 @@ def test_wall_seen_from_behind_keeps_z_up():
     sol = solve_rectangle(cam.project(world), WIDTH, HEIGHT, cam.image_size, plane="XZ")
     assert sol.rotation[2, 1] > 0.9  # camera up vector still points up
     assert sol.pitch == pytest.approx(-5.0, abs=0.2)
+
+
+@pytest.mark.parametrize("plane", ["XZ", "YZ"])
+@pytest.mark.parametrize("order", [[2, 3, 0, 1], [3, 2, 1, 0]])
+def test_wall_corners_from_the_top_keep_z_up(plane, order):
+    """Corners starting from the top edge (e.g. F pressed twice): the wall's
+    vertical still points up instead of turning the camera upside down."""
+    from solver.common import plane_frame
+
+    cam = make_camera(pitch=-5.0, yaw=20.0 if plane == "XZ" else -110.0, roll=2.0, position=(0.0, 0.0, 0.0))
+    frame = plane_frame(plane)
+    centre = cam.rotation @ np.array([0.3, 0.2, -6.0])
+    hw, hh = WIDTH / 2, HEIGHT / 2
+    world = [centre + frame @ np.array([x, y, 0.0]) for x, y in ((-hw, -hh), (hw, -hh), (hw, hh), (-hw, hh))]
+    corners_px = np.asarray(cam.project(world))[order]
+    sol = solve_rectangle(corners_px, WIDTH, HEIGHT, cam.image_size, plane=plane)
+    assert sol.rotation[2, 1] > 0.9
+    assert sol.pitch == pytest.approx(-5.0, abs=0.2)
+    assert sol.roll == pytest.approx(2.0, abs=0.2)

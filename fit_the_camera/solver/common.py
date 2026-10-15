@@ -138,7 +138,9 @@ def vanishing_point(lines, scale: float) -> np.ndarray:
             raise SolverError("a guide line has zero length")
         line = np.cross([a[0], a[1], 1.0], [b[0], b[1], 1.0])
         rows.append(line / np.linalg.norm(line[:2]))
-    _, _, vt = np.linalg.svd(np.array(rows))
+    _, sv, vt = np.linalg.svd(np.array(rows))
+    if sv[1] < 1e-7 * sv[0]:
+        raise SolverError("the guide lines of a vanishing point lie on one line: move them apart")
     v = vt[-1]
     v = np.array([v[0] * scale, v[1] * scale, v[2]])
     if abs(v[2]) > 1e-12:
@@ -212,6 +214,8 @@ def adjust_pitch(rotation: np.ndarray, delta: float) -> np.ndarray:
 
 # Below this, removing the roll does not visibly move the guides.
 ROLL_WARNING_DEG = 0.05
+# Templates: the panel translates them with their numbers ({} = text).
+ROLL_REMOVED = "straighten horizon removed {}° of roll: the camera no longer matches the guides"
 
 
 def finish_rotation(
@@ -229,9 +233,7 @@ def finish_rotation(
         removed = math.degrees(math.atan2(right[2], up[2]))
         rotation = straighten(rotation)
         if abs(removed) > ROLL_WARNING_DEG:
-            warnings.append(
-                f"straighten horizon removed {removed:+.1f}° of roll: the camera no longer matches the guides"
-            )
+            warnings.append(ROLL_REMOVED.format(f"{removed:+.1f}"))
     return adjust_pitch(rotation, pitch_offset), removed
 
 

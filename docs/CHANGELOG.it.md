@@ -3,6 +3,37 @@
 Storia completa in italiano. Dalla 1.1 il changelog principale è in inglese:
 [`CHANGELOG.md`](CHANGELOG.md).
 
+## 1.1.1 – in sviluppo
+- Sweep di bug dopo la 1.1.0 (quattro revisioni in parallelo: solver, Fit Sun /
+  EXIF / report, HDRI / render, sessione / interfaccia), chiesto da Antonio:
+  - copia raddrizzata di foto a 16 bit o float non più scura dopo aver
+    riaperto il file (la copia float resta lineare); file della foto mancante =
+    messaggio;
+  - Results: altezza e distanza con la Unit Scale della scena;
+  - rettangolo su parete con gli angoli dal lato in alto (o F due volte): la
+    camera non si capovolge più;
+  - equivalente 35 mm senza sensore: la focale mostrata è quella inserita
+    (sensore equivalente sulla diagonale del formato nativo);
+  - due guide sulla stessa retta: errore chiaro;
+  - Align to Scene: la casella *Usa bersaglio salvato* sposta subito la camera;
+    il cambio di piano aggiorna l'orientamento FTC;
+  - Fit Sun: *Rileggi dalla foto* non cancella luogo o fuso inseriti a mano se
+    la foto non li ha; il sole di data e luogo segue un allineamento inclinato
+    (tutto calcolato nel mondo calibrato, poi ruotato nella scena); il report non
+    scrive il luogo se la luce è stata cancellata o l'HDRI non è più quello del
+    World; date EXIF agli estremi del calendario non bloccano Load Image;
+  - Fit HDRI: avviso per un Mapping con Location; uscite di Texture Coordinate
+    diverse da Generated rifiutate; un link mutato non viene riattivato; fake
+    user non conta come "usato altrove"; file HDRI sparito = messaggio;
+  - sessione: Ctrl+Z annulla anche le modifiche del pannello; cambiare
+    workspace non chiude la sessione (aspetta), Ctrl+Space la segue; il gizmo
+    di navigazione funziona; I non mette keyframe sulla camera;
+  - tooltip del segno dell'asse corretto.
+- Interfaccia **tutta in italiano** (inglese lingua principale, italiano
+  parallelo, chiesto da Antonio): tooltip, report e messaggi del solver, anche
+  quelli con numeri (modelli tradotti da `translations.message`); il test
+  `every_string_is_translated` lo verifica.
+
 ## 1.1.0 – 2026-10-14
 - Dal primo test GUI (semplificazione chiesta da Antonio): *Mappa* e
   *Riferimento* tolti (misurare direzioni su Google Earth era troppo complesso).

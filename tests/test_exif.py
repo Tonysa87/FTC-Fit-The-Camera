@@ -251,3 +251,18 @@ def test_garbled_time_tags_are_none(local, offset, date, time):
     )
     assert data.datetime_original is None and data.offset_minutes is None and data.gps_datetime is None
     assert data.make == "Acme"
+
+
+@pytest.mark.parametrize(
+    "local, offset, gps",
+    [
+        (None, None, [(exif.GPS_DATE, ASCII, "9999:12:31"), (exif.GPS_TIME, RATIONAL, [(24, 1), (0, 1), (0, 1)])]),
+        ("0001:01:01 00:00:00", "+01:00", []),
+        ("9999:12:31 23:00:00", "-05:00", []),
+    ],
+)
+def test_dates_at_the_ends_of_the_calendar_do_not_raise(local, offset, gps):
+    tags = [(exif.TAG_DATETIME_ORIGINAL, ASCII, local), (exif.TAG_OFFSET_TIME_ORIGINAL, ASCII, offset)] if local else []
+    data = timed(tags, gps)
+    assert data.make == "Acme"
+    assert data.capture_time() is None
