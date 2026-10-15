@@ -12,7 +12,9 @@ Extensions audience) and `README.it.md` (Italian); developer docs
   `docs/CHANGELOG.md`) + **the whole UI in Italian** (user: English first, Italian
   in parallel for everything; `translations.message` translates templated
   messages, test `every_string_is_translated` enforces it: never f-strings for
-  shown messages). **GUI test in progress, ONE POINT AT A TIME** (he asked):
+  shown messages). **Next session starts with his validation of 1.1.1** (he
+  disliked the first change he saw, the gizmo pass-through: every 1.1.1 change
+  must pass his check before release). **GUI test, ONE POINT AT A TIME**:
   `docs/TEST_GUI_1.1.1.md`, build `dist/fit_the_camera-1.1.1-alpha.2.zip`.
   Paused 2026-10-15 before item 1 (workspace switch: Calibrate, Shading, back to
   Layout, session still on, drag + Ctrl+Z work). Resume by explaining item 1
