@@ -19,6 +19,8 @@ poi riavvia Blender.
    guide di prima. Ctrl+Shift+Z lo rifà.
 4. **Tasto I** durante la sessione: nessun keyframe sulla camera (nessun avviso
    rosso "Keyframes, drivers...").
+   Anche col mouse sui campi del pannello FTC, I non mette keyframe (i campi
+   non diventano gialli; tasto destro: niente *Insert Keyframe*).
 
 ## Allineamento e risultati
 5. *Align to Scene* › 3D Cursor, poi togli e rimetti la spunta **Use Stored
