@@ -3,7 +3,7 @@
 From 1.1 the changelog is in English. The full history in Italian, with every
 release since 0.1, is in [`CHANGELOG.it.md`](CHANGELOG.it.md).
 
-## 1.1.1 – unreleased
+## 1.1.1 – 2026-10-15
 
 *A bug sweep after 1.1.0, and the whole interface in Italian.*
 

@@ -5,6 +5,13 @@
 **Disponibile su [Blender Extensions](https://extensions.blender.org/add-ons/fit-the-camera/)** (oppure dalle
 [Release](https://github.com/Tonysa87/FTC-Fit-The-Camera/releases)).
 
+**Novità della 1.1.1** (15/10/2026): una serie di correzioni (sessione di
+calibrazione, risultati nelle scene in centimetri, rettangoli sulle pareti,
+Fit Sun / Fit HDRI) e tutta l'interfaccia in italiano, tooltip e messaggi
+compresi. La 1.1 ha portato **Fit Sun** e **Fit HDRI**: luce, ombre e HDRI
+seguono il sole della foto. Tutte le modifiche:
+[CHANGELOG](docs/CHANGELOG.it.md).
+
 ![Un oggetto CG renderizzato in una foto calibrata con FTC](docs/images/ftc_hero.jpg)
 
 Estensione per Blender 5.2+ che calibra una camera su una singola immagine
@@ -69,7 +76,7 @@ Senza le estensioni online (offline, o per una versione precisa):
 2. Blender 5.2 o successivo: *Edit › Preferences › Get Extensions › ⌄ ›
    Install from Disk…* e scegli lo zip.
 3. Interfaccia in italiano: *Preferences › Interface › Translation*, lingua
-   Italiano.
+   Italiano (tutta tradotta: tooltip, avvisi e messaggi compresi).
 
 L'estensione legge solo l'immagine che carichi (e i suoi metadati EXIF) e, dalla
 1.1, scrive i report di calibrazione che esporti. Non usa la rete. I report

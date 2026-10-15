@@ -5,6 +5,12 @@
 **Get it on [Blender Extensions](https://extensions.blender.org/add-ons/fit-the-camera/)** (or from the
 [Releases](https://github.com/Tonysa87/FTC-Fit-The-Camera/releases)).
 
+**New in 1.1.1** (2026-10-15): a round of bug fixes (calibration session,
+results in centimetre scenes, rectangles on walls, Fit Sun / Fit HDRI) and the
+whole interface in Italian, tooltips and messages included. 1.1 brought
+**Fit Sun** and **Fit HDRI**: the light, the shadows and the HDRI match the sun
+of the photo. All the changes: [CHANGELOG](docs/CHANGELOG.md).
+
 ![A CG object rendered into a photo calibrated with FTC](docs/images/ftc_hero.jpg)
 
 A Blender 5.2+ extension that matches a camera to a single image (a photo, a
@@ -91,7 +97,7 @@ The rest of this page explains every option.
   shadow of the photo, with a white × showing where the computed sun puts the
   shadow's tip. **Fit HDRI** turns the World HDRI about Z onto that sun, also
   through node groups such as Poly Haven's.
-- Interface in English and Italian.
+- Interface in English and Italian (all of it: tooltips, warnings and messages too).
 
 ## Install
 
