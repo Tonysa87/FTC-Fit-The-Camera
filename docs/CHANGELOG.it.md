@@ -26,8 +26,8 @@ Storia completa in italiano. Dalla 1.1 il changelog principale è in inglese:
     diverse da Generated rifiutate; un link mutato non viene riattivato; fake
     user non conta come "usato altrove"; file HDRI sparito = messaggio;
   - sessione: Ctrl+Z annulla anche le modifiche del pannello; cambiare
-    workspace non chiude la sessione (aspetta), Ctrl+Space la segue; il gizmo
-    di navigazione funziona; I non mette keyframe sulla camera;
+    workspace non chiude la sessione (aspetta), Ctrl+Space la segue; I non
+    mette keyframe sulla camera;
   - tooltip del segno dell'asse corretto.
 - Interfaccia **tutta in italiano** (inglese lingua principale, italiano
   parallelo, chiesto da Antonio): tooltip, report e messaggi del solver, anche
