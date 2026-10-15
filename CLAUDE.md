@@ -16,11 +16,9 @@ Extensions audience) and `README.it.md` (Italian); developer docs
   disliked the first change he saw, the gizmo pass-through: every 1.1.1 change
   must pass his check before release). **GUI test, ONE POINT AT A TIME**:
   `docs/TEST_GUI_1.1.1.md`, build `dist/fit_the_camera-1.1.1-alpha.4.zip`.
-  Items 1-6 passed (1-3 on alpha.3; 4 incl. panel keys + 5 on alpha.4, where
+  Items 1-7 passed (1-3 on alpha.3; 4 incl. panel keys + 5 on alpha.4, where
   every FTC property is non-animatable: `props.not_animatable`, old keys inert).
-  Next: item 7 onwards. Explain each item in plain words:
-  7 (wall rectangle F×2),
-  8 (Italian tooltips/warnings). The navigation-gizmo item was dropped: he
+  Next: item 8  (Italian tooltips/warnings). The navigation-gizmo item was dropped: he
   wants those clicks blocked (alpha.2 reverted the pass-through). Then release
   1.1.1 (version, CHANGELOG date, GitHub release, Extensions upload).
 - **1.1.0 released on GitHub (2026-10-14)**, tag `v1.1.0`,
